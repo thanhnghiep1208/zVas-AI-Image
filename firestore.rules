@@ -1,0 +1,119 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    // Collection: users
+    // Fields:
+    //   - uid: string
+    //   - email: string
+    //   - displayName: string
+    //   - photoURL: string
+    //   - role: string ('admin', 'editor', 'advice')
+    //   - status: string ('pending', 'approved', 'rejected')
+    //   - createdAt: timestamp
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isDefaultSuperadminEmail() {
+      return request.auth.token.email == "thanhnghiep1208@gmail.com" &&
+        request.auth.token.email_verified == true;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && (
+        isDefaultSuperadminEmail() ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
+      );
+    }
+
+    /** Admin hoặc role advice — dùng cho đọc analytics / danh sách user / history tổng hợp */
+    function canViewAnalyticsDashboard() {
+      return isAuthenticated() && (
+        isDefaultSuperadminEmail() ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'advice'])
+      );
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function isValidUser(data) {
+      return hasRequiredFields(['uid', 'email', 'role', 'status']) &&
+        hasOnlyAllowedFields(['uid', 'email', 'displayName', 'photoURL', 'role', 'status', 'createdAt']) &&
+        data.uid is string &&
+        data.email is string &&
+        data.role in ['admin', 'editor', 'advice'] &&
+        data.status in ['pending', 'approved', 'rejected'];
+    }
+
+    function isValidHistory(data) {
+      return hasRequiredFields(['uid', 'prompt', 'imageUrl', 'createdAt']) &&
+        hasOnlyAllowedFields(['uid', 'prompt', 'imageUrl', 'text', 'createdAt']) &&
+        data.uid == request.auth.uid &&
+        data.prompt is string && data.prompt.size() > 0 && data.prompt.size() < 5000 &&
+        data.imageUrl is string && data.imageUrl.size() > 0 && data.imageUrl.size() < 2000000 &&
+        data.createdAt is timestamp &&
+        (!('text' in data) || data.text == null || (data.text is string && data.text.size() < 10000));
+    }
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || canViewAnalyticsDashboard();
+
+      allow create: if isOwner(userId) && isValidUser(request.resource.data) && (
+        (request.resource.data.role == 'editor' && request.resource.data.status == 'approved') ||
+        (request.resource.data.email == "thanhnghiep1208@gmail.com" && request.resource.data.role == 'admin' && request.resource.data.status == 'approved')
+      );
+
+      allow update: if isAdmin() || (isOwner(userId) &&
+        isValidUser(request.resource.data) &&
+        request.resource.data.role == resource.data.role &&
+        request.resource.data.status == resource.data.status);
+
+      allow delete: if isAdmin();
+    }
+
+    match /settings/global {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    match /history/{historyId} {
+      allow read: if isAuthenticated() && (resource.data.uid == request.auth.uid || canViewAnalyticsDashboard());
+      allow create: if isAuthenticated() && isValidHistory(request.resource.data);
+      allow delete: if isAuthenticated() && (resource.data.uid == request.auth.uid || isAdmin());
+    }
+
+    match /analytics_events/{eventId} {
+      allow create: if isAuthenticated() && request.resource.data.user_id == request.auth.uid;
+      allow read: if canViewAnalyticsDashboard();
+    }
+
+    match /monthly_costs/{monthId} {
+      allow read: if canViewAnalyticsDashboard();
+      allow write: if isAdmin();
+    }
+
+    match /rateLimits/{userId} {
+      allow read, write: if isOwner(userId) || isAdmin();
+    }
+  }
+}

@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI image zVas - AI Image Variation Generator</title>
+    <meta name="description" content="AI image zVas: Upload social media ad images and generate creative variations with Gemini AI. Professional AI image generation for marketing and design." />
+    <meta name="keywords" content="AI image generation, Gemini AI, image variations, social media ads, creative design, AI marketing tool, image generator" />
+    <meta name="author" content="AI image zVas Team" />
+    <link rel="canonical" href="https://ais-pre-jpxgthjssk2bx5rsq6brkf-400570033216.asia-southeast1.run.app" />
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://ais-pre-jpxgthjssk2bx5rsq6brkf-400570033216.asia-southeast1.run.app" />
+    <meta property="og:title" content="AI image zVas - AI Image Variation Generator" />
+    <meta property="og:description" content="Generate creative social media ad variations using the power of Gemini AI. Professional tool for designers and marketers." />
+    <meta property="og:image" content="https://thanhnghiep.top/img5.jpg" />
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content="https://ais-pre-jpxgthjssk2bx5rsq6brkf-400570033216.asia-southeast1.run.app" />
+    <meta property="twitter:title" content="AI image zVas - AI Image Variation Generator" />
+    <meta property="twitter:description" content="Generate creative social media ad variations using the power of Gemini AI. Professional tool for designers and marketers." />
+    <meta property="twitter:image" content="https://thanhnghiep.top/img5.jpg" />
+    <script>
+      // Aggressive error suppression for fetch assignment
+      (function() {
+        var suppressFetchError = function(msg, url, lineNo, columnNo, error) {
+          var message = msg || (error && error.message) || "";
+          if (typeof message !== 'string') message = String(message);
+          
+          // Log all errors during startup to help debug if they are not being caught
+          if (message.indexOf('fetch') !== -1) {
+            console.warn("DEBUG: Caught error containing 'fetch':", message);
+          }
+
+          if (message.indexOf('fetch') !== -1 && (message.indexOf('getter') !== -1 || message.indexOf('property') !== -1 || message.indexOf('setting') !== -1 || message.indexOf('readonly') !== -1)) {
+            if (console && console.warn) console.warn("Aggressively suppressed fetch assignment error:", message);
+            return true; // Prevents the firing of the default event handler
+          }
+          return false;
+        };
+
+        // Use both window.onerror and addEventListener for maximum coverage
+        var originalOnError = window.onerror;
+        window.onerror = function(msg, url, lineNo, columnNo, error) {
+          if (suppressFetchError(msg, url, lineNo, columnNo, error)) return true;
+          if (originalOnError) return originalOnError.apply(this, arguments);
+          return false;
+        };
+
+        window.addEventListener('error', function(e) {
+          if (suppressFetchError(e.message, e.filename, e.lineno, e.colno, e.error)) {
+            e.preventDefault();
+            e.stopPropagation();
+          }
+        }, true);
+
+        window.addEventListener('unhandledrejection', function(e) {
+          var reason = e.reason ? (e.reason.message || String(e.reason)) : "";
+          if (suppressFetchError(reason)) {
+            e.preventDefault();
+            e.stopPropagation();
+          }
+        }, true);
+
+        // Shim process.env for runtime API key injection in the browser
+        var win = window;
+        win.process = win.process || {};
+        win.process.env = win.process.env || {};
+        
+        // Ensure API keys are accessible if injected at root
+        if (win.API_KEY && !win.process.env.API_KEY) {
+          win.process.env.API_KEY = win.API_KEY;
+        }
+        if (win.GEMINI_API_KEY && !win.process.env.GEMINI_API_KEY) {
+          win.process.env.GEMINI_API_KEY = win.GEMINI_API_KEY;
+        }
+
+        // Protect window.fetch from being overwritten by polyfills
+        try {
+          var originalFetch = win.fetch;
+          console.log("DEBUG: Initial window.fetch type:", typeof originalFetch);
+          var initialDesc = Object.getOwnPropertyDescriptor(win, 'fetch') || Object.getOwnPropertyDescriptor(Object.getPrototypeOf(win), 'fetch');
+          console.log("DEBUG: Initial window.fetch descriptor:", initialDesc);
+
+          if (!originalFetch) {
+             console.warn("Native fetch not found, skipping protection");
+             return;
+          }
+          
+          var targets = [win, self, globalThis];
+          targets.forEach(function(target) {
+            if (!target) return;
+            try {
+              var desc = Object.getOwnPropertyDescriptor(target, 'fetch');
+              
+              // If it's already a getter and not configurable, we can't do much
+              if (desc && !desc.configurable && desc.get) {
+                console.log("Fetch is already a non-configurable getter on", target === win ? "window" : "target");
+                return;
+              }
+
+              // Try to define it on the target itself to shadow any prototype getters
+              Object.defineProperty(target, 'fetch', {
+                configurable: true,
+                enumerable: true,
+                get: function() { return originalFetch; },
+                set: function(v) { 
+                  // Silently ignore attempts to overwrite fetch
+                  // console.warn("Blocked attempt to overwrite fetch");
+                }
+              });
+            } catch (e) {
+              // If defineProperty fails, just log it but don't try to assign (which causes the error we're trying to avoid)
+              console.warn("Could not redefine fetch on target:", e.message);
+            }
+          });
+        } catch (e) {
+          console.warn("Global fetch protection failed:", e);
+        }
+      })();
+
+      window.addEventListener('error', function(e) {
+        // General error display for other errors
+        if (e.defaultPrevented) return;
+        
+        var errDiv = document.createElement('div');
+        errDiv.style.color = 'red';
+        errDiv.style.padding = '20px';
+        errDiv.style.backgroundColor = '#ffebee';
+        errDiv.style.position = 'fixed';
+        errDiv.style.top = '0';
+        errDiv.style.left = '0';
+        errDiv.style.zIndex = '9999';
+        errDiv.innerHTML = '<strong>Global Error:</strong> ' + e.message + '<br/>' + (e.error ? e.error.stack : '');
+        document.body.appendChild(errDiv);
+      });
+      window.addEventListener('unhandledrejection', function(e) {
+        var errDiv = document.createElement('div');
+        errDiv.style.color = 'red';
+        errDiv.style.padding = '20px';
+        errDiv.style.backgroundColor = '#ffebee';
+        errDiv.style.position = 'fixed';
+        errDiv.style.top = '100px';
+        errDiv.style.left = '0';
+        errDiv.style.zIndex = '9999';
+        errDiv.innerHTML = '<strong>Unhandled Promise Rejection:</strong> ' + e.reason;
+        document.body.appendChild(errDiv);
+      });
+    </script>
+  </head>
+  <body class="bg-gray-900 text-gray-100">
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>

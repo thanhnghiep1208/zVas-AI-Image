@@ -1,0 +1,55 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# ---------------------------------------------------------------------------
+# Secrets & local overrides (không commit)
+# ---------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+!.env*.example
+
+# Firebase / GCP service accounts & keys
+*-firebase-adminsdk-*.json
+*serviceAccount*.json
+service-account*.json
+credentials.json
+google-services.json
+GoogleService-Info.plist
+*.pem
+*.p12
+*.pfx
+
+# Optional: bản cấu hình Firebase client chỉ dùng local (nếu team tách khỏi repo)
+# firebase-applet-config.json
+# firebase-applet-config.local.json
+
+# Firebase CLI cache
+.firebase/
+
+# OS / editor
+.DS_Store
+.idea
+.vscode/*
+!.vscode/extensions.json
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Tooling / coverage
+coverage
+.turbo
+*.tsbuildinfo

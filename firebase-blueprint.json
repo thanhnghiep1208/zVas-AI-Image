@@ -1,0 +1,67 @@
+{
+  "entities": {
+    "users": {
+      "title": "User",
+      "description": "User profile information with roles and status",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "editor", "advice"] },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "role", "status"]
+    },
+    "settings": {
+      "title": "Settings",
+      "description": "Global application settings",
+      "type": "object",
+      "properties": {
+        "systemApiKey": { "type": "string", "description": "Master Gemini API Key for all users" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "history": {
+      "title": "History",
+      "description": "User's generated image history",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "prompt": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "text": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "prompt", "imageUrl", "createdAt"]
+    },
+    "rateLimits": {
+      "title": "Rate Limit",
+      "description": "User rate limit tracking",
+      "type": "object",
+      "properties": {
+        "lastRequests": { "type": "array", "items": { "type": "string", "format": "date-time" } }
+      }
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "users",
+      "description": "User profile document"
+    },
+    "/settings/global": {
+      "schema": "settings",
+      "description": "Global settings document"
+    },
+    "/rateLimits/{userId}": {
+      "schema": "rateLimits",
+      "description": "User rate limit document"
+    },
+    "/history/{historyId}": {
+      "schema": "history",
+      "description": "User's image generation history"
+    }
+  }
+}
