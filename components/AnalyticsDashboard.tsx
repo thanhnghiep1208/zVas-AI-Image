@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { calculateMonthlyAnalytics, MonthlyAnalytics, getMonthlyCosts, saveMonthlyCosts, MonthlyCosts, getMonthlyErrorBreakdown, MonthlyErrorBreakdownItem, getMonthlyTokenStats, MonthlyTokenStats, getMonthlyTopModelStats, MonthlyTopModelStats } from '../services/analyticsService';
+import { calculateMonthlyAnalytics, MonthlyAnalytics, getMonthlyErrorBreakdown, MonthlyErrorBreakdownItem, getMonthlyTokenStats, MonthlyTokenStats, getMonthlyTopModelStats, MonthlyTopModelStats } from '../services/analyticsService';
 import { db, collection, query, where, getCountFromServer, onSnapshot, handleFirestoreError, OperationType } from '../firebase';
-import { BarChart3, Users, Image as ImageIcon, CheckCircle, XCircle, DollarSign, Activity, HardDrive, Pencil, ChevronDown, ChevronRight, Clock } from 'lucide-react';
+import { BarChart3, Users, Image as ImageIcon, CheckCircle, XCircle, DollarSign, Activity, Pencil, ChevronDown, ChevronRight, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 import { LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer } from 'recharts';
 import { useTrendData } from '../hooks/useTrendData';
@@ -17,8 +17,6 @@ const TREND_METRIC_CONFIG: Record<TrendMetric, { label: string; range: '30d' | '
 interface AnalyticsDashboardProps {
   onErrorClick?: (errorType: string) => void;
   latencyStats?: { avg: number; p95: number; sparkline: number[] };
-  topUsers?: Array<{ name: string; count: number }>;
-  onViewAllUsers?: () => void;
   /** Role `advice`: không chỉnh chi phí / ngân sách (Firestore chỉ admin ghi) */
   readOnly?: boolean;
 }
@@ -26,8 +24,6 @@ interface AnalyticsDashboardProps {
 export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
   onErrorClick,
   latencyStats,
-  topUsers,
-  onViewAllUsers,
   readOnly = false,
 }) => {
   const ANALYTICS_CACHE_TTL_MS = 5 * 60 * 1000;
@@ -68,14 +64,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
   });
   
   const [analytics, setAnalytics] = useState<MonthlyAnalytics | null>(null);
-  const [costs, setCosts] = useState<MonthlyCosts>({
-    storage_cost: 0,
-    server_cost: 0,
-    bandwidth_cost: 0,
-    other_cost: 0
-  });
   const [isLoading, setIsLoading] = useState(false);
-  const [isSavingCosts, setIsSavingCosts] = useState(false);
   const [activeTrendMetric, setActiveTrendMetric] = useState<TrendMetric>('generations');
   const [errorBreakdown, setErrorBreakdown] = useState<MonthlyErrorBreakdownItem[]>([]);
   const [isErrorBreakdownOpen, setIsErrorBreakdownOpen] = useState(false);
@@ -117,14 +106,12 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
           errorBreakdown: MonthlyErrorBreakdownItem[];
           tokenStats: MonthlyTokenStats;
           topModelStats: MonthlyTopModelStats;
-          costs: MonthlyCosts;
         }>(cacheKey);
         if (cached) {
           setAnalytics(cached.analytics);
           setErrorBreakdown(cached.errorBreakdown);
           setTokenStats(cached.tokenStats);
           setTopModelStats(cached.topModelStats);
-          setCosts(cached.costs);
           setIsLoading(false);
           return;
         }
@@ -137,28 +124,13 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
         setTokenStats(monthlyTokenStats);
         const monthlyTopModelStats = await getMonthlyTopModelStats(monthKey);
         setTopModelStats(monthlyTopModelStats);
-        
-        const monthlyCosts = await getMonthlyCosts(monthKey);
-        if (monthlyCosts) {
-          setCosts(monthlyCosts);
-          writeCache(cacheKey, {
-            analytics: data,
-            errorBreakdown: monthlyErrorBreakdown,
-            tokenStats: monthlyTokenStats,
-            topModelStats: monthlyTopModelStats,
-            costs: monthlyCosts
-          });
-        } else {
-          const emptyCosts = { storage_cost: 0, server_cost: 0, bandwidth_cost: 0, other_cost: 0 };
-          setCosts(emptyCosts);
-          writeCache(cacheKey, {
-            analytics: data,
-            errorBreakdown: monthlyErrorBreakdown,
-            tokenStats: monthlyTokenStats,
-            topModelStats: monthlyTopModelStats,
-            costs: emptyCosts
-          });
-        }
+
+        writeCache(cacheKey, {
+          analytics: data,
+          errorBreakdown: monthlyErrorBreakdown,
+          tokenStats: monthlyTokenStats,
+          topModelStats: monthlyTopModelStats,
+        });
       } catch (error) {
         console.error('Error loading analytics:', error);
         toast.error('Failed to load analytics data');
@@ -169,27 +141,6 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
 
     loadData();
   }, [monthKey]);
-
-  const handleCostChange = (field: keyof MonthlyCosts, value: string) => {
-    const numValue = parseFloat(value) || 0;
-    setCosts(prev => ({ ...prev, [field]: numValue }));
-  };
-
-  const handleSaveCosts = async () => {
-    setIsSavingCosts(true);
-    try {
-      await saveMonthlyCosts(monthKey, costs);
-      toast.success('Costs saved successfully');
-      sessionStorage.removeItem(`analytics_dashboard_${monthKey}`);
-      // Reload analytics to recalculate totals
-      const data = await calculateMonthlyAnalytics(monthKey);
-      setAnalytics(data);
-    } catch (error) {
-      toast.error('Failed to save costs');
-    } finally {
-      setIsSavingCosts(false);
-    }
-  };
 
   const formatCurrency = (val: number) => `$${val.toFixed(2)}`;
   const formatNumber = (val: number) => new Intl.NumberFormat('en-US').format(val);
@@ -222,9 +173,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
       </div>
 
       {isLoading ? (
-        <div className="flex justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-cyan-500"></div>
-        </div>
+        <AnalyticsPageSkeleton />
       ) : analytics ? (
         <>
           {/* KPI Cards */}
@@ -297,10 +246,9 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
             onMetricChange={setActiveTrendMetric}
           />
 
-          <UserHistoryCountsPanel />
+          <UserHistoryCountsPanel monthKey={monthKey} />
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Detailed Metrics Table */}
+          <div className="grid grid-cols-1 gap-6">
             <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-5">
               <h3 className="text-lg font-semibold text-white mb-4">Generation Metrics</h3>
               <div className="space-y-3">
@@ -327,61 +275,8 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
                 <MetricRow label="Avg Gens / User" value={analytics.average_generations_per_user.toFixed(1)} />
               </div>
             </div>
-
-            <TopUsersPanel
-              topUsers={topUsers}
-              onViewAllUsers={onViewAllUsers}
-              hideViewAll={readOnly}
-            />
           </div>
 
-          {!readOnly && (
-            <div className="grid grid-cols-1 gap-6">
-              <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-5">
-                <h3 className="text-lg font-semibold text-white mb-4 flex items-center">
-                  <HardDrive className="w-5 h-5 mr-2 text-gray-400" />
-                  Manual Infrastructure Costs
-                </h3>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <CostInput
-                      label="Storage Cost ($)"
-                      value={costs.storage_cost}
-                      onChange={(v) => handleCostChange('storage_cost', v)}
-                    />
-                    <CostInput
-                      label="Server Cost ($)"
-                      value={costs.server_cost}
-                      onChange={(v) => handleCostChange('server_cost', v)}
-                    />
-                    <CostInput
-                      label="Bandwidth Cost ($)"
-                      value={costs.bandwidth_cost}
-                      onChange={(v) => handleCostChange('bandwidth_cost', v)}
-                    />
-                    <CostInput
-                      label="Other Cost ($)"
-                      value={costs.other_cost}
-                      onChange={(v) => handleCostChange('other_cost', v)}
-                    />
-                  </div>
-                  <div className="flex justify-between items-center pt-2 border-t border-gray-700">
-                    <span className="text-sm text-gray-400">
-                      Total Manual: {formatCurrency(analytics.total_manual_infra_cost)}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={handleSaveCosts}
-                      disabled={isSavingCosts}
-                      className="bg-cyan-600 hover:bg-cyan-500 text-white px-4 py-2 rounded text-sm font-medium transition-colors disabled:opacity-50"
-                    >
-                      {isSavingCosts ? 'Saving...' : 'Save Costs'}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
         </>
       ) : (
         <div className="text-center py-12 text-gray-400">
@@ -399,11 +294,27 @@ interface AnalyticsUserRow {
   photoURL: string;
 }
 
-const UserHistoryCountsPanel: React.FC = () => {
+const UserHistoryCountsPanel: React.FC<{ monthKey: string }> = ({ monthKey }) => {
   const [users, setUsers] = useState<AnalyticsUserRow[]>([]);
   const [userCounts, setUserCounts] = useState<Record<string, number>>({});
   const [isUsersLoading, setIsUsersLoading] = useState(true);
   const [isCountsLoading, setIsCountsLoading] = useState(false);
+
+  const monthRange = useMemo(() => {
+    const [yearStr, monthStr] = monthKey.split('-');
+    const year = parseInt(yearStr, 10);
+    const month = parseInt(monthStr, 10) - 1;
+    if (!Number.isFinite(year) || !Number.isFinite(month)) {
+      const now = new Date();
+      const startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+      const endDate = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+      return { startDate, endDate };
+    }
+    return {
+      startDate: new Date(year, month, 1),
+      endDate: new Date(year, month + 1, 1),
+    };
+  }, [monthKey]);
 
   useEffect(() => {
     const usersRef = collection(db, 'users');
@@ -442,7 +353,12 @@ const UserHistoryCountsPanel: React.FC = () => {
     try {
       for (const user of userList) {
         try {
-          const historyQ = query(collection(db, 'history'), where('uid', '==', user.uid));
+          const historyQ = query(
+            collection(db, 'history'),
+            where('uid', '==', user.uid),
+            where('createdAt', '>=', monthRange.startDate),
+            where('createdAt', '<', monthRange.endDate),
+          );
           const countSnapshot = await getCountFromServer(historyQ);
           counts[user.uid] = countSnapshot.data().count;
         } catch (err) {
@@ -453,7 +369,7 @@ const UserHistoryCountsPanel: React.FC = () => {
     } finally {
       setIsCountsLoading(false);
     }
-  }, []);
+  }, [monthRange.endDate, monthRange.startDate]);
 
   const usersKey = useMemo(() => [...users].map((u) => u.uid).sort().join(','), [users]);
 
@@ -463,7 +379,7 @@ const UserHistoryCountsPanel: React.FC = () => {
       return;
     }
     loadCounts(users);
-  }, [usersKey, users, loadCounts]);
+  }, [usersKey, users, loadCounts, monthKey]);
 
   const sortedUsers = useMemo(() => {
     return [...users].sort((a, b) => {
@@ -486,7 +402,7 @@ const UserHistoryCountsPanel: React.FC = () => {
             Số ảnh đã tạo theo người dùng
           </h3>
           <p className="text-xs text-gray-500 mt-1">
-            Đếm từ collection <code className="text-gray-400">history</code> trên Firestore (toàn thời gian).
+            Đếm theo tháng đang chọn từ collection <code className="text-gray-400">history</code> trên Firestore.
           </p>
         </div>
         <button
@@ -541,63 +457,6 @@ const UserHistoryCountsPanel: React.FC = () => {
               ))}
             </tbody>
           </table>
-        </div>
-      )}
-    </div>
-  );
-};
-
-const TopUsersPanel = ({
-  topUsers,
-  onViewAllUsers,
-  hideViewAll = false
-}: {
-  topUsers?: Array<{ name: string; count: number }>;
-  onViewAllUsers?: () => void;
-  hideViewAll?: boolean;
-}) => {
-  const rankedUsers = (topUsers ?? []).slice(0, 5);
-  const maxCount = rankedUsers[0]?.count ?? 0;
-
-  return (
-    <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-5">
-      <h3 className="text-lg font-semibold text-white mb-4">Top Users</h3>
-      <div className="space-y-2">
-        {rankedUsers.length === 0 ? (
-          <div className="text-sm text-gray-500 py-6">No generation data this month.</div>
-        ) : (
-          rankedUsers.map((user, index) => {
-            const rank = index + 1;
-            const widthPercent = maxCount > 0 ? (user.count / maxCount) * 100 : 0;
-            return (
-              <div
-                key={`${user.name}-${rank}`}
-                className={`rounded-md px-3 py-2 bg-gray-900/40 border border-gray-700/60 ${
-                  rank === 1 ? 'border-l-2 border-l-amber-400' : ''
-                }`}
-              >
-                <div className="grid grid-cols-[26px_1fr_auto] items-center gap-3 mb-2">
-                  <span className="text-xs font-semibold text-gray-400">#{rank}</span>
-                  <span className="text-sm text-gray-200 truncate">{user.name}</span>
-                  <span className="text-sm font-semibold text-white">{new Intl.NumberFormat('en-US').format(user.count)}</span>
-                </div>
-                <div className="w-full h-1.5 rounded-full bg-gray-700/80 overflow-hidden">
-                  <div className="h-full bg-cyan-500/80 rounded-full" style={{ width: `${widthPercent}%` }} />
-                </div>
-              </div>
-            );
-          })
-        )}
-      </div>
-      {!hideViewAll && (
-        <div className="pt-4 mt-4 border-t border-gray-700/70">
-          <button
-            type="button"
-            onClick={() => onViewAllUsers?.()}
-            className="text-sm text-cyan-400 hover:text-cyan-300 transition-colors"
-          >
-            View all
-          </button>
         </div>
       )}
     </div>
@@ -891,6 +750,70 @@ const TrendSkeleton = () => (
   </div>
 );
 
+const AnalyticsPageSkeleton = () => (
+  <div className="space-y-6">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      {Array.from({ length: 10 }).map((_, idx) => (
+        <div
+          key={`kpi-skeleton-${idx}`}
+          className="bg-gray-800 border border-gray-700 rounded-lg p-4 animate-pulse"
+        >
+          <div className="h-3 w-24 bg-gray-700 rounded mb-3" />
+          <div className="h-8 w-32 bg-gray-700 rounded" />
+        </div>
+      ))}
+    </div>
+
+    <section className="space-y-3">
+      <div className="h-5 w-28 bg-gray-700 rounded animate-pulse" />
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {Array.from({ length: 4 }).map((_, idx) => (
+          <div
+            key={`token-skeleton-${idx}`}
+            className="bg-gray-800 border border-gray-700 rounded-lg p-4 animate-pulse"
+          >
+            <div className="h-3 w-24 bg-gray-700 rounded mb-3" />
+            <div className="h-7 w-20 bg-gray-700 rounded mb-2" />
+            <div className="h-3 w-16 bg-gray-700 rounded" />
+          </div>
+        ))}
+      </div>
+    </section>
+
+    <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-5 animate-pulse">
+      <div className="h-5 w-44 bg-gray-700 rounded mb-4" />
+      <div className="space-y-2">
+        {Array.from({ length: 4 }).map((_, idx) => (
+          <div key={`model-skeleton-${idx}`} className="h-8 bg-gray-700/80 rounded" />
+        ))}
+      </div>
+    </div>
+
+    <TrendSkeleton />
+
+    <div className="bg-gray-800/50 border border-gray-700 rounded-lg overflow-hidden animate-pulse">
+      <div className="px-5 py-4 border-b border-gray-700">
+        <div className="h-5 w-64 bg-gray-700 rounded mb-2" />
+        <div className="h-3 w-72 bg-gray-700 rounded" />
+      </div>
+      <div className="px-5 py-4 space-y-3">
+        {Array.from({ length: 5 }).map((_, idx) => (
+          <div key={`user-count-skeleton-${idx}`} className="h-10 bg-gray-700/70 rounded" />
+        ))}
+      </div>
+    </div>
+
+    <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-5 animate-pulse">
+      <div className="h-5 w-40 bg-gray-700 rounded mb-4" />
+      <div className="space-y-3">
+        {Array.from({ length: 6 }).map((_, idx) => (
+          <div key={`metric-row-skeleton-${idx}`} className="h-6 bg-gray-700/80 rounded" />
+        ))}
+      </div>
+    </div>
+  </div>
+);
+
 const MetricRow = ({ label, value }: { label: string, value: string | number }) => (
   <div className="flex justify-between items-center py-2 border-b border-gray-700/50 last:border-0">
     <span className="text-gray-300">{label}</span>
@@ -971,16 +894,3 @@ const ExpandableErrorBreakdown = ({
   </div>
 );
 
-const CostInput = ({ label, value, onChange }: { label: string, value: number, onChange: (val: string) => void }) => (
-  <div>
-    <label className="block text-xs text-gray-400 mb-1">{label}</label>
-    <input
-      type="number"
-      min="0"
-      step="0.01"
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      className="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500"
-    />
-  </div>
-);

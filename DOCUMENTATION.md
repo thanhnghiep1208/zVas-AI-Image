@@ -60,7 +60,7 @@ Sử dụng các công nghệ hiện đại nhất để đảm bảo hiệu nă
 ### 2.3. Entry & shell dev/prod
 
 - `**npm run dev`**: `tsx server.ts` — Express + Vite middleware (HMR).
-- `**npm run build`**: output `dist/`; `**npm start**`: Express phục vụ `dist` + API.
+- `**npm run build`**: output `dist/`; `**npm start`**: Express phục vụ `dist` + API.
 
 ### 2.4. Sơ đồ kiến trúc (Mermaid)
 
@@ -153,13 +153,13 @@ flowchart TD
 Hệ thống sử dụng mô hình Full-stack với Express và Firebase.
 
 - **Server**: [Express 5](https://expressjs.com/) chạy trên môi trường Node.js (`server.ts`).
-- **Database**: [Firebase Firestore](https://firebase.google.com/docs/firestore).
+- **Database**: [Firebase Firestore](https://firebase.google.com/docs/firestore) (named database theo `firebase-applet-config.json`).
   - Thông tin người dùng (`users`).
   - Lịch sử metadata (`history`; `imageUrl: 'idb'` khi blob lưu ở IndexedDB).
   - Cấu hình (`settings/global`).
-  - Analytics (`analytics_events`), chi phí thủ công (`monthly_costs`).
+  - Analytics (`analytics_events`), chi phí tháng (`monthly_costs`, hiện chỉ đọc trên UI analytics).
 - **Authentication**: [Firebase Auth](https://firebase.google.com/docs/auth) (đăng nhập Google).
-- **Security Rules**: Phân quyền theo role (user/editor/admin); Admin cấu hình key trong `settings/global` — rules phải bảo vệ field nhạy cảm.
+- **Security Rules**: Phân quyền theo role (editor/advice/admin); `advice` có quyền xem analytics, `admin` có quyền quản trị.
 
 ---
 
@@ -194,7 +194,7 @@ Hệ thống sử dụng mô hình Full-stack với Express và Firebase.
   - Firestore: document `history` (prompt, `imageUrl: 'idb'`, …).
   - IndexedDB: key `img_{docId}` chứa data URL/blob ảnh.
   - UI cập nhật history optimistically qua `useImageGeneration` + `useHistoryImages`.
-6. **Analytics**: Ghi `image_generation_`*, `image_downloaded`, `user_login` vào `analytics_events` (dashboard admin).
+6. **Analytics**: Ghi `image_generation_*`, `image_downloaded`, `user_login` vào `analytics_events` (dashboard cho `admin` và `advice`).
 7. **Tải xuống**: `useGeneratedImageDownload` — canvas, tuỳ chọn nền trong suốt / xóa nền heuristic.
 
 ---
@@ -226,16 +226,158 @@ Hệ thống sử dụng mô hình Full-stack với Express và Firebase.
 
 ## 8. Bảng Điều Khiển Admin (Admin Dashboard)
 
-- **`role === 'admin'`**: đầy đủ tab **Người dùng**, **Cấu hình hệ thống**, **Analytics**; badge pending; toast duyệt user.
-- **`role === 'advice'`**: chỉ **Analytics** (nút biểu đồ trên header); không quản lý user, không sửa cấu hình / chi phí thủ công / ngân sách trong UI. Firestore rules cho phép đọc `analytics_events`, `monthly_costs`, `users`, `history` (để bảng số ảnh theo user); ghi `monthly_costs` và cấu hình vẫn chỉ **admin**.
-- **`role === 'editor'`**: không vào dashboard admin (trừ khi được nâng role).
+- `**role === 'admin'`**: đầy đủ tab **Người dùng**, **Cấu hình hệ thống**, **Analytics**; badge pending; toast duyệt user.
+- `**role === 'advice'`**: chỉ **Analytics** (nút biểu đồ trên header); không quản lý user, không sửa cấu hình / chi phí / ngân sách trong UI. Firestore rules cho phép đọc `analytics_events`, `monthly_costs`, `users`, `history` (để bảng số ảnh theo user); ghi `monthly_costs` và cấu hình vẫn chỉ **admin**.
+- `**role === 'editor'`**: không vào dashboard admin (trừ khi được nâng role).
 
 Chi tiết tab admin:
 
 - **Người dùng**: Danh sách, role (`admin` / `editor` / `advice`), trạng thái (pending/approved/rejected).
 - **Cấu hình**: Khóa API và provider/model trong `settings/global`.
-- **Analytics / chi phí**: Đọc từ `analytics_events` và `monthly_costs` (logic trong `services/analyticsService.ts`).
+- **Analytics**: KPI theo tháng, token/model usage, trends, bảng **Số ảnh đã tạo theo người dùng** lọc theo tháng (`Month`) từ collection `history`.
+- **Top Users panel**: đã loại bỏ khỏi UI.
+- **Manual Infrastructure Costs**: đã loại bỏ khỏi UI (không còn thao tác nhập tay trên dashboard).
 
 ---
 
-*Tài liệu cập nhật: tháng 5/2026 — phản ánh cấu trúc mã sau refactor (hooks, `lib/`, layout views), luồng API hiện tại, và sơ đồ Mermaid (§2.4).*
+## 9. Hướng Dẫn Live Product (Cloud Run End-to-End)
+
+Mục này là checklist đầy đủ để đưa bản hiện tại lên môi trường live an toàn.
+
+### 9.1. Chuẩn bị local trước khi deploy
+
+```bash
+npm install
+npm run lint
+npm run build
+```
+
+Đảm bảo có các file cấu hình Firebase CLI ở root:
+
+- `firebase.json`
+- `.firebaserc`
+- `firestore.indexes.json`
+
+### 9.2. Đồng bộ Firestore Rules và Indexes
+
+App đang dùng **named database** theo `firebase-applet-config.json`, nên cần deploy rules/indexes đúng database đã khai báo trong `firebase.json`.
+
+```bash
+firebase login
+firebase deploy --only firestore --project zvas-ai-image
+```
+
+Nếu chưa cài Firebase CLI global:
+
+```bash
+npx firebase-tools@latest deploy --only firestore --project zvas-ai-image
+```
+
+### 9.3. Quản lý secrets cho runtime (phân theo số lượng API key)
+
+Không truyền API key thật qua `VITE_*`. Chỉ dùng secret/env phía server.
+
+#### Trường hợp A - chỉ 1 API key (Gemini-only)
+
+1. Tạo secret Gemini (nếu chưa có) và thêm version:
+
+```bash
+gcloud secrets create GEMINI_API_KEY --replication-policy=automatic --project zvas-ai-image
+echo -n 'YOUR_GEMINI_API_KEY' | gcloud secrets versions add GEMINI_API_KEY --data-file=- --project zvas-ai-image
+```
+
+2. Cấp quyền cho runtime service account (ví dụ):
+
+- `217522553738-compute@developer.gserviceaccount.com`
+
+```bash
+gcloud secrets add-iam-policy-binding GEMINI_API_KEY \
+  --project zvas-ai-image \
+  --member="serviceAccount:217522553738-compute@developer.gserviceaccount.com" \
+  --role="roles/secretmanager.secretAccessor"
+```
+
+3. Deploy chỉ với Gemini secret:
+
+```bash
+gcloud run deploy ai-image-zvas \
+  --source . \
+  --region us-west1 \
+  --platform managed \
+  --allow-unauthenticated \
+  --update-secrets=GEMINI_API_KEY=GEMINI_API_KEY:latest \
+  --clear-base-image
+```
+
+4. Nếu service từng có OpenAI/Seedance env secret refs, cần remove trước:
+
+```bash
+gcloud run services update ai-image-zvas \
+  --region us-west1 \
+  --remove-secrets=OPENAI_API_KEY,SEEDANCE_API_KEY
+
+gcloud run services update ai-image-zvas \
+  --region us-west1 \
+  --remove-env-vars=OPENAI_API_KEY,SEEDANCE_API_KEY
+```
+
+#### Trường hợp B - nhiều API key (Gemini + OpenAI + Seedance)
+
+1. Tạo (hoặc rotate) đầy đủ secret versions:
+
+```bash
+echo -n 'YOUR_GEMINI_API_KEY' | gcloud secrets versions add GEMINI_API_KEY --data-file=- --project zvas-ai-image
+echo -n 'YOUR_OPENAI_API_KEY' | gcloud secrets versions add OPENAI_API_KEY --data-file=- --project zvas-ai-image
+echo -n 'YOUR_SEEDANCE_API_KEY' | gcloud secrets versions add SEEDANCE_API_KEY --data-file=- --project zvas-ai-image
+```
+
+2. Cấp `roles/secretmanager.secretAccessor` cho runtime service account trên cả 3 secret.
+
+3. Deploy với full secret mapping:
+
+```bash
+gcloud run deploy ai-image-zvas \
+  --source . \
+  --region us-west1 \
+  --platform managed \
+  --allow-unauthenticated \
+  --update-secrets=GEMINI_API_KEY=GEMINI_API_KEY:latest,OPENAI_API_KEY=OPENAI_API_KEY:latest,SEEDANCE_API_KEY=SEEDANCE_API_KEY:latest \
+  --clear-base-image
+```
+
+> Lưu ý: Nếu gặp lỗi `Permission denied on secret ...`, nguyên nhân thường là runtime service account chưa được grant `secretAccessor` trên đúng secret đó.
+
+### 9.6. Kiểm tra sau deploy (smoke test)
+
+1. Mở URL Cloud Run, hard refresh.
+2. Đăng nhập Google.
+3. Generate ảnh ở `Create`.
+4. Mở Analytics kiểm tra:
+  - KPI theo tháng load được.
+  - Bảng **Số ảnh đã tạo theo người dùng** lọc đúng theo `Month`.
+5. Đăng nhập user role `advice`:
+  - Chỉ xem được Analytics.
+  - Không thấy tab Người dùng / Cấu hình.
+
+### 9.7. Quan sát logs và rollback
+
+Xem logs Cloud Run:
+
+```bash
+gcloud logging read \
+  'resource.type="cloud_run_revision" AND resource.labels.service_name="ai-image-zvas"' \
+  --project zvas-ai-image \
+  --limit 100 \
+  --format="value(textPayload)"
+```
+
+Rollback revision nếu cần:
+
+```bash
+gcloud run revisions list --service ai-image-zvas --region us-west1
+gcloud run services update-traffic ai-image-zvas --region us-west1 --to-revisions=REVISION_NAME=100
+```
+
+---
+
+*Tài liệu cập nhật: tháng 5/2026 — phản ánh cấu trúc mã sau refactor (hooks, `lib/`, layout views), luồng API hiện tại, sơ đồ Mermaid (§2.4), và hướng dẫn live product end-to-end (§9).*
