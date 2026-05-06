@@ -6,7 +6,7 @@ interface StyleGuideViewerProps {
   onStyleSelect: (styleValue: string) => void;
 }
 
-const STYLE_GUIDE_IMAGE_URL = 'https://thanhnghiep.top/img5.jpg';
+const STYLE_GUIDE_IMAGE_URL = 'https://thanhnghiep.top/CVMatcher/styleai.jpg';
 
 /**
  * Configuration for the 6-column grid layout of the 23 styles.
