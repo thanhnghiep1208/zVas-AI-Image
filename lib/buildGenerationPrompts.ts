@@ -1,4 +1,5 @@
 import { BACKGROUND_PROMPT_MAP, PROMPT_OPTIONS_MAP } from '../constants/promptModifiers';
+import { findAiStyleBySelection } from './styleLibrary';
 
 export interface PromptPipelineSlice {
   styleSimplified: boolean;
@@ -32,7 +33,15 @@ export function buildFinalPrompts(params: BuildFinalPromptsParams): string[] {
   return activePrompts.map((prompt) => {
     let finalPrompt = prompt.trim();
 
-    if (selectedStyle) {
+    const mappedStyle = findAiStyleBySelection(selectedStyle);
+
+    if (mappedStyle) {
+      finalPrompt = finalPrompt.replace(/,+$/, '').trim();
+      finalPrompt += `, ${mappedStyle.prompt}`;
+      if (mappedStyle.negative_prompt) {
+        finalPrompt += `, avoid: ${mappedStyle.negative_prompt}`;
+      }
+    } else if (selectedStyle) {
       const parts = selectedStyle.split(':');
       const category = parts.length > 1 ? parts[0] : 'Style';
       const styleName = parts.length > 1 ? parts[1] : parts[0];

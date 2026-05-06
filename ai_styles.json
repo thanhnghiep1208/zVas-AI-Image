@@ -1,0 +1,301 @@
+[
+  {
+    "id": "photorealistic",
+    "name": "Photorealistic",
+    "category": "Photography",
+    "emoji": "📸",
+    "prompt": "ultra-realistic photograph, shot on Sony A7R IV, 85mm f/1.4 lens, natural lighting, sharp focus, high dynamic range, photojournalism quality, 8K resolution",
+    "negative_prompt": "painting, illustration, cartoon, sketch, 3d render, anime, watercolor, blurry, oversaturated",
+    "params": {
+      "steps": 30,
+      "cfg_scale": 7,
+      "sampler": "DPM++ 2M Karras"
+    }
+  },
+  {
+    "id": "modern_brutalist",
+    "name": "Modern Brutalist",
+    "category": "Architecture",
+    "emoji": "🏗️",
+    "prompt": "modern brutalist interior design, raw concrete textures, geometric minimalism, muted earth tones, dramatic shadows, architectural photography, editorial quality, high contrast",
+    "negative_prompt": "ornate, colorful, decorative, traditional, warm lighting, organic shapes",
+    "params": {
+      "steps": 28,
+      "cfg_scale": 8,
+      "sampler": "Euler a"
+    }
+  },
+  {
+    "id": "geometric_3d",
+    "name": "Geometric 3D",
+    "category": "3D / CGI",
+    "emoji": "🟤",
+    "prompt": "clean geometric 3D render, soft pastel colors, smooth surfaces, studio lighting with soft shadows, product visualization style, Blender octane render, minimal background",
+    "negative_prompt": "realistic, photorealistic, hand-drawn, sketch, noise, texture, complex background",
+    "params": {
+      "steps": 25,
+      "cfg_scale": 7.5,
+      "sampler": "DPM++ 2M"
+    }
+  },
+  {
+    "id": "surrealism",
+    "name": "Surrealism",
+    "category": "Artistic",
+    "emoji": "🌀",
+    "prompt": "surrealist digital painting, dreamlike atmosphere, impossible architecture, cinematic mist, fantasy elements, lush ethereal lighting, detailed environment, Salvador Dali inspired",
+    "negative_prompt": "realistic, plain, simple background, cartoonish, flat design, anime",
+    "params": {
+      "steps": 35,
+      "cfg_scale": 9,
+      "sampler": "DPM++ 2M Karras"
+    }
+  },
+  {
+    "id": "whimsical_3d",
+    "name": "Whimsical 3D",
+    "category": "3D / CGI",
+    "emoji": "🎀",
+    "prompt": "cute whimsical 3D render, soft rounded shapes, pastel color palette, playful composition, toy-like materials, warm studio lighting, Pixar inspired aesthetic, clean background",
+    "negative_prompt": "dark, gritty, realistic, sharp edges, horror, adult, complex",
+    "params": {
+      "steps": 25,
+      "cfg_scale": 7,
+      "sampler": "Euler a"
+    }
+  },
+  {
+    "id": "neon_art",
+    "name": "Neon Art",
+    "category": "Digital Art",
+    "emoji": "🌈",
+    "prompt": "neon light art, glowing multicolor neon tubes, dark background, long exposure effect, vibrant electric colors, bokeh reflections, urban night aesthetic, ultra sharp",
+    "negative_prompt": "daytime, soft colors, muted, pastel, watercolor, natural lighting, blurry",
+    "params": {
+      "steps": 30,
+      "cfg_scale": 8.5,
+      "sampler": "DPM++ SDE"
+    }
+  },
+  {
+    "id": "cyberpunk",
+    "name": "Cyberpunk",
+    "category": "Sci-Fi",
+    "emoji": "🤖",
+    "prompt": "cyberpunk cityscape, neon-lit streets, rain-soaked reflections, dense urban megastructure, holographic ads, dark dystopian atmosphere, cinematic lighting, ultra-detailed",
+    "negative_prompt": "daytime, nature, bright cheerful, simple, retro, low tech",
+    "params": {
+      "steps": 35,
+      "cfg_scale": 9,
+      "sampler": "DPM++ 2M Karras"
+    }
+  },
+  {
+    "id": "cinematic",
+    "name": "Cinematic",
+    "category": "Photography",
+    "emoji": "🎬",
+    "prompt": "cinematic film still, anamorphic lens flare, color graded with teal and orange LUT, dramatic volumetric lighting, shallow depth of field, movie scene composition, 35mm film grain",
+    "negative_prompt": "animation, cartoon, anime, flat, bright, oversaturated, digital art",
+    "params": {
+      "steps": 30,
+      "cfg_scale": 8,
+      "sampler": "DPM++ 2M"
+    }
+  },
+  {
+    "id": "anime",
+    "name": "Anime",
+    "category": "Illustration",
+    "emoji": "✨",
+    "prompt": "high quality anime illustration, detailed cel shading, vibrant colors, expressive characters, dynamic composition, studio Ghibli inspired background, clean linework, manga-style",
+    "negative_prompt": "photorealistic, 3D render, western cartoon, sketch, rough lines, dark, gritty",
+    "params": {
+      "steps": 28,
+      "cfg_scale": 7.5,
+      "sampler": "Euler a"
+    }
+  },
+  {
+    "id": "flat_design",
+    "name": "Flat Design",
+    "category": "Illustration",
+    "emoji": "🎨",
+    "prompt": "flat design vector illustration, bold solid colors, minimal geometric shapes, clean composition, modern UI-friendly style, no gradients, white space, editorial illustration",
+    "negative_prompt": "gradient, shadow, 3D, texture, realistic, detailed, complex, dark background",
+    "params": {
+      "steps": 20,
+      "cfg_scale": 7,
+      "sampler": "DDIM"
+    }
+  },
+  {
+    "id": "isometric_3d",
+    "name": "Isometric 3D",
+    "category": "3D / CGI",
+    "emoji": "📦",
+    "prompt": "isometric 3D scene, clean geometric objects, pastel and muted color palette, equal lighting, top-down 45° view, product design aesthetic, Blender render, minimal shadows",
+    "negative_prompt": "perspective distortion, dark, gritty, realistic, cluttered, organic shapes",
+    "params": {
+      "steps": 25,
+      "cfg_scale": 7.5,
+      "sampler": "DPM++ 2M"
+    }
+  },
+  {
+    "id": "retro_print",
+    "name": "Retro Print",
+    "category": "Artistic",
+    "emoji": "🖼️",
+    "prompt": "retro vintage print illustration, risograph texture, bold outlines, limited color palette, 1960s-70s graphic design aesthetic, grain texture overlay, editorial poster style",
+    "negative_prompt": "digital clean, modern, photorealistic, 3D, anime, gradient, glossy",
+    "params": {
+      "steps": 28,
+      "cfg_scale": 8,
+      "sampler": "Euler a"
+    }
+  },
+  {
+    "id": "synthwave",
+    "name": "Synthwave",
+    "category": "Sci-Fi",
+    "emoji": "🌅",
+    "prompt": "synthwave retrowave aesthetic, purple and pink gradient sky, chrome grid floor, neon sun, palm tree silhouettes, 80s retro futurism, glowing outlines, vaporwave vibes",
+    "negative_prompt": "realistic, photographic, anime, flat, daylight, modern, natural",
+    "params": {
+      "steps": 30,
+      "cfg_scale": 8.5,
+      "sampler": "DPM++ 2M Karras"
+    }
+  },
+  {
+    "id": "pixel_art",
+    "name": "Pixel Art",
+    "category": "Digital Art",
+    "emoji": "👾",
+    "prompt": "detailed pixel art scene, 16-bit RPG style, warm color palette, dithering technique, retro game aesthetic, 64x64 base resolution upscaled",
+    "negative_prompt": "smooth, anti-aliased, photorealistic, 3D, painterly, vector, blurry",
+    "params": {
+      "steps": 25,
+      "cfg_scale": 7,
+      "sampler": "DDIM"
+    }
+  },
+  {
+    "id": "sketch",
+    "name": "Sketch",
+    "category": "Illustration",
+    "emoji": "✏️",
+    "prompt": "architectural pencil sketch, clean linework, cross-hatching shading technique, white paper background, technical drawing precision, hand-drawn aesthetic, graphite pencil texture",
+    "negative_prompt": "color, painted, digital, smooth, photorealistic, 3D, anime, watercolor",
+    "params": {
+      "steps": 25,
+      "cfg_scale": 8,
+      "sampler": "Euler a"
+    }
+  },
+  {
+    "id": "diorama",
+    "name": "Diorama",
+    "category": "3D / CGI",
+    "emoji": "🏠",
+    "prompt": "miniature diorama photography, tilt-shift lens effect, tiny scale model, realistic textures and materials, selective focus blur edges, architectural model, warm ambient lighting",
+    "negative_prompt": "full scale, flat, illustration, cartoon, dark, gloomy, photojournalism",
+    "params": {
+      "steps": 30,
+      "cfg_scale": 7.5,
+      "sampler": "DPM++ 2M"
+    }
+  },
+  {
+    "id": "low_poly",
+    "name": "Low Poly",
+    "category": "3D / CGI",
+    "emoji": "🔷",
+    "prompt": "low poly 3D render, geometric faceted surfaces, cool blue-gray color scheme, clean polygonal mesh, minimal scene, flat ambient lighting, no texture mapping",
+    "negative_prompt": "high poly, smooth surface, photorealistic, painted, sketchy, dark, complex",
+    "params": {
+      "steps": 22,
+      "cfg_scale": 7,
+      "sampler": "DDIM"
+    }
+  },
+  {
+    "id": "doodle",
+    "name": "Doodle",
+    "category": "Illustration",
+    "emoji": "🖊️",
+    "prompt": "hand-drawn doodle illustration, black ink linework, whimsical cartoon figures, dense pattern fill, zine aesthetic, marker pen texture, busy expressive composition",
+    "negative_prompt": "color photography, 3D, photorealistic, clean digital, anime, smooth, gradient",
+    "params": {
+      "steps": 25,
+      "cfg_scale": 8,
+      "sampler": "Euler a"
+    }
+  },
+  {
+    "id": "3d_pixel",
+    "name": "3D Pixel",
+    "category": "Digital Art",
+    "emoji": "🟩",
+    "prompt": "voxel art 3D render, Minecraft-inspired style, colorful block construction, isometric view, clean voxel resolution, cute character or object, white studio background",
+    "negative_prompt": "smooth surfaces, anti-aliased, photorealistic, hand-drawn, sketch, 2D flat",
+    "params": {
+      "steps": 25,
+      "cfg_scale": 7.5,
+      "sampler": "DPM++ 2M"
+    }
+  },
+  {
+    "id": "manga_ink",
+    "name": "Manga Ink",
+    "category": "Illustration",
+    "emoji": "⚫",
+    "prompt": "manga ink illustration, dramatic black and white contrast, bold inking with screen tone shading, dynamic action pose, Japanese comic style, expressive face, cross-hatching",
+    "negative_prompt": "color, photorealistic, 3D render, western cartoon, anime color, pastel, soft",
+    "params": {
+      "steps": 28,
+      "cfg_scale": 8.5,
+      "sampler": "Euler a"
+    }
+  },
+  {
+    "id": "watercolor",
+    "name": "Watercolor",
+    "category": "Artistic",
+    "emoji": "🎨",
+    "prompt": "expressive watercolor painting, loose wet-on-wet technique, vibrant color bleed, white paper grain showing through, impressionistic brushwork, botanical illustration style",
+    "negative_prompt": "photorealistic, digital, 3D, flat design, sharp edges, anime, cartoonish",
+    "params": {
+      "steps": 28,
+      "cfg_scale": 7.5,
+      "sampler": "DPM++ SDE"
+    }
+  },
+  {
+    "id": "oil_painting",
+    "name": "Oil Painting",
+    "category": "Artistic",
+    "emoji": "🖌️",
+    "prompt": "dramatic oil painting, thick impasto texture, rich jewel-tone palette, chiaroscuro lighting, old masters technique, canvas texture visible, fine art museum quality",
+    "negative_prompt": "digital, flat, cartoon, anime, sketch, 3D, photographic, watercolor",
+    "params": {
+      "steps": 35,
+      "cfg_scale": 8,
+      "sampler": "DPM++ 2M Karras"
+    }
+  },
+  {
+    "id": "scribble_sketch",
+    "name": "Scribble Sketch",
+    "category": "Illustration",
+    "emoji": "〰️",
+    "prompt": "expressive scribble sketch portrait, loose gestural linework, chaotic overlapping strokes, charcoal and graphite texture, raw unfinished aesthetic, cross-contour drawing technique",
+    "negative_prompt": "clean, polished, color, 3D, photorealistic, digital, anime, precise lines",
+    "params": {
+      "steps": 25,
+      "cfg_scale": 8,
+      "sampler": "Euler a"
+    }
+  }
+]
