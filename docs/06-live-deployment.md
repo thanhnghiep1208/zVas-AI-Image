@@ -13,6 +13,15 @@ npm run build
 - `firebase.json`
 - `.firebaserc`
 - `firestore.indexes.json`
+- **`firebase-applet-config.json`** trên máy (sao chép từ `firebase-applet-config.example.json`, **không** commit Git). File này cần cho `npm run build` (Vite) và `server.ts` (Admin `projectId` / database).
+
+### Gói nguồn Cloud Build và `.gcloudignore`
+
+`gcloud run deploy --source .` đóng gói theo **`.gcloudignore`** (nếu không có thì mặc định bám **`.gitignore`**). Vì `firebase-applet-config.json` nằm trong `.gitignore`, nếu không có `.gcloudignore` riêng thì file **không được upload** → Docker `COPY firebase-applet-config.json` **lỗi build**.
+
+Repo có **`.gcloudignore`**: giống `.gitignore` nhưng **không** loại trừ `firebase-applet-config.json`, để khi deploy từ máy đã có file thì build thành công.
+
+Deploy từ **clone sạch** (không có file): tạo `firebase-applet-config.json` trước, hoặc dùng Cloud Build + Secret Manager để ghi file trước bước `docker build` (tùy pipeline).
 
 ## 2) Deploy Firestore rules + indexes
 
