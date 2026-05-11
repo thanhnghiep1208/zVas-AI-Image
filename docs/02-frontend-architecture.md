@@ -55,14 +55,14 @@
 
 ```mermaid
 flowchart LR
-  subgraph browser [Browser - React]
+  subgraph browser["Browser (React)"]
     App[App.tsx]
     Hooks[hooks/*]
     App --> Hooks
   end
 
-  subgraph server [Node - Express]
-    API[/api/rate-limit + /api/generate]
+  subgraph server["Node (Express)"]
+    API["API: /api/rate-limit + /api/generate"]
   end
 
   browser -->|Bearer token + payload| API
