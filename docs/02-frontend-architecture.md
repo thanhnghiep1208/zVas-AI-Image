@@ -30,10 +30,10 @@
 
 ## Custom hooks chính
 
-- `useAuthAndProfile`: đồng bộ Firebase user profile.
-- `useGlobalSettingsAndApiKey`: đọc settings/model/provider hiệu lực.
+- `useAuthAndProfile`: profile `users/{uid}` bằng **`getDoc`** + refetch theo chu kỳ / khi quay lại tab (không `onSnapshot`).
+- `useGlobalSettingsAndApiKey`: `settings/global` bằng **`getDoc`** + refetch theo chu kỳ / visibility (không listener liên tục).
 - `useHistoryImages`: đồng bộ history + IndexedDB.
-- `usePendingUsersNotifier`: cảnh báo pending users cho admin.
+- `usePendingUsersNotifier`: admin — **`getCountFromServer`** theo chu kỳ + toast khi số pending tăng.
 - `useImageGeneration`: pipeline generate + persist + optimistic update; export thêm `resetGenerationWorkspace()` (tắt loading, xóa ảnh vừa tạo trên UI).
 - `useGeneratedImageDownload`: tải PNG/JPG + xử lý nền.
 
@@ -45,7 +45,7 @@
 
 ## Cấu hình Firebase client (local, không commit)
 
-- File **`firebase-applet-config.json`** có trong `.gitignore`; trong repo chỉ giữ **`firebase-applet-config.example.json`** làm mẫu.
+- File `firebase-applet-config.json` có trong `.gitignore`; trong repo chỉ giữ `firebase-applet-config.example.json` làm mẫu.
 - Sau khi clone: sao chép example → `firebase-applet-config.json` rồi điền `projectId`, `apiKey`, `firestoreDatabaseId`, v.v. File này được `import` trong `firebase.ts` (bundle Vite) và đọc trong `server.ts` (Firebase Admin: `projectId` + database).
 - **Docker / CI:** trước `docker build` cần đặt `firebase-applet-config.json` trong ngữ cảnh build (secret CI hoặc bước generate từ biến môi trường của bạn) — không lấy từ Git.
 
@@ -99,12 +99,19 @@ flowchart TD
 ## Banner “Chào bạn!” (Create)
 
 - File: `components/views/CreateView.tsx`.
-- Có nút đóng (X); khi đóng, ghi `localStorage` key `**zvas-create-welcome-dismissed`** = `'1'` — lần sau vào màn create banner không hiện (chỉ trên cùng origin/trình duyệt).
+- Có nút đóng (X); khi đóng, ghi `localStorage` key `zvas-create-welcome-dismissed` = `'1'` — lần sau vào màn create banner không hiện (chỉ trên cùng origin/trình duyệt).
 - Logo làm mới vùng làm việc **không** xóa key này (user vẫn giữ lựa chọn đã đóng banner).
 
 ## Upload & kết quả
 
-- `**ImageUploader`:** prop tùy chọn `showLabel` (mặc định `true`). Ở **Multiple** truyền `showLabel={false}` vì section cha đã có tiêu đề “Hình ảnh gốc”.
-- `**ReferenceImageUploader`:** cùng ngôn ngữ giao diện (kính, dashed “Thêm ảnh”, drag highlight); prop `showLabel` tương tự nếu cần tái sử dụng.
-- `**ResultsDisplay`:** empty/loading bằng tiếng Việt; thẻ ảnh bo lớn, nút “Dùng làm ảnh gốc”, “Tách nền”; lỗi generate hiển thị dạng thân thiện.
+- **`ImageUploader`:** prop tùy chọn `showLabel` (mặc định `true`). Ở **Multiple** truyền `showLabel={false}` vì section cha đã có tiêu đề “Hình ảnh gốc”.
+- **`ReferenceImageUploader`:** cùng ngôn ngữ giao diện (kính, dashed “Thêm ảnh”, drag highlight); prop `showLabel` tương tự nếu cần tái sử dụng.
+- **`ResultsDisplay`:** empty/loading bằng tiếng Việt; thẻ ảnh bo lớn, nút “Dùng làm ảnh gốc”, “Tách nền”; lỗi generate hiển thị dạng thân thiện.
 
+## Firestore — giảm đọc (Admin / Analytics)
+
+- **`AdminDashboard`:** danh sách `users` bằng **`getDocs`** khi mở / sau thao tác; modal lịch sử user: **`getDocs`** (50 mục), không `onSnapshot`. **`React.lazy`** + **`Suspense`** cho `AnalyticsDashboard` (chunk tách khi mở tab Analytics).
+- **`App.tsx`:** **`React.lazy`** + **`Suspense`** cho `AdminDashboard` — giảm JS ban đầu cho user không mở admin.
+- **`AnalyticsDashboard`:** bundle tháng qua **`loadMonthlyDashboardBundle`** (một lần quét `analytics_events` tháng hiện tại + tháng trước + `monthly_costs`, hoặc doc rollup `analytics_monthly_rollups/{YYYY-MM}` nếu có); cache **`sessionStorage`** TTL 15 phút; biểu đồ xu hướng mount khi gần viewport (**IntersectionObserver**).
+- **`UserHistoryCountsPanel`:** **`getDocs(users)`** + đếm `history` theo tháng: ưu tiên doc **`stats_by_user_month/{YYYY-MM}`** nếu tồn tại; không thì **pagination** `getDocs` + `orderBy(createdAt)` + `startAfter`.
+- **`analytics_events`:** repository đọc theo trang (**`limit` + `startAfter`**, `ANALYTICS_EVENTS_PAGE_SIZE`), tránh một response quá lớn.
