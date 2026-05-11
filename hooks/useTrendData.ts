@@ -23,6 +23,15 @@ interface AnalyticsEventDoc {
   timestamp?: { toDate?: () => Date } | Date | null;
 }
 
+type CachedEventsEntry = {
+  savedAt: number;
+  data: AnalyticsEventDoc[];
+  pending?: Promise<AnalyticsEventDoc[]>;
+};
+
+const TREND_CACHE_TTL_MS = 15 * 60 * 1000;
+const trendEventsCache = new Map<string, CachedEventsEntry>();
+
 const toDate = (timestamp: AnalyticsEventDoc['timestamp']): Date | null => {
   if (!timestamp) return null;
   if (timestamp instanceof Date) return timestamp;
@@ -48,7 +57,6 @@ const formatWeekLabel = (date: Date): string =>
   `Wk ${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
 
 export const useTrendData = (metric: string, range: TrendRange): UseTrendDataResult => {
-  const TREND_CACHE_TTL_MS = 15 * 60 * 1000;
   const [data, setData] = useState<TrendPoint[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -88,10 +96,31 @@ export const useTrendData = (metric: string, range: TrendRange): UseTrendDataRes
           startDate.setDate(startDate.getDate() - 7 * 7);
         }
 
-        const events = (await getAnalyticsEventsByDateRange(
-          startDate,
-          new Date(now.getTime() + 1)
-        )) as AnalyticsEventDoc[];
+        const eventsCacheKey = `trend_events_${range}_${todayKey}`;
+        const nowMs = Date.now();
+        const cachedEvents = trendEventsCache.get(eventsCacheKey);
+        let events: AnalyticsEventDoc[];
+
+        if (cachedEvents && nowMs - cachedEvents.savedAt <= TREND_CACHE_TTL_MS && cachedEvents.data.length > 0) {
+          events = cachedEvents.data;
+        } else if (cachedEvents?.pending) {
+          events = await cachedEvents.pending;
+        } else {
+          const pending = (getAnalyticsEventsByDateRange(
+            startDate,
+            new Date(now.getTime() + 1)
+          ) as Promise<AnalyticsEventDoc[]>);
+          trendEventsCache.set(eventsCacheKey, {
+            savedAt: nowMs,
+            data: [],
+            pending,
+          });
+          events = await pending;
+          trendEventsCache.set(eventsCacheKey, {
+            savedAt: Date.now(),
+            data: events,
+          });
+        }
 
         if (range === '30d') {
           const dayMap = new Map<string, number>();

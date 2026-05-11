@@ -9,7 +9,7 @@ export interface GeneratedImageDownloadPromptOptions {
 export interface UseGeneratedImageDownloadParams {
   backgroundStyle: string;
   promptOptions: GeneratedImageDownloadPromptOptions;
-  onDownloadTracked?: () => void;
+  onDownloadTracked?: (meta: { exportType: 'jpg' | 'png'; removeBackground: boolean }) => void;
 }
 
 export function useGeneratedImageDownload({
@@ -22,8 +22,6 @@ export function useGeneratedImageDownload({
       imageToDownload: GeneratedImage,
       options?: { forceTransparent?: boolean; forceRemoveBackground?: boolean }
     ) => {
-      onDownloadTracked?.();
-
       const img = new Image();
       img.crossOrigin = 'anonymous';
       img.onload = () => {
@@ -175,6 +173,10 @@ export function useGeneratedImageDownload({
         const outputUrl = shouldExportTransparentPng
           ? canvas.toDataURL('image/png')
           : canvas.toDataURL('image/jpeg', 0.92);
+        onDownloadTracked?.({
+          exportType: shouldExportTransparentPng ? 'png' : 'jpg',
+          removeBackground: Boolean(shouldExportTransparentPng && (options?.forceRemoveBackground || promptOptions.forceRemoveBackground)),
+        });
         const link = document.createElement('a');
         link.href = outputUrl;
         const sanitizedPrompt = imageToDownload.prompt.replace(/[^a-z0-9]/gi, '_').toLowerCase();

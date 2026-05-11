@@ -36,7 +36,7 @@ function HistoryDisplayInner({ images, onImageSelect, onUseAsInput, onDownload, 
       <div className="flex-1 flex space-x-3 overflow-x-auto custom-scrollbar pb-2 px-1">
         {images.map((image, index) => (
           <div 
-            key={`${index}-${image.prompt.slice(0, 10)}`}
+            key={`${image.imageUrl}-${image.prompt}`}
             className="flex-shrink-0 group relative w-24 h-full bg-black rounded-md overflow-hidden border border-gray-700 hover:border-cyan-500 transition-all cursor-pointer shadow-lg [content-visibility:auto] [contain-intrinsic-size:96px_64px]"
           >
             <img 

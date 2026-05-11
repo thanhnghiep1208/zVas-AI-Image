@@ -24,7 +24,7 @@
 
 - Chỉ xem Analytics dashboard.
 - Không quản lý user, không sửa settings/costs.
-- Được đọc `analytics_events`, `monthly_costs`, `users`, `history` theo rules hiện tại để hiển thị dashboard.
+- Được đọc `analytics_events`, `analytics_monthly_rollups`, `monthly_costs`, `users`, `history` theo rules hiện tại để hiển thị dashboard.
 
 ### `editor`
 

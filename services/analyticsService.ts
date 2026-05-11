@@ -27,11 +27,46 @@ export interface AnalyticsEventPayload {
   total_tokens?: number;
   status?: string;
   error_code?: string;
+  error_message_short?: string;
+  export_type?: 'jpg' | 'png';
+  remove_background?: boolean;
+}
+
+const MAX_ERROR_CODE_LENGTH = 96;
+const MAX_ERROR_MESSAGE_LENGTH = 280;
+
+function normalizeErrorCode(raw: unknown): string {
+  const text = String(raw ?? '').toLowerCase();
+  if (!text) return 'unknown_error';
+  if (text.includes('permission_denied') || text.includes('missing or insufficient permissions')) return 'permission_denied';
+  if (text.includes('timeout') || text.includes('deadline exceeded') || text.includes('timed out')) return 'timeout';
+  if (text.includes('invalid') || text.includes('prompt')) return 'invalid_prompt';
+  if (text.includes('filter') || text.includes('safety')) return 'content_filter';
+  if (text.includes('quota') || text.includes('rate limit') || text.includes('too many requests')) return 'rate_limit';
+  if (text.includes('auth') || text.includes('api_key') || text.includes('unregistered callers')) return 'auth_error';
+  return text.replace(/[^a-z0-9_]+/g, '_').slice(0, MAX_ERROR_CODE_LENGTH) || 'unknown_error';
+}
+
+function sanitizePayload(eventName: AnalyticsEventName, payload: AnalyticsEventPayload): AnalyticsEventPayload {
+  const sanitized: AnalyticsEventPayload = { ...payload };
+
+  if (eventName === 'image_generation_failed') {
+    const raw = payload.error_code;
+    sanitized.error_code = normalizeErrorCode(raw);
+    sanitized.error_message_short = String(raw ?? '').slice(0, MAX_ERROR_MESSAGE_LENGTH);
+  }
+
+  if (eventName === 'image_downloaded') {
+    sanitized.image_count = payload.image_count ?? 1;
+  }
+
+  return sanitized;
 }
 
 export const trackEvent = async (eventName: AnalyticsEventName, payload: AnalyticsEventPayload) => {
   try {
-    await addAnalyticsEvent(eventName, payload as unknown as Record<string, unknown>);
+    const sanitizedPayload = sanitizePayload(eventName, payload);
+    await addAnalyticsEvent(eventName, sanitizedPayload as unknown as Record<string, unknown>);
   } catch (error) {
     console.error('Failed to track analytics event:', error);
   }

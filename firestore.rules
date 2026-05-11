@@ -107,6 +107,13 @@ service cloud.firestore {
       allow read: if canViewAnalyticsDashboard();
     }
 
+    // Dashboard v2 đọc rollup theo tháng từ analytics_monthly_rollups/{YYYY-MM}
+    match /analytics_monthly_rollups/{monthId} {
+      allow read: if canViewAnalyticsDashboard();
+      // Rollup được ghi bởi backend job (Admin SDK bypass rules), chặn client-side writes.
+      allow write: if false;
+    }
+
     match /monthly_costs/{monthId} {
       allow read: if canViewAnalyticsDashboard();
       allow write: if isAdmin();

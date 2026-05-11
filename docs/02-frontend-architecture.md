@@ -30,10 +30,10 @@
 
 ## Custom hooks chính
 
-- `useAuthAndProfile`: profile `users/{uid}` bằng **`getDoc`** + refetch theo chu kỳ / khi quay lại tab (không `onSnapshot`).
-- `useGlobalSettingsAndApiKey`: `settings/global` bằng **`getDoc`** + refetch theo chu kỳ / visibility (không listener liên tục).
+- `useAuthAndProfile`: profile `users/{uid}` bằng `**getDoc**` + refetch theo chu kỳ / khi quay lại tab (không `onSnapshot`).
+- `useGlobalSettingsAndApiKey`: `settings/global` bằng `**getDoc**` + refetch theo chu kỳ / visibility (không listener liên tục).
 - `useHistoryImages`: đồng bộ history + IndexedDB.
-- `usePendingUsersNotifier`: admin — **`getCountFromServer`** theo chu kỳ + toast khi số pending tăng.
+- `usePendingUsersNotifier`: admin — `**getCountFromServer**` theo chu kỳ + toast khi số pending tăng.
 - `useImageGeneration`: pipeline generate + persist + optimistic update; export thêm `resetGenerationWorkspace()` (tắt loading, xóa ảnh vừa tạo trên UI).
 - `useGeneratedImageDownload`: tải PNG/JPG + xử lý nền.
 
@@ -104,14 +104,17 @@ flowchart TD
 
 ## Upload & kết quả
 
-- **`ImageUploader`:** prop tùy chọn `showLabel` (mặc định `true`). Ở **Multiple** truyền `showLabel={false}` vì section cha đã có tiêu đề “Hình ảnh gốc”.
-- **`ReferenceImageUploader`:** cùng ngôn ngữ giao diện (kính, dashed “Thêm ảnh”, drag highlight); prop `showLabel` tương tự nếu cần tái sử dụng.
-- **`ResultsDisplay`:** empty/loading bằng tiếng Việt; thẻ ảnh bo lớn, nút “Dùng làm ảnh gốc”, “Tách nền”; lỗi generate hiển thị dạng thân thiện.
+- `**ImageUploader`:** prop tùy chọn `showLabel` (mặc định `true`). Ở **Multiple** truyền `showLabel={false}` vì section cha đã có tiêu đề “Hình ảnh gốc”.
+- `**ReferenceImageUploader`:** cùng ngôn ngữ giao diện (kính, dashed “Thêm ảnh”, drag highlight); prop `showLabel` tương tự nếu cần tái sử dụng.
+- `**ResultsDisplay`:** empty/loading bằng tiếng Việt; thẻ ảnh bo lớn, nút “Dùng làm ảnh gốc”, “Tách nền”; lỗi generate hiển thị dạng thân thiện.
 
 ## Firestore — giảm đọc (Admin / Analytics)
 
-- **`AdminDashboard`:** danh sách `users` bằng **`getDocs`** khi mở / sau thao tác; modal lịch sử user: **`getDocs`** (50 mục), không `onSnapshot`. **`React.lazy`** + **`Suspense`** cho `AnalyticsDashboard` (chunk tách khi mở tab Analytics).
-- **`App.tsx`:** **`React.lazy`** + **`Suspense`** cho `AdminDashboard` — giảm JS ban đầu cho user không mở admin.
-- **`AnalyticsDashboard`:** bundle tháng qua **`loadMonthlyDashboardBundle`** (một lần quét `analytics_events` tháng hiện tại + tháng trước + `monthly_costs`, hoặc doc rollup `analytics_monthly_rollups/{YYYY-MM}` nếu có); cache **`sessionStorage`** TTL 15 phút; biểu đồ xu hướng mount khi gần viewport (**IntersectionObserver**).
-- **`UserHistoryCountsPanel`:** **`getDocs(users)`** + đếm `history` theo tháng: ưu tiên doc **`stats_by_user_month/{YYYY-MM}`** nếu tồn tại; không thì **pagination** `getDocs` + `orderBy(createdAt)` + `startAfter`.
-- **`analytics_events`:** repository đọc theo trang (**`limit` + `startAfter`**, `ANALYTICS_EVENTS_PAGE_SIZE`), tránh một response quá lớn.
+- `**AdminDashboard`:** danh sách `users` bằng `**getDocs`** khi mở / sau thao tác; modal lịch sử user: `**getDocs`** (50 mục), không `onSnapshot`. `**React.lazy`** + `**Suspense`** cho `AnalyticsDashboard` (chunk tách khi mở tab Analytics).
+- `**App.tsx`:** `**React.lazy`** + `**Suspense`** cho `AdminDashboard` — giảm JS ban đầu cho user không mở admin.
+- `**AnalyticsDashboard`:** không auto-fetch khi mở trang/đổi tháng. Chỉ đọc Firestore khi user bấm nút **Yêu cầu dữ liệu**; sau đó cache `**sessionStorage`** TTL 15 phút theo `monthKey`.
+- `**DeferredTrendsSection`:** mount theo `requestVersion` (sau khi bấm **Yêu cầu dữ liệu**) để tránh query ngầm trước khi user yêu cầu.
+- `**useTrendData`:** thêm cache events dùng chung theo `range + ngày` (in-memory + pending promise dedupe) để đổi metric không lặp lại read cùng tập `analytics_events`.
+- `**UserHistoryCountsPanel`:** `**getDocs(users)`** + đếm `history` theo tháng: ưu tiên doc `**stats_by_user_month/{YYYY-MM}`**; nếu thiếu thì **không auto quét history**, chỉ quét khi user bấm **Cập nhật số ảnh**.
+- `**analytics_events`:** repository đọc theo trang (`**limit` + `startAfter`**, `ANALYTICS_EVENTS_PAGE_SIZE`) và hạn chế quét lặp bằng cache tầng hook.
+

@@ -62,6 +62,41 @@ export function useImageGeneration(params: UseImageGenerationParams) {
   const [isLoading, setIsLoading] = useState(false);
   const [generatedImages, setGeneratedImages] = useState<GeneratedImage[]>([]);
 
+  const getFriendlyErrorMessage = useCallback((rawError: string): string => {
+    const normalized = rawError.toLowerCase();
+    if (
+      normalized.includes('permission_denied') ||
+      normalized.includes('missing or insufficient permissions') ||
+      normalized.includes('403') ||
+      normalized.includes('unregistered callers') ||
+      normalized.includes('api_key_invalid') ||
+      normalized.includes('identity')
+    ) {
+      return 'Bạn chưa có quyền truy cập hoặc API key chưa hợp lệ. Vui lòng kiểm tra đăng nhập và cấu hình API.';
+    }
+    if (
+      normalized.includes('timeout') ||
+      normalized.includes('deadline exceeded') ||
+      normalized.includes('timed out')
+    ) {
+      return 'Hệ thống đang phản hồi chậm. Vui lòng thử lại sau ít phút.';
+    }
+    if (
+      normalized.includes('rate limit') ||
+      normalized.includes('too many requests') ||
+      normalized.includes('quota')
+    ) {
+      return 'Bạn đang thao tác quá nhanh hoặc đã chạm giới hạn tạm thời. Vui lòng đợi rồi thử lại.';
+    }
+    if (normalized.includes('filter') || normalized.includes('safety')) {
+      return 'Nội dung prompt bị bộ lọc an toàn chặn. Vui lòng chỉnh lại mô tả.';
+    }
+    if (normalized.includes('invalid') || normalized.includes('prompt')) {
+      return 'Prompt chưa hợp lệ. Vui lòng kiểm tra và thử lại.';
+    }
+    return 'Đã xảy ra lỗi khi tạo ảnh. Vui lòng thử lại.';
+  }, []);
+
   useEffect(() => {
     if (!user) {
       setGeneratedImages([]);
@@ -217,7 +252,7 @@ export function useImageGeneration(params: UseImageGenerationParams) {
         errorMessage = JSON.stringify(err);
       }
 
-      setError(errorMessage);
+      setError(getFriendlyErrorMessage(errorMessage));
 
       if (user) {
         trackEvent('image_generation_failed', {

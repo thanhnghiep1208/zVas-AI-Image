@@ -32,6 +32,8 @@ export interface AppHeaderProps {
   onOpenAdminUsers: () => void;
   /** Role `advice`: mở dashboard chỉ tab Analytics */
   onOpenAdminAnalytics: () => void;
+  /** Preload dashboard chunk trên hover/focus để mở mượt lần đầu. */
+  onPrefetchAdminDashboard: () => void;
   getEffectiveModel: () => string;
   getProviderKey: () => string;
   onModelPreferenceChange: (model: string) => void;
@@ -50,6 +52,7 @@ function AppHeaderComponent({
   onOpenAdminSettings,
   onOpenAdminUsers,
   onOpenAdminAnalytics,
+  onPrefetchAdminDashboard,
   getEffectiveModel,
   getProviderKey,
   onModelPreferenceChange,
@@ -136,6 +139,8 @@ function AppHeaderComponent({
             <button
               type="button"
               onClick={onOpenAdminSettings}
+              onMouseEnter={onPrefetchAdminDashboard}
+              onFocus={onPrefetchAdminDashboard}
               className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-gray-400 transition-colors hover:text-cyan-300 sm:h-10 sm:w-10"
               title="Cấu hình hệ thống"
             >
@@ -144,6 +149,8 @@ function AppHeaderComponent({
             <button
               type="button"
               onClick={onOpenAdminUsers}
+              onMouseEnter={onPrefetchAdminDashboard}
+              onFocus={onPrefetchAdminDashboard}
               className="relative flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl border border-cyan-500/25 bg-cyan-500/10 text-cyan-200 transition-colors hover:bg-cyan-500/20 sm:h-10 sm:w-10"
               title="Quản trị"
             >
@@ -160,6 +167,8 @@ function AppHeaderComponent({
           <button
             type="button"
             onClick={onOpenAdminAnalytics}
+            onMouseEnter={onPrefetchAdminDashboard}
+            onFocus={onPrefetchAdminDashboard}
             className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl border border-violet-500/30 bg-violet-500/10 text-violet-200 transition-colors hover:bg-violet-500/20 sm:h-10 sm:w-10"
             title="Analytics (chỉ xem)"
           >

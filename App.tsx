@@ -19,6 +19,8 @@ import { useImageGeneration } from './hooks/useImageGeneration';
 const AdminDashboard = lazy(() =>
   import('./components/AdminDashboard').then((m) => ({ default: m.AdminDashboard }))
 );
+const preloadAdminDashboard = () =>
+  import('./components/AdminDashboard');
 
 const CreateView = lazy(() =>
   import('./components/views/CreateView').then((m) => ({ default: m.CreateView }))
@@ -175,6 +177,10 @@ const App: React.FC = () => {
     setIsAdminDashboardOpen(true);
   }, []);
 
+  const handlePrefetchAdminDashboard = useCallback(() => {
+    void preloadAdminDashboard();
+  }, []);
+
   const handleCloseAdminDashboard = useCallback(() => {
     setIsAdminDashboardOpen(false);
   }, []);
@@ -307,11 +313,17 @@ const App: React.FC = () => {
     setError(null);
   }, [image, referenceImages, setGeneratedImages]);
 
-  const onDownloadTracked = useCallback(() => {
+  const onDownloadTracked = useCallback((meta: { exportType: 'jpg' | 'png'; removeBackground: boolean }) => {
     if (user) {
-      trackEvent('image_downloaded', { user_id: user.uid });
+      trackEvent('image_downloaded', {
+        user_id: user.uid,
+        generation_type: currentView,
+        image_count: 1,
+        export_type: meta.exportType,
+        remove_background: meta.removeBackground,
+      });
     }
-  }, [user]);
+  }, [user, currentView]);
 
   const { handleDownloadImage, handleForceRemoveBackgroundDownload } = useGeneratedImageDownload({
     backgroundStyle,
@@ -386,6 +398,7 @@ const App: React.FC = () => {
           onOpenAdminSettings={handleOpenAdminSettings}
           onOpenAdminUsers={handleOpenAdminUsers}
           onOpenAdminAnalytics={handleOpenAdminAnalytics}
+          onPrefetchAdminDashboard={handlePrefetchAdminDashboard}
           getEffectiveModel={getEffectiveModel}
           getProviderKey={getProviderKey}
           onModelPreferenceChange={handleModelPreferenceChange}

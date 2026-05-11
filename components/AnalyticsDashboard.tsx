@@ -94,6 +94,8 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
   const [budgetLimit, setBudgetLimit] = useState<number>(10);
   const [budgetInput, setBudgetInput] = useState<string>('10');
   const [isEditingBudget, setIsEditingBudget] = useState(false);
+  const [requestVersion, setRequestVersion] = useState(0);
+  const [loadedMonthKey, setLoadedMonthKey] = useState<string | null>(null);
 
   useEffect(() => {
     const saved = window.localStorage.getItem('analytics_monthly_budget_limit');
@@ -104,46 +106,69 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
   }, []);
 
   useEffect(() => {
-    const loadData = async () => {
-      setIsLoading(true);
-      try {
-        const cacheKey = `analytics_dashboard_${monthKey}`;
-        const cached = readCache<{
-          analytics: MonthlyAnalytics;
-          errorBreakdown: MonthlyErrorBreakdownItem[];
-          tokenStats: MonthlyTokenStats;
-          topModelStats: MonthlyTopModelStats;
-        }>(cacheKey);
-        if (cached) {
-          setAnalytics(cached.analytics);
-          setErrorBreakdown(cached.errorBreakdown);
-          setTokenStats(cached.tokenStats);
-          setTopModelStats(cached.topModelStats);
-          setIsLoading(false);
-          return;
-        }
+    if (loadedMonthKey !== monthKey) {
+      setAnalytics(null);
+      setErrorBreakdown([]);
+      setTokenStats({
+        avgTotal: 0,
+        avgInput: 0,
+        avgOutput: 0,
+        totalMonth: 0,
+        costPer1k: 0,
+        avgTotalTrend: 0,
+        avgInputTrend: 0,
+        avgOutputTrend: 0,
+        totalMonthTrend: 0
+      });
+      setTopModelStats({
+        modelName: 'N/A',
+        requestCount: 0,
+        modelBreakdown: []
+      });
+      setIsErrorBreakdownOpen(false);
+    }
+  }, [loadedMonthKey, monthKey]);
 
-        const bundle = await loadMonthlyDashboardBundle(monthKey);
-        setAnalytics(bundle.analytics);
-        setErrorBreakdown(bundle.errorBreakdown);
-        setTokenStats(bundle.tokenStats);
-        setTopModelStats(bundle.topModelStats);
-
-        writeCache(cacheKey, {
-          analytics: bundle.analytics,
-          errorBreakdown: bundle.errorBreakdown,
-          tokenStats: bundle.tokenStats,
-          topModelStats: bundle.topModelStats,
-        });
-      } catch (error) {
-        console.error('Error loading analytics:', error);
-        toast.error('Failed to load analytics data');
-      } finally {
-        setIsLoading(false);
+  const handleRequestData = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const cacheKey = `analytics_dashboard_${monthKey}`;
+      const cached = readCache<{
+        analytics: MonthlyAnalytics;
+        errorBreakdown: MonthlyErrorBreakdownItem[];
+        tokenStats: MonthlyTokenStats;
+        topModelStats: MonthlyTopModelStats;
+      }>(cacheKey);
+      if (cached) {
+        setAnalytics(cached.analytics);
+        setErrorBreakdown(cached.errorBreakdown);
+        setTokenStats(cached.tokenStats);
+        setTopModelStats(cached.topModelStats);
+        setLoadedMonthKey(monthKey);
+        setRequestVersion((v) => v + 1);
+        return;
       }
-    };
 
-    loadData();
+      const bundle = await loadMonthlyDashboardBundle(monthKey);
+      setAnalytics(bundle.analytics);
+      setErrorBreakdown(bundle.errorBreakdown);
+      setTokenStats(bundle.tokenStats);
+      setTopModelStats(bundle.topModelStats);
+      setLoadedMonthKey(monthKey);
+      setRequestVersion((v) => v + 1);
+
+      writeCache(cacheKey, {
+        analytics: bundle.analytics,
+        errorBreakdown: bundle.errorBreakdown,
+        tokenStats: bundle.tokenStats,
+        topModelStats: bundle.topModelStats,
+      });
+    } catch (error) {
+      console.error('Error loading analytics:', error);
+      toast.error('Failed to load analytics data');
+    } finally {
+      setIsLoading(false);
+    }
   }, [monthKey]);
 
   const formatCurrency = (val: number) => `$${val.toFixed(2)}`;
@@ -183,6 +208,14 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
             onChange={(e) => setMonthKey(e.target.value)}
             className="rounded-xl border border-white/10 bg-white/[0.06] px-3 py-2 text-sm text-white outline-none transition focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/20"
           />
+          <button
+            type="button"
+            onClick={() => void handleRequestData()}
+            disabled={isLoading}
+            className="rounded-xl border border-cyan-500/30 bg-cyan-500/15 px-3 py-2 text-xs font-medium text-cyan-100 transition hover:bg-cyan-500/25 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {isLoading ? 'Đang tải...' : 'Yêu cầu dữ liệu'}
+          </button>
         </div>
       </div>
 
@@ -256,11 +289,12 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
           <ModelUsageCard modelBreakdown={topModelStats.modelBreakdown} />
 
           <DeferredTrendsSection
+            key={`trend-${monthKey}-${requestVersion}`}
             activeMetric={activeTrendMetric}
             onMetricChange={setActiveTrendMetric}
           />
 
-          <UserHistoryCountsPanel monthKey={monthKey} />
+          <UserHistoryCountsPanel key={`uh-${monthKey}-${requestVersion}`} monthKey={monthKey} />
 
           <div className="grid grid-cols-1 gap-6">
             <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-5 backdrop-blur-sm">
@@ -294,7 +328,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
         </>
       ) : (
         <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] py-14 text-center text-sm text-gray-500">
-          Chưa có dữ liệu cho tháng này.
+          Chưa tải dữ liệu cho tháng này. Nhấn <span className="font-semibold text-gray-300">Yêu cầu dữ liệu</span> để cập nhật.
         </div>
       )}
     </div>
@@ -312,7 +346,7 @@ const STATS_BY_USER_MONTH_COLLECTION = 'stats_by_user_month';
 const HISTORY_AGG_PAGE_SIZE = 500;
 
 interface UserHistoryScanInfo {
-  mode: 'precomputed' | 'paginated';
+  mode: 'precomputed' | 'paginated' | 'missing_precomputed';
   docCount?: number;
 }
 
@@ -383,6 +417,13 @@ const UserHistoryCountsPanel: React.FC<{ monthKey: string }> = ({ monthKey }) =>
           } catch {
             /* fall through to client aggregation */
           }
+
+          // Không tự động quét toàn bộ history nếu thiếu doc tổng hợp
+          // để tránh đốt read quota Firestore trên màn hình analytics.
+          setUserCounts({});
+          setScanInfo({ mode: 'missing_precomputed' });
+          setIsCountsLoading(false);
+          return;
         }
 
         const counts: Record<string, number> = {};
@@ -456,6 +497,8 @@ const UserHistoryCountsPanel: React.FC<{ monthKey: string }> = ({ monthKey }) =>
   const scanHint =
     scanInfo?.mode === 'precomputed'
       ? 'Nguồn: doc stats_by_user_month/{tháng} (1 lần đọc). Bấm cập nhật để quét lại history trên client.'
+      : scanInfo?.mode === 'missing_precomputed'
+        ? 'Chưa có doc stats_by_user_month/{tháng}. Bấm "Cập nhật số ảnh" để quét history thủ công.'
       : scanInfo?.mode === 'paginated' && typeof scanInfo.docCount === 'number'
         ? `Đã quét ${scanInfo.docCount.toLocaleString('vi-VN')} bản ghi history (pagination ${HISTORY_AGG_PAGE_SIZE}/trang).`
         : null;
