@@ -2,49 +2,30 @@ import { useState, useEffect, useCallback } from 'react';
 import type { User } from 'firebase/auth';
 import type { GeneratedImage } from '../types';
 import * as idb from 'idb-keyval';
-import {
-  db,
-  collection,
-  query,
-  where,
-  orderBy,
-  limit,
-  getDocs,
-  deleteDoc,
-  handleFirestoreError,
-  OperationType,
-} from '../firebase';
+import { handleFirestoreError, OperationType } from '../firebase';
 import { toast } from 'sonner';
+import { clearHistoryByUser, listRecentHistoryByUser } from '../repositories/historyRepository';
 
 export function useHistoryImages(user: User | null) {
   const [historyImages, setHistoryImages] = useState<GeneratedImage[]>([]);
 
   const fetchHistory = useCallback(async (userId: string) => {
-    const historyRef = collection(db, 'history');
-    const q = query(
-      historyRef,
-      where('uid', '==', userId),
-      orderBy('createdAt', 'desc'),
-      limit(10)
-    );
-
     try {
-      const snapshot = await getDocs(q);
+      const records = await listRecentHistoryByUser(userId, 10);
       const images: GeneratedImage[] = [];
-      for (const docSnap of snapshot.docs) {
-        const data = docSnap.data();
-        let imageUrl = data.imageUrl;
+      for (const record of records) {
+        let imageUrl = record.imageUrl;
         if (!imageUrl || imageUrl === 'idb') {
           try {
-            imageUrl = (await idb.get(`img_${docSnap.id}`)) || 'error';
+            imageUrl = (await idb.get(`img_${record.id}`)) || 'error';
           } catch {
             imageUrl = 'error';
           }
         }
         images.push({
-          prompt: data.prompt,
+          prompt: record.prompt,
           imageUrl: imageUrl,
-          text: data.text,
+          text: record.text,
         });
       }
       setHistoryImages(images);
@@ -72,14 +53,11 @@ export function useHistoryImages(user: User | null) {
     if (!user || !window.confirm('Bạn có chắc chắn muốn xóa toàn bộ lịch sử?')) return;
     const path = 'history';
     try {
-      const historyRef = collection(db, path);
-      const q = query(historyRef, where('uid', '==', user.uid));
-      const snapshot = await getDocs(q);
-      const deletePromises = snapshot.docs.map(async (docSnap) => {
-        await deleteDoc(docSnap.ref);
-        await idb.del(`img_${docSnap.id}`);
+      const deletedIds = await clearHistoryByUser(user.uid);
+      const deleteCachePromises = deletedIds.map(async (historyId) => {
+        await idb.del(`img_${historyId}`);
       });
-      await Promise.all(deletePromises);
+      await Promise.all(deleteCachePromises);
 
       setHistoryImages([]);
       toast.success('Lịch sử đã được xóa sạch.');

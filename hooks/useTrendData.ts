@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
-import { collection, getDocs, query, where } from '../firebase';
-import { db } from '../firebase';
+import { getAnalyticsEventsByDateRange } from '../repositories/analyticsRepository';
 
 export type TrendMetric = 'generations' | 'activeUsers' | 'cost';
 export type TrendRange = '30d' | '8w';
@@ -89,13 +88,10 @@ export const useTrendData = (metric: string, range: TrendRange): UseTrendDataRes
           startDate.setDate(startDate.getDate() - 7 * 7);
         }
 
-        const q = query(
-          collection(db, 'analytics_events'),
-          where('timestamp', '>=', startDate),
-          where('timestamp', '<=', now)
-        );
-        const snapshot = await getDocs(q);
-        const events: AnalyticsEventDoc[] = snapshot.docs.map((doc) => doc.data() as AnalyticsEventDoc);
+        const events = (await getAnalyticsEventsByDateRange(
+          startDate,
+          new Date(now.getTime() + 1)
+        )) as AnalyticsEventDoc[];
 
         if (range === '30d') {
           const dayMap = new Map<string, number>();

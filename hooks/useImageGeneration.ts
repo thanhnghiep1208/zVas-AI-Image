@@ -5,15 +5,12 @@ import type { ImageFile, GeneratedImage, ImageSize } from '../types';
 import { generateImageVariations } from '../services/geminiService';
 import { trackEvent } from '../services/analyticsService';
 import {
-  db,
-  collection,
-  addDoc,
-  serverTimestamp,
   handleFirestoreError,
   OperationType,
 } from '../firebase';
 import * as idb from 'idb-keyval';
 import { buildFinalPrompts, buildEffectiveSettings } from '../lib/buildGenerationPrompts';
+import { createHistoryEntry } from '../repositories/historyRepository';
 
 export interface UseImageGenerationParams {
   user: User | null;
@@ -189,20 +186,13 @@ export function useImageGeneration(params: UseImageGenerationParams) {
         for (const res of validResults) {
           const path = 'history';
           try {
-            const historyRef = collection(db, path);
-            const historyData: Record<string, unknown> = {
-              uid: user.uid,
+            const historyId = await createHistoryEntry({
+              userId: user.uid,
               prompt: res.prompt,
-              imageUrl: 'idb',
-              createdAt: serverTimestamp(),
-            };
-            if (res.text) {
-              historyData.text = res.text;
-            }
+              text: res.text
+            });
 
-            const docRef = await addDoc(historyRef, historyData);
-
-            await idb.set(`img_${docRef.id}`, res.imageUrl);
+            await idb.set(`img_${historyId}`, res.imageUrl);
 
             setHistoryImages((prev) => {
               const newEntry = {

@@ -1,4 +1,10 @@
-import { db, collection, addDoc, serverTimestamp, getDocs, query, where, orderBy, setDoc, doc, getDoc } from '../firebase';
+import {
+  addAnalyticsEvent,
+  getAnalyticsEventsByDateRange,
+  getAnalyticsEventsByDateRangeAndName,
+  getMonthlyCostsRecord,
+  saveMonthlyCostsRecord
+} from '../repositories/analyticsRepository';
 
 export type AnalyticsEventName = 
   | 'user_login'
@@ -23,12 +29,7 @@ export interface AnalyticsEventPayload {
 
 export const trackEvent = async (eventName: AnalyticsEventName, payload: AnalyticsEventPayload) => {
   try {
-    const eventsRef = collection(db, 'analytics_events');
-    await addDoc(eventsRef, {
-      event_name: eventName,
-      timestamp: serverTimestamp(),
-      ...payload
-    });
+    await addAnalyticsEvent(eventName, payload as unknown as Record<string, unknown>);
   } catch (error) {
     console.error('Failed to track analytics event:', error);
   }
@@ -43,8 +44,7 @@ export interface MonthlyCosts {
 
 export const saveMonthlyCosts = async (monthKey: string, costs: MonthlyCosts) => {
   try {
-    const docRef = doc(db, 'monthly_costs', monthKey);
-    await setDoc(docRef, costs);
+    await saveMonthlyCostsRecord(monthKey, costs);
   } catch (error) {
     console.error('Failed to save monthly costs:', error);
     throw error;
@@ -53,12 +53,7 @@ export const saveMonthlyCosts = async (monthKey: string, costs: MonthlyCosts) =>
 
 export const getMonthlyCosts = async (monthKey: string): Promise<MonthlyCosts | null> => {
   try {
-    const docRef = doc(db, 'monthly_costs', monthKey);
-    const snap = await getDoc(docRef);
-    if (snap.exists()) {
-      return snap.data() as MonthlyCosts;
-    }
-    return null;
+    return await getMonthlyCostsRecord(monthKey);
   } catch (error) {
     console.error('Failed to get monthly costs:', error);
     return null;
@@ -105,6 +100,13 @@ export interface MonthlyTopModelStats {
   modelBreakdown: Array<{ modelName: string; requestCount: number }>;
 }
 
+const toDateValue = (value: Date | { toDate?: () => Date } | null | undefined): Date | null => {
+  if (!value) return null;
+  if (value instanceof Date) return value;
+  if (typeof value.toDate === 'function') return value.toDate();
+  return null;
+};
+
 const mapErrorType = (errorCode?: string): { errorType: string; severity: 'warning' | 'critical' } => {
   const normalized = (errorCode || '').toLowerCase();
   if (normalized.includes('timeout')) {
@@ -135,14 +137,7 @@ export const calculateMonthlyAnalytics = async (monthKey: string): Promise<Month
   const startDate = new Date(year, month, 1);
   const endDate = new Date(year, month + 1, 1);
 
-  const eventsRef = collection(db, 'analytics_events');
-  const q = query(
-    eventsRef,
-    where('timestamp', '>=', startDate),
-    where('timestamp', '<', endDate)
-  );
-
-  const snapshot = await getDocs(q);
+  const events = await getAnalyticsEventsByDateRange(startDate, endDate);
   
   const activeUsers = new Set<string>();
   const generatingUsers = new Set<string>();
@@ -151,8 +146,7 @@ export const calculateMonthlyAnalytics = async (monthKey: string): Promise<Month
   let failedGenerations = 0;
   let totalVariableAiCost = 0;
 
-  snapshot.forEach(doc => {
-    const data = doc.data();
+  events.forEach((data) => {
     const userId = data.user_id;
     const eventName = data.event_name;
 
@@ -200,22 +194,17 @@ export const getMonthlyErrorBreakdown = async (monthKey: string): Promise<Monthl
   const startDate = new Date(year, month, 1);
   const endDate = new Date(year, month + 1, 1);
 
-  const eventsRef = collection(db, 'analytics_events');
-  const q = query(
-    eventsRef,
-    where('timestamp', '>=', startDate),
-    where('timestamp', '<', endDate),
-    where('event_name', '==', 'image_generation_failed')
+  const events = await getAnalyticsEventsByDateRangeAndName(
+    startDate,
+    endDate,
+    'image_generation_failed'
   );
-
-  const snapshot = await getDocs(q);
   const grouped = new Map<string, MonthlyErrorBreakdownItem>();
 
-  snapshot.forEach((eventDoc) => {
-    const data = eventDoc.data();
+  events.forEach((data) => {
     const { errorType, severity } = mapErrorType(data.error_code);
     const count = data.image_count || 1;
-    const eventDate: Date | null = data.timestamp?.toDate ? data.timestamp.toDate() : null;
+    const eventDate = toDateValue(data.timestamp);
 
     const current = grouped.get(errorType);
     if (!current) {
@@ -247,19 +236,10 @@ export const getMonthlyTokenStats = async (monthKey: string): Promise<MonthlyTok
   const prevStart = new Date(year, month - 1, 1);
   const prevEnd = new Date(year, month, 1);
 
-  const eventsRef = collection(db, 'analytics_events');
-  const currentQuery = query(
-    eventsRef,
-    where('timestamp', '>=', currentStart),
-    where('timestamp', '<', currentEnd)
-  );
-  const prevQuery = query(
-    eventsRef,
-    where('timestamp', '>=', prevStart),
-    where('timestamp', '<', prevEnd)
-  );
-
-  const [currentSnap, prevSnap] = await Promise.all([getDocs(currentQuery), getDocs(prevQuery)]);
+  const [currentEvents, prevEvents] = await Promise.all([
+    getAnalyticsEventsByDateRange(currentStart, currentEnd),
+    getAnalyticsEventsByDateRange(prevStart, prevEnd)
+  ]);
 
   interface TokenEventDoc {
     event_name?: string;
@@ -269,15 +249,14 @@ export const getMonthlyTokenStats = async (monthKey: string): Promise<MonthlyTok
     total_tokens?: number;
   }
 
-  const summarize = (snapshot: Awaited<ReturnType<typeof getDocs>>) => {
+  const summarize = (events: TokenEventDoc[]) => {
     let totalTokens = 0;
     let totalInput = 0;
     let totalOutput = 0;
     let totalCost = 0;
     let requestCount = 0;
 
-    snapshot.forEach((eventDoc) => {
-      const data = eventDoc.data() as TokenEventDoc;
+    events.forEach((data) => {
       if (data.event_name !== 'image_generation_succeeded') return;
 
       requestCount += 1;
@@ -303,8 +282,8 @@ export const getMonthlyTokenStats = async (monthKey: string): Promise<MonthlyTok
     };
   };
 
-  const current = summarize(currentSnap);
-  const previous = summarize(prevSnap);
+  const current = summarize(currentEvents as TokenEventDoc[]);
+  const previous = summarize(prevEvents as TokenEventDoc[]);
 
   return {
     avgTotal: current.avgTotal,
@@ -327,21 +306,17 @@ export const getMonthlyTopModelStats = async (monthKey: string): Promise<Monthly
   const startDate = new Date(year, month, 1);
   const endDate = new Date(year, month + 1, 1);
 
-  const eventsRef = collection(db, 'analytics_events');
-  const q = query(
-    eventsRef,
-    where('timestamp', '>=', startDate),
-    where('timestamp', '<', endDate),
-    where('event_name', '==', 'image_generation_started')
+  const events = await getAnalyticsEventsByDateRangeAndName(
+    startDate,
+    endDate,
+    'image_generation_started'
   );
-
-  const snapshot = await getDocs(q);
   const modelCounts = new Map<string, number>();
 
-  snapshot.forEach((eventDoc) => {
-    const data = eventDoc.data() as { model_name?: string; image_count?: number };
-    const modelName = data.model_name || 'unknown';
-    const count = data.image_count || 1;
+  events.forEach((data) => {
+    const typed = data as { model_name?: string; image_count?: number };
+    const modelName = typed.model_name || 'unknown';
+    const count = typed.image_count || 1;
     modelCounts.set(modelName, (modelCounts.get(modelName) || 0) + count);
   });
 
