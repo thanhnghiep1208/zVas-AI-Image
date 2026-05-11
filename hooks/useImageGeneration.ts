@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 import type { User } from 'firebase/auth';
 import type { ImageFile, GeneratedImage, ImageSize } from '../types';
@@ -244,10 +244,16 @@ export function useImageGeneration(params: UseImageGenerationParams) {
     }
   };
 
+  const resetGenerationWorkspace = useCallback(() => {
+    setIsLoading(false);
+    setGeneratedImages([]);
+  }, []);
+
   return {
     isLoading,
     generatedImages,
     setGeneratedImages,
     handleGenerateClick,
+    resetGenerationWorkspace,
   };
 }

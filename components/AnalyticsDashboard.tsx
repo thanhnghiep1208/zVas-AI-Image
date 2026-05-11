@@ -156,18 +156,28 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-xl font-bold text-white flex items-center">
-          <BarChart3 className="w-6 h-6 mr-2 text-cyan-400" />
-          Internal Analytics
-        </h2>
-        <div className="flex items-center space-x-2">
-          <label className="text-sm text-gray-400">Month:</label>
-          <input 
-            type="month" 
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h2 className="flex items-center gap-2 text-xl font-semibold tracking-tight text-white">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-cyan-500/25 bg-cyan-500/10">
+              <BarChart3 className="h-5 w-5 text-cyan-300" aria-hidden />
+            </span>
+            Tổng quan analytics
+          </h2>
+          <p className="mt-1 max-w-lg text-sm text-gray-500">
+            Số liệu nội bộ theo tháng — tập trung vào người dùng, lượt tạo và chi phí.
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <label htmlFor="analytics-month" className="text-sm text-gray-500">
+            Tháng
+          </label>
+          <input
+            id="analytics-month"
+            type="month"
             value={monthKey}
             onChange={(e) => setMonthKey(e.target.value)}
-            className="bg-gray-700 border border-gray-600 rounded px-3 py-1.5 text-sm text-white focus:outline-none focus:border-cyan-500"
+            className="rounded-xl border border-white/10 bg-white/[0.06] px-3 py-2 text-sm text-white outline-none transition focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/20"
           />
         </div>
       </div>
@@ -177,7 +187,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
       ) : analytics ? (
         <>
           {/* KPI Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
             <KpiCard 
               title="Monthly Active Users" 
               value={formatNumber(analytics.monthly_active_users)} 
@@ -249,8 +259,8 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
           <UserHistoryCountsPanel monthKey={monthKey} />
 
           <div className="grid grid-cols-1 gap-6">
-            <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-5">
-              <h3 className="text-lg font-semibold text-white mb-4">Generation Metrics</h3>
+            <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-5 backdrop-blur-sm">
+              <h3 className="mb-4 text-lg font-semibold tracking-tight text-white">Chỉ số tạo ảnh</h3>
               <div className="space-y-3">
                 <MetricRow label="Successful Generations" value={formatNumber(analytics.successful_generations)} />
                 <ExpandableErrorBreakdown
@@ -279,8 +289,8 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
 
         </>
       ) : (
-        <div className="text-center py-12 text-gray-400">
-          No data available for this month.
+        <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] py-14 text-center text-sm text-gray-500">
+          Chưa có dữ liệu cho tháng này.
         </div>
       )}
     </div>
@@ -394,14 +404,16 @@ const UserHistoryCountsPanel: React.FC<{ monthKey: string }> = ({ monthKey }) =>
   };
 
   return (
-    <div className="bg-gray-800/50 border border-gray-700 rounded-lg overflow-hidden">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-5 py-4 border-b border-gray-700">
+    <div className="overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-sm">
+      <div className="flex flex-col gap-3 border-b border-white/[0.08] px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-            <ImageIcon className="w-5 h-5 text-cyan-400" />
+          <h3 className="flex items-center gap-2 text-lg font-semibold tracking-tight text-white">
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-cyan-500/20 bg-cyan-500/10">
+              <ImageIcon className="h-4 w-4 text-cyan-300" aria-hidden />
+            </span>
             Số ảnh đã tạo theo người dùng
           </h3>
-          <p className="text-xs text-gray-500 mt-1">
+          <p className="mt-1 text-xs text-gray-500">
             Đếm theo tháng đang chọn từ collection <code className="text-gray-400">history</code> trên Firestore.
           </p>
         </div>
@@ -409,7 +421,7 @@ const UserHistoryCountsPanel: React.FC<{ monthKey: string }> = ({ monthKey }) =>
           type="button"
           onClick={handleRefreshCounts}
           disabled={isCountsLoading || users.length === 0}
-          className="text-xs bg-gray-700 hover:bg-gray-600 disabled:opacity-50 disabled:pointer-events-none text-gray-300 px-3 py-1.5 rounded-lg transition-colors flex items-center justify-center gap-2 shrink-0"
+          className="flex shrink-0 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.06] px-3 py-2 text-xs font-medium text-gray-200 transition hover:bg-white/10 disabled:pointer-events-none disabled:opacity-50"
         >
           <Clock className="w-3 h-3" />
           <span>Cập nhật số ảnh</span>
@@ -418,7 +430,7 @@ const UserHistoryCountsPanel: React.FC<{ monthKey: string }> = ({ monthKey }) =>
 
       {isUsersLoading ? (
         <div className="flex justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-cyan-500" />
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-cyan-500/25 border-t-cyan-400" />
         </div>
       ) : sortedUsers.length === 0 ? (
         <div className="px-5 py-8 text-sm text-gray-500">Chưa có người dùng.</div>
@@ -426,20 +438,22 @@ const UserHistoryCountsPanel: React.FC<{ monthKey: string }> = ({ monthKey }) =>
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-gray-900/50 border-b border-gray-700">
-                <th className="px-5 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider">Người dùng</th>
-                <th className="px-5 py-3 text-xs font-bold text-gray-400 uppercase tracking-wider text-center">Số ảnh đã tạo</th>
+              <tr className="border-b border-white/[0.06] bg-white/[0.03]">
+                <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500">Người dùng</th>
+                <th className="px-5 py-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-500">
+                  Số ảnh đã tạo
+                </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-700/80">
+            <tbody className="divide-y divide-white/[0.05]">
               {sortedUsers.map((user) => (
-                <tr key={user.uid} className="hover:bg-gray-700/20">
+                <tr key={user.uid} className="transition-colors hover:bg-white/[0.03]">
                   <td className="px-5 py-3 whitespace-nowrap">
                     <div className="flex items-center gap-3 min-w-0">
                       <img
                         src={user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.displayName || user.email)}`}
                         alt=""
-                        className="w-9 h-9 rounded-full border border-gray-700 shrink-0"
+                        className="h-9 w-9 shrink-0 rounded-full border border-white/10 object-cover ring-1 ring-white/5"
                         referrerPolicy="no-referrer"
                       />
                       <div className="flex flex-col min-w-0">
@@ -472,7 +486,7 @@ const TokenUsageSection = ({
 
   return (
     <section className="space-y-3">
-      <h3 className="text-lg font-semibold text-white">Token Usage</h3>
+      <h3 className="text-lg font-semibold tracking-tight text-white">Dùng token</h3>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <TokenUsageCard title="Avg tokens / request" value={stats.avgTotal.toFixed(1)} trend={stats.avgTotalTrend ?? 0} />
         <TokenUsageCard title="Avg input tokens" value={stats.avgInput.toFixed(1)} trend={stats.avgInputTrend ?? 0} />
@@ -494,10 +508,10 @@ const TokenUsageCard = ({ title, value, trend }: { title: string; value: string;
   const trendColorClass = isUp ? 'text-amber-400' : isDown ? 'text-emerald-400' : 'text-gray-400';
 
   return (
-    <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
-      <p className="text-xs text-gray-400 uppercase tracking-wider font-semibold">{title}</p>
-      <p className="text-2xl font-bold text-white mt-1">{value}</p>
-      <p className={`text-xs mt-2 ${trendColorClass}`}>{trendLabel} vs last month</p>
+    <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-4 backdrop-blur-sm">
+      <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500">{title}</p>
+      <p className="mt-1 text-2xl font-semibold tabular-nums text-white">{value}</p>
+      <p className={`mt-2 text-xs ${trendColorClass}`}>{trendLabel} so với tháng trước</p>
     </div>
   );
 };
@@ -507,14 +521,17 @@ const ModelUsageCard = ({
 }: {
   modelBreakdown: Array<{ modelName: string; requestCount: number }>;
 }) => (
-  <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-5">
-    <h3 className="text-lg font-semibold text-white mb-4">Model Usage (month)</h3>
+  <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-5 backdrop-blur-sm">
+    <h3 className="mb-4 text-lg font-semibold tracking-tight text-white">Model dùng nhiều (tháng)</h3>
     {modelBreakdown.length === 0 ? (
-      <div className="text-sm text-gray-500">No model usage data this month.</div>
+      <div className="text-sm text-gray-500">Chưa có dữ liệu model trong tháng này.</div>
     ) : (
       <div className="space-y-2">
         {modelBreakdown.map((item) => (
-          <div key={item.modelName} className="flex items-center justify-between py-2 border-b border-gray-700/50 last:border-0">
+          <div
+            key={item.modelName}
+            className="flex items-center justify-between border-b border-white/[0.06] py-2 last:border-0"
+          >
             <span className="text-sm text-gray-200 truncate pr-3">{item.modelName}</span>
             <span className="text-sm font-semibold text-cyan-300">
               {new Intl.NumberFormat('en-US').format(item.requestCount)} requests
@@ -537,14 +554,14 @@ const KpiCard = ({
   icon: React.ReactNode;
   subValue?: string;
 }) => (
-  <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 flex items-center">
-    <div className="p-3 bg-gray-900 rounded-lg mr-4">
+  <div className="flex items-center rounded-xl border border-white/[0.08] bg-white/[0.03] p-4 backdrop-blur-sm">
+    <div className="mr-4 flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04]">
       {icon}
     </div>
     <div className="min-w-0">
-      <p className="text-xs text-gray-400 uppercase tracking-wider font-semibold">{title}</p>
-      <p className="text-2xl font-bold text-white mt-1 truncate">{value}</p>
-      {subValue && <p className="text-xs text-gray-400 mt-1">{subValue}</p>}
+      <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500">{title}</p>
+      <p className="mt-1 truncate text-2xl font-semibold tabular-nums text-white">{value}</p>
+      {subValue && <p className="mt-1 text-xs text-gray-500">{subValue}</p>}
     </div>
   </div>
 );
@@ -561,12 +578,12 @@ const LatencyCard = ({
   }));
 
   return (
-    <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 flex flex-col">
+    <div className="flex flex-col rounded-xl border border-white/[0.08] bg-white/[0.03] p-4 backdrop-blur-sm">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-xs text-gray-400 uppercase tracking-wider font-semibold">Avg latency</p>
-          <p className="text-2xl font-bold text-white mt-1">{stats.avg.toFixed(1)}s</p>
-          <p className="text-xs text-gray-400 mt-1">p95: {stats.p95.toFixed(1)}s</p>
+          <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500">Độ trễ TB</p>
+          <p className="mt-1 text-2xl font-semibold tabular-nums text-white">{stats.avg.toFixed(1)}s</p>
+          <p className="mt-1 text-xs text-gray-500">p95: {stats.p95.toFixed(1)}s</p>
         </div>
         <div className="w-24 h-12">
           <ResponsiveContainer width="100%" height="100%">
@@ -606,15 +623,15 @@ const MonthlyBudgetCard = ({
     percent < 70 ? 'bg-emerald-500' : percent <= 90 ? 'bg-amber-500' : 'bg-red-500';
 
   return (
-    <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
-      <div className="flex items-center justify-between mb-3">
+    <div className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-4 backdrop-blur-sm">
+      <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center">
-          <div className="p-3 bg-gray-900 rounded-lg mr-4">
-            <DollarSign className="w-5 h-5 text-emerald-400" />
+          <div className="mr-4 flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04]">
+            <DollarSign className="h-5 w-5 text-emerald-400" />
           </div>
           <div>
-            <p className="text-xs text-gray-400 uppercase tracking-wider font-semibold">Monthly Budget</p>
-            <p className="text-lg font-bold text-white mt-1">
+            <p className="text-[11px] font-medium uppercase tracking-wide text-gray-500">Ngân sách tháng</p>
+            <p className="mt-1 text-lg font-semibold tabular-nums text-white">
               ${currentSpend.toFixed(2)} / ${budgetLimit.toFixed(2)} ({percent}%)
             </p>
           </div>
@@ -623,7 +640,7 @@ const MonthlyBudgetCard = ({
           <button
             type="button"
             onClick={onToggleEditing}
-            className="p-2 rounded-md text-gray-400 hover:text-white hover:bg-gray-700 transition-colors"
+            className="rounded-lg p-2 text-gray-400 transition-colors hover:bg-white/10 hover:text-white"
             title="Edit budget limit"
           >
             <Pencil className="w-4 h-4" />
@@ -631,7 +648,7 @@ const MonthlyBudgetCard = ({
         )}
       </div>
 
-      <div className="w-full h-2 rounded-full bg-gray-700 overflow-hidden">
+      <div className="h-2 w-full overflow-hidden rounded-full bg-white/10">
         <div
           className={`h-full transition-all duration-300 ${barColorClass}`}
           style={{ width: `${clampedPercent}%` }}
@@ -646,13 +663,13 @@ const MonthlyBudgetCard = ({
             step="0.01"
             value={budgetInput}
             onChange={(e) => onBudgetInputChange(e.target.value)}
-            className="w-full bg-gray-900 border border-gray-600 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500"
+            className="w-full rounded-lg border border-white/10 bg-white/[0.06] px-3 py-2 text-sm text-white outline-none focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/20"
             placeholder="Budget limit"
           />
           <button
             type="button"
             onClick={onSaveBudget}
-            className="bg-cyan-600 hover:bg-cyan-500 text-white px-3 py-2 rounded text-sm font-medium transition-colors"
+            className="rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-2 text-sm font-medium text-white transition hover:brightness-110"
           >
             Save
           </button>
@@ -673,18 +690,19 @@ const TrendsSection = ({
   const { data, isLoading, error } = useTrendData(activeMetric, config.range);
 
   return (
-    <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-5">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
-        <h3 className="text-lg font-semibold text-white">Trends</h3>
-        <div className="inline-flex bg-gray-900/70 border border-gray-700 rounded-lg p-1">
+    <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-5 backdrop-blur-sm">
+      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h3 className="text-lg font-semibold tracking-tight text-white">Xu hướng</h3>
+        <div className="inline-flex rounded-xl border border-white/10 bg-white/[0.04] p-1">
           {(Object.keys(TREND_METRIC_CONFIG) as TrendMetric[]).map((metric) => (
             <button
               key={metric}
+              type="button"
               onClick={() => onMetricChange(metric)}
-              className={`px-3 py-1.5 text-xs sm:text-sm rounded-md transition-colors ${
+              className={`rounded-lg px-3 py-1.5 text-xs transition-all sm:text-sm ${
                 activeMetric === metric
-                  ? 'bg-cyan-600 text-white'
-                  : 'text-gray-400 hover:text-gray-200'
+                  ? 'bg-gradient-to-r from-cyan-500/30 to-blue-600/25 font-medium text-white ring-1 ring-cyan-500/30'
+                  : 'text-gray-400 hover:bg-white/[0.06] hover:text-gray-200'
               }`}
             >
               {TREND_METRIC_CONFIG[metric].label}
@@ -737,12 +755,12 @@ const TrendsSection = ({
 };
 
 const TrendSkeleton = () => (
-  <div className="h-72 rounded-lg border border-gray-700/60 bg-gray-900/40 p-4">
+  <div className="h-72 rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
     <div className="h-full flex items-end gap-2">
       {Array.from({ length: 24 }).map((_, idx) => (
         <div
           key={`trend-skeleton-${idx}`}
-          className="flex-1 rounded-t bg-gray-700/50 animate-pulse"
+          className="flex-1 animate-pulse rounded-t bg-white/10"
           style={{ height: `${20 + ((idx * 11) % 65)}%` }}
         />
       ))}
@@ -756,58 +774,58 @@ const AnalyticsPageSkeleton = () => (
       {Array.from({ length: 10 }).map((_, idx) => (
         <div
           key={`kpi-skeleton-${idx}`}
-          className="bg-gray-800 border border-gray-700 rounded-lg p-4 animate-pulse"
+          className="animate-pulse rounded-xl border border-white/[0.08] bg-white/[0.03] p-4"
         >
-          <div className="h-3 w-24 bg-gray-700 rounded mb-3" />
-          <div className="h-8 w-32 bg-gray-700 rounded" />
+          <div className="mb-3 h-3 w-24 rounded bg-white/10" />
+          <div className="h-8 w-32 rounded bg-white/10" />
         </div>
       ))}
     </div>
 
     <section className="space-y-3">
-      <div className="h-5 w-28 bg-gray-700 rounded animate-pulse" />
+      <div className="h-5 w-28 animate-pulse rounded bg-white/10" />
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {Array.from({ length: 4 }).map((_, idx) => (
           <div
             key={`token-skeleton-${idx}`}
-            className="bg-gray-800 border border-gray-700 rounded-lg p-4 animate-pulse"
+            className="animate-pulse rounded-xl border border-white/[0.08] bg-white/[0.03] p-4"
           >
-            <div className="h-3 w-24 bg-gray-700 rounded mb-3" />
-            <div className="h-7 w-20 bg-gray-700 rounded mb-2" />
-            <div className="h-3 w-16 bg-gray-700 rounded" />
+            <div className="mb-3 h-3 w-24 rounded bg-white/10" />
+            <div className="mb-2 h-7 w-20 rounded bg-white/10" />
+            <div className="h-3 w-16 rounded bg-white/10" />
           </div>
         ))}
       </div>
     </section>
 
-    <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-5 animate-pulse">
-      <div className="h-5 w-44 bg-gray-700 rounded mb-4" />
+    <div className="animate-pulse rounded-2xl border border-white/[0.08] bg-white/[0.03] p-5">
+      <div className="mb-4 h-5 w-44 rounded bg-white/10" />
       <div className="space-y-2">
         {Array.from({ length: 4 }).map((_, idx) => (
-          <div key={`model-skeleton-${idx}`} className="h-8 bg-gray-700/80 rounded" />
+          <div key={`model-skeleton-${idx}`} className="h-8 rounded bg-white/10" />
         ))}
       </div>
     </div>
 
     <TrendSkeleton />
 
-    <div className="bg-gray-800/50 border border-gray-700 rounded-lg overflow-hidden animate-pulse">
-      <div className="px-5 py-4 border-b border-gray-700">
-        <div className="h-5 w-64 bg-gray-700 rounded mb-2" />
-        <div className="h-3 w-72 bg-gray-700 rounded" />
+    <div className="animate-pulse overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03]">
+      <div className="border-b border-white/[0.08] px-5 py-4">
+        <div className="mb-2 h-5 w-64 rounded bg-white/10" />
+        <div className="h-3 w-72 rounded bg-white/10" />
       </div>
-      <div className="px-5 py-4 space-y-3">
+      <div className="space-y-3 px-5 py-4">
         {Array.from({ length: 5 }).map((_, idx) => (
-          <div key={`user-count-skeleton-${idx}`} className="h-10 bg-gray-700/70 rounded" />
+          <div key={`user-count-skeleton-${idx}`} className="h-10 rounded bg-white/10" />
         ))}
       </div>
     </div>
 
-    <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-5 animate-pulse">
-      <div className="h-5 w-40 bg-gray-700 rounded mb-4" />
+    <div className="animate-pulse rounded-2xl border border-white/[0.08] bg-white/[0.03] p-5">
+      <div className="mb-4 h-5 w-40 rounded bg-white/10" />
       <div className="space-y-3">
         {Array.from({ length: 6 }).map((_, idx) => (
-          <div key={`metric-row-skeleton-${idx}`} className="h-6 bg-gray-700/80 rounded" />
+          <div key={`metric-row-skeleton-${idx}`} className="h-6 rounded bg-white/10" />
         ))}
       </div>
     </div>
@@ -815,9 +833,9 @@ const AnalyticsPageSkeleton = () => (
 );
 
 const MetricRow = ({ label, value }: { label: string, value: string | number }) => (
-  <div className="flex justify-between items-center py-2 border-b border-gray-700/50 last:border-0">
-    <span className="text-gray-300">{label}</span>
-    <span className="font-semibold text-white">{value}</span>
+  <div className="flex items-center justify-between border-b border-white/[0.06] py-2.5 last:border-0">
+    <span className="text-sm text-gray-400">{label}</span>
+    <span className="font-medium tabular-nums text-white">{value}</span>
   </div>
 );
 
@@ -834,13 +852,13 @@ const ExpandableErrorBreakdown = ({
   onToggle: () => void;
   onErrorClick: (errorType: string) => void;
 }) => (
-  <div className="py-2 border-b border-gray-700/50">
+  <div className="border-b border-white/[0.06] py-2">
     <button
       type="button"
       onClick={onToggle}
-      className="w-full flex items-center justify-between text-left hover:bg-gray-700/30 rounded px-2 py-1 transition-colors"
+      className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-white/[0.04]"
     >
-      <span className="text-gray-300">Failed Generations</span>
+      <span className="text-sm text-gray-400">Lượt tạo thất bại</span>
       <span className="flex items-center gap-2">
         <span className="font-semibold text-white">{new Intl.NumberFormat('en-US').format(totalFailedGenerations)}</span>
         {isOpen ? (
@@ -852,20 +870,20 @@ const ExpandableErrorBreakdown = ({
     </button>
 
     {isOpen && (
-      <div className="mt-3 overflow-hidden rounded border border-gray-700 bg-gray-900/40">
+      <div className="mt-3 overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.03]">
         <table className="w-full text-sm">
-          <thead className="bg-gray-800/70 text-gray-400">
+          <thead className="bg-white/[0.04] text-gray-500">
             <tr>
-              <th className="px-3 py-2 text-left font-medium">Error Type</th>
-              <th className="px-3 py-2 text-right font-medium">Count</th>
-              <th className="px-3 py-2 text-right font-medium">Last occurred</th>
+              <th className="px-3 py-2 text-left font-medium">Loại lỗi</th>
+              <th className="px-3 py-2 text-right font-medium">Số lần</th>
+              <th className="px-3 py-2 text-right font-medium">Lần cuối</th>
             </tr>
           </thead>
           <tbody>
             {items.length === 0 ? (
               <tr>
                 <td className="px-3 py-3 text-gray-500" colSpan={3}>
-                  No failure details for this month.
+                  Không có chi tiết lỗi cho tháng này.
                 </td>
               </tr>
             ) : (
@@ -873,7 +891,7 @@ const ExpandableErrorBreakdown = ({
                 <tr
                   key={item.errorType}
                   onClick={() => onErrorClick(item.errorType)}
-                  className="border-t border-gray-800 hover:bg-gray-700/30 cursor-pointer"
+                  className="cursor-pointer border-t border-white/[0.06] transition-colors hover:bg-white/[0.04]"
                 >
                   <td className="px-3 py-2">
                     <span className={item.severity === 'critical' ? 'text-red-400' : 'text-amber-400'}>

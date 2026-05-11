@@ -16,135 +16,166 @@ interface ResultsDisplayProps {
 }
 
 interface ImageCardProps {
-    title: string;
-    imageUrl: string;
-    caption?: string | null;
-    isError?: boolean;
-    onDownload?: () => void;
-    onQuickView?: () => void;
-    onUseAsInput?: () => void;
-    onForceRemoveBackgroundDownload?: () => void;
-    isOriginal?: boolean;
+  title: string;
+  imageUrl: string;
+  caption?: string | null;
+  isError?: boolean;
+  onDownload?: () => void;
+  onQuickView?: () => void;
+  onUseAsInput?: () => void;
+  onForceRemoveBackgroundDownload?: () => void;
+  isOriginal?: boolean;
 }
 
-const ImageCard: React.FC<ImageCardProps> = ({ title, imageUrl, caption, isError = false, onDownload, onQuickView, onUseAsInput, onForceRemoveBackgroundDownload, isOriginal = false }) => {
-
+const ImageCard: React.FC<ImageCardProps> = ({
+  title,
+  imageUrl,
+  caption,
+  isError = false,
+  onDownload,
+  onQuickView,
+  onUseAsInput,
+  onForceRemoveBackgroundDownload,
+  isOriginal = false,
+}) => {
   if (isOriginal) {
     return (
-        <div className="group bg-gray-800 rounded-lg overflow-hidden shadow border border-gray-700 flex flex-col h-full">
-            <div className="p-2 bg-gray-800/80 border-b border-gray-700">
-              <h3 className="text-xs font-semibold text-cyan-400 truncate uppercase tracking-wider">Input</h3>
-            </div>
-            <div className="relative flex-1 bg-black min-h-[300px] lg:min-h-[500px]">
-              <img src={imageUrl} alt={title} className="w-full h-full object-contain absolute inset-0" />
-            </div>
+      <div className="group flex h-full flex-col overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03] shadow-lg shadow-black/20">
+        <div className="border-b border-white/[0.08] bg-white/[0.04] px-3 py-2">
+          <h3 className="truncate text-xs font-semibold tracking-tight text-cyan-200/95">Ảnh gốc</h3>
         </div>
+        <div className="relative min-h-[280px] flex-1 bg-black/80 lg:min-h-[480px]">
+          <img src={imageUrl} alt={title} className="absolute inset-0 h-full w-full object-contain p-1" />
+        </div>
+      </div>
     );
   }
-    
+
   return (
-    <div className="group bg-gray-800 rounded-lg overflow-hidden shadow border border-gray-700 transition-all duration-200 hover:border-cyan-500/50 flex flex-col h-full">
-      <div className={`relative flex-1 min-h-[300px] lg:min-h-[500px] ${isError ? 'bg-red-900/20 flex items-center justify-center' : 'bg-black'}`}>
+    <div className="group flex h-full flex-col overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03] shadow-lg shadow-black/20 transition-all duration-200 hover:border-cyan-500/35">
+      <div
+        className={`relative min-h-[280px] flex-1 lg:min-h-[480px] ${
+          isError ? 'flex items-center justify-center bg-red-500/[0.06]' : 'bg-black/80'
+        }`}
+      >
         {isError ? (
-           <div className="text-center p-4 text-red-400">
-              <p className="text-sm font-bold">Error</p>
-              <p className="text-xs mt-1">{caption}</p>
-           </div>
+          <div className="max-w-[90%] space-y-2 p-5 text-center">
+            <p className="text-sm font-semibold text-red-300">Không tạo được ảnh</p>
+            {caption ? <p className="text-xs leading-relaxed text-red-200/80">{caption}</p> : null}
+          </div>
         ) : (
           <>
-              <img src={imageUrl} alt={title} className="w-full h-full object-contain absolute inset-0" />
-              <div className="absolute top-2 right-2 flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                   {onQuickView && (
-                      <button
-                          onClick={onQuickView}
-                          className="p-1.5 bg-black/60 rounded-full text-white hover:bg-cyan-500 hover:text-white transition-colors"
-                          title="View full screen"
-                      >
-                          <ExpandIcon className="w-4 h-4" />
-                      </button>
-                  )}
-                  {onDownload && (
-                      <button
-                          onClick={onDownload}
-                          className="p-1.5 bg-black/60 rounded-full text-white hover:bg-cyan-500 hover:text-white transition-colors"
-                          title="Download as JPG"
-                      >
-                          <DownloadIcon className="w-4 h-4" />
-                      </button>
-                  )}
-                  {onForceRemoveBackgroundDownload && (
-                      <button
-                          onClick={onForceRemoveBackgroundDownload}
-                          className="px-2 py-1 bg-black/60 rounded-full text-[10px] text-white hover:bg-emerald-600 transition-colors font-semibold"
-                          title="Force remove background and download PNG"
-                      >
-                          Remove BG
-                      </button>
-                  )}
-              </div>
+            <img src={imageUrl} alt={title} className="absolute inset-0 h-full w-full object-contain p-1" />
+            <div className="absolute right-2 top-2 flex flex-wrap justify-end gap-1.5 opacity-0 transition-opacity group-hover:opacity-100">
+              {onQuickView && (
+                <button
+                  type="button"
+                  onClick={onQuickView}
+                  className="rounded-full border border-white/10 bg-black/55 p-2 text-white backdrop-blur-sm transition-colors hover:border-cyan-400/40 hover:bg-cyan-600/80"
+                  title="Xem toàn màn hình"
+                >
+                  <ExpandIcon className="h-4 w-4" />
+                </button>
+              )}
+              {onDownload && (
+                <button
+                  type="button"
+                  onClick={onDownload}
+                  className="rounded-full border border-white/10 bg-black/55 p-2 text-white backdrop-blur-sm transition-colors hover:border-cyan-400/40 hover:bg-cyan-600/80"
+                  title="Tải xuống (JPG)"
+                >
+                  <DownloadIcon className="h-4 w-4" />
+                </button>
+              )}
+              {onForceRemoveBackgroundDownload && (
+                <button
+                  type="button"
+                  onClick={onForceRemoveBackgroundDownload}
+                  className="rounded-full border border-white/10 bg-black/55 px-2.5 py-1.5 text-[11px] font-semibold text-white backdrop-blur-sm transition-colors hover:border-emerald-400/50 hover:bg-emerald-600/85"
+                  title="Tách nền và tải PNG"
+                >
+                  Tách nền
+                </button>
+              )}
+            </div>
           </>
         )}
       </div>
       {!isError && (
-          <div className="p-2.5 bg-gray-800 text-xs border-t border-gray-700">
-              <div className="mb-2">
-                  <p className="font-medium text-gray-300 line-clamp-2" title={title}>
-                      {title}
-                  </p>
-              </div>
-              {onUseAsInput && (
-              <button
-                  onClick={onUseAsInput}
-                  className="w-full flex items-center justify-center space-x-1.5 px-2 py-1.5 bg-gray-700 hover:bg-cyan-700 rounded transition-colors text-gray-200 font-medium"
-              >
-                  <SparklesIcon className="w-3.5 h-3.5" />
-                  <span>Edit This</span>
-              </button>
-              )}
-          </div>
+        <div className="space-y-2 border-t border-white/[0.08] bg-white/[0.02] p-3">
+          <p className="line-clamp-2 text-xs font-medium leading-relaxed text-gray-300" title={title}>
+            {title}
+          </p>
+          {onUseAsInput && (
+            <button
+              type="button"
+              onClick={onUseAsInput}
+              className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.06] px-3 py-2 text-xs font-semibold text-gray-100 transition-colors hover:border-cyan-500/35 hover:bg-cyan-600/25"
+            >
+              <SparklesIcon className="h-3.5 w-3.5 text-cyan-200/90" />
+              <span>Dùng làm ảnh gốc</span>
+            </button>
+          )}
+        </div>
       )}
     </div>
   );
 };
 
+export const ResultsDisplay: React.FC<ResultsDisplayProps> = ({
+  originalImage,
+  generatedImages,
+  isLoading,
+  onImageSelect,
+  onUseAsInput,
+  onDownload,
+  onForceRemoveBackgroundDownload,
+}) => {
+  if (!originalImage && !isLoading && generatedImages.length === 0) {
+    return (
+      <div className="flex h-full min-h-[240px] flex-col items-center justify-center gap-4 p-6 text-center">
+        <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-white/[0.08] bg-gradient-to-br from-cyan-500/10 to-blue-600/5 text-cyan-300/50">
+          <SparklesIcon className="h-8 w-8" />
+        </div>
+        <div className="max-w-xs space-y-1">
+          <p className="text-sm font-medium text-gray-300">Chưa có ảnh nào</p>
+          <p className="text-xs leading-relaxed text-gray-500">
+            Sau khi bạn tạo, ảnh sẽ hiện ở đây — xem trước, tải về hoặc dùng làm ảnh đầu vào.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
-export const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ originalImage, generatedImages, isLoading, onImageSelect, onUseAsInput, onDownload, onForceRemoveBackgroundDownload }) => {
-
-    if (!originalImage && !isLoading && generatedImages.length === 0) {
-        return (
-            <div className="h-full flex flex-col items-center justify-center text-gray-500 space-y-2">
-                <SparklesIcon className="w-12 h-12 opacity-20" />
-                <p className="text-sm">Your generated images will appear here.</p>
-            </div>
-        );
-    }
-    
-    if (isLoading && generatedImages.length === 0) {
-        return (
-            <div className="h-full flex flex-col items-center justify-center text-gray-400">
-                <div className="relative">
-                    <div className="w-12 h-12 border-4 border-gray-700 border-t-cyan-500 rounded-full animate-spin"></div>
-                </div>
-                <p className="mt-4 text-sm font-medium">Generating Variations...</p>
-            </div>
-        );
-    }
+  if (isLoading && generatedImages.length === 0) {
+    return (
+      <div className="flex h-full min-h-[240px] flex-col items-center justify-center gap-4 p-6">
+        <div className="relative">
+          <div className="h-12 w-12 animate-spin rounded-full border-[3px] border-white/10 border-t-cyan-400" />
+        </div>
+        <p className="text-sm font-medium text-gray-400">Đang tạo ảnh…</p>
+        <p className="max-w-xs text-center text-xs text-gray-600">Quá trình có thể mất vài giây</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="p-2 h-full overflow-y-auto">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 auto-rows-fr">
+    <div className="custom-scrollbar h-full overflow-y-auto p-3 sm:p-4">
+      <div className="grid auto-rows-fr grid-cols-1 gap-4 lg:grid-cols-2">
         {originalImage && (
-          <ImageCard title="Original" imageUrl={originalImage.previewUrl} isOriginal={true} />
+          <ImageCard title="Ảnh gốc" imageUrl={originalImage.previewUrl} isOriginal />
         )}
         {generatedImages.map((image, index) => (
-          <ImageCard 
-            key={index} 
-            title={image.prompt} 
-            imageUrl={image.imageUrl} 
+          <ImageCard
+            key={index}
+            title={image.prompt}
+            imageUrl={image.imageUrl}
             caption={image.text}
             isError={image.imageUrl === 'error'}
             onDownload={image.imageUrl !== 'error' ? () => onDownload(image) : undefined}
-            onForceRemoveBackgroundDownload={image.imageUrl !== 'error' ? () => onForceRemoveBackgroundDownload(image) : undefined}
+            onForceRemoveBackgroundDownload={
+              image.imageUrl !== 'error' ? () => onForceRemoveBackgroundDownload(image) : undefined
+            }
             onQuickView={image.imageUrl !== 'error' ? () => onImageSelect(image) : undefined}
             onUseAsInput={image.imageUrl !== 'error' ? () => onUseAsInput(image) : undefined}
           />

@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { Sparkles, X } from 'lucide-react';
 import type { ImageFile, GeneratedImage, ImageSize } from '../../types';
 import { ImageUploader } from '../ImageUploader';
 import { ReferenceImageUploader } from '../ReferenceImageUploader';
@@ -55,6 +56,17 @@ export interface CreateViewProps {
   onClearHistory: () => void;
 }
 
+const CREATE_WELCOME_DISMISSED_KEY = 'zvas-create-welcome-dismissed';
+
+function readWelcomeDismissedFromStorage(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    return localStorage.getItem(CREATE_WELCOME_DISMISSED_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
 export const CreateView: React.FC<CreateViewProps> = ({
   prompts,
   setPrompts,
@@ -91,10 +103,42 @@ export const CreateView: React.FC<CreateViewProps> = ({
   onDownload,
   onForceRemoveBackgroundDownload,
   onClearHistory,
-}) => (
+}) => {
+  const [welcomeDismissed, setWelcomeDismissed] = useState(readWelcomeDismissedFromStorage);
+
+  const dismissWelcomeBanner = () => {
+    try {
+      localStorage.setItem(CREATE_WELCOME_DISMISSED_KEY, '1');
+    } catch {
+      /* ignore quota / private mode */
+    }
+    setWelcomeDismissed(true);
+  };
+
+  return (
   <>
-    <aside className="w-full lg:w-[480px] flex-shrink-0 flex flex-col border-b lg:border-b-0 lg:border-r border-gray-700 bg-gray-800/30 lg:h-full">
-      <div className="flex-shrink-0 lg:flex-1 lg:overflow-y-auto p-4 space-y-4 custom-scrollbar">
+    <aside className="flex w-full flex-shrink-0 flex-col border-b border-white/[0.08] bg-white/[0.03] backdrop-blur-sm lg:h-full lg:w-[480px] lg:border-b-0 lg:border-r">
+      <div className="custom-scrollbar flex-shrink-0 space-y-4 p-4 lg:flex-1 lg:overflow-y-auto">
+        {!welcomeDismissed && (
+          <div className="flex items-start gap-3 rounded-2xl border border-cyan-500/15 bg-cyan-500/[0.06] px-3 py-2.5 sm:px-4">
+            <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-cyan-500/25 bg-cyan-500/10">
+              <Sparkles className="h-4 w-4 text-cyan-200" aria-hidden />
+            </span>
+            <p className="min-w-0 flex-1 text-xs leading-relaxed text-gray-400 sm:text-sm">
+              <span className="font-medium text-gray-200">Chào bạn!</span> Viết prompt, thêm ảnh gốc nếu cần, chọn style — rồi bấm{' '}
+              <span className="text-cyan-300/90">Tạo ảnh</span> bên dưới.
+            </p>
+            <button
+              type="button"
+              onClick={dismissWelcomeBanner}
+              className="shrink-0 rounded-lg p-1.5 text-gray-500 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-500/60"
+              aria-label="Đóng gợi ý"
+            >
+              <X className="h-4 w-4" strokeWidth={2} aria-hidden />
+            </button>
+          </div>
+        )}
+
         <PromptManager prompts={prompts} setPrompts={setPrompts} hasImage={!!image} />
 
         <PromptOptions
@@ -129,21 +173,21 @@ export const CreateView: React.FC<CreateViewProps> = ({
         <ImageSizeSelector imageSize={imageSize} setImageSize={onImageSizeChange} />
       </div>
 
-      <div className="p-6 border-t border-gray-700 bg-gray-900/50 backdrop-blur-md z-10 sticky bottom-0 lg:static">
+      <div className="sticky bottom-0 z-10 border-t border-white/[0.08] bg-[#0a1016]/90 p-5 backdrop-blur-lg lg:static lg:bg-[#0a1016]/80">
         <button
           type="button"
           onClick={onGenerate}
           disabled={!canGenerate}
-          className={`w-full text-lg font-semibold py-3 px-4 rounded-lg transition-all duration-300 flex items-center justify-center ${
+          className={`flex w-full items-center justify-center rounded-2xl px-4 py-3.5 text-base font-semibold transition-all duration-300 sm:py-4 sm:text-lg ${
             canGenerate
-              ? 'bg-gradient-to-r from-cyan-600 to-blue-700 hover:from-cyan-500 hover:to-blue-600 text-white shadow-lg transform hover:scale-[1.02]'
-              : 'bg-gray-700 cursor-not-allowed text-gray-500'
+              ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg shadow-cyan-500/20 hover:brightness-110 active:scale-[0.99]'
+              : 'cursor-not-allowed bg-white/5 text-gray-600'
           }`}
         >
           {isLoading ? (
             <>
               <svg
-                className="animate-spin -ml-1 mr-2 h-5 w-5 text-white"
+                className="-ml-1 mr-2 h-5 w-5 animate-spin text-white"
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
                 viewBox="0 0 24 24"
@@ -155,32 +199,35 @@ export const CreateView: React.FC<CreateViewProps> = ({
                   d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                 />
               </svg>
-              Đang tạo...
+              Đang tạo ảnh…
             </>
           ) : (
-            'Generate Images'
+            'Tạo ảnh'
           )}
         </button>
         {error && (
-          <div className="mt-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-sm">
+          <div className="mt-4 rounded-xl border border-red-500/25 bg-red-500/[0.08] p-3 text-sm">
             {error.includes('Quota exceeded') ? (
-              <p className="text-amber-400">
-                <span className="font-bold">Hết hạn mức (Quota Exceeded):</span> Hệ thống đã đạt giới hạn lượt đọc
-                miễn phí trong ngày. Vui lòng quay lại vào ngày mai hoặc liên hệ Admin để nâng cấp.
+              <p className="text-amber-200/95">
+                <span className="font-semibold text-amber-100">Hết quota:</span> đã đạt giới hạn miễn phí trong ngày.
+                Thử lại sau hoặc nhờ admin hỗ trợ nâng hạn mức.
               </p>
             ) : (
-              <p className="text-red-400">{error}</p>
+              <p className="text-red-300">{error}</p>
             )}
           </div>
         )}
       </div>
     </aside>
 
-    <main className="flex-shrink-0 lg:flex-1 bg-gray-900 p-2 flex flex-col lg:overflow-hidden min-h-[400px] lg:min-h-0">
-      <div className="flex items-center justify-between mb-2 px-1 flex-shrink-0">
-        <h2 className="text-base font-bold text-cyan-300 uppercase tracking-wider">Kết quả</h2>
+    <main className="flex min-h-[400px] flex-shrink-0 flex-col p-3 sm:p-4 lg:min-h-0 lg:flex-1 lg:overflow-hidden">
+      <div className="mb-3 flex flex-shrink-0 flex-col gap-0.5 px-0.5 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h2 className="text-base font-semibold tracking-tight text-white sm:text-lg">Kết quả</h2>
+          <p className="text-xs text-gray-500">Xem trước, tải về hoặc dùng làm ảnh đầu vào</p>
+        </div>
       </div>
-      <div className="flex-shrink-0 lg:flex-1 lg:overflow-y-auto rounded-lg border border-gray-800 bg-gray-800/20 mb-2">
+      <div className="mb-3 flex min-h-0 flex-shrink-0 flex-1 flex-col overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.02] lg:overflow-y-auto">
         <ResultsDisplay
           originalImage={image}
           generatedImages={generatedImages}
@@ -192,7 +239,7 @@ export const CreateView: React.FC<CreateViewProps> = ({
         />
       </div>
 
-      <div className="h-32 flex-shrink-0 border-t border-gray-800 pt-2">
+      <div className="h-32 flex-shrink-0 rounded-2xl border border-white/[0.06] bg-white/[0.02] pt-3">
         <HistoryDisplay
           images={historyImages}
           onImageSelect={onFullscreen}
@@ -203,4 +250,5 @@ export const CreateView: React.FC<CreateViewProps> = ({
       </div>
     </main>
   </>
-);
+  );
+};

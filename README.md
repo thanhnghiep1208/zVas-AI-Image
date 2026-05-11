@@ -2,7 +2,7 @@
 
 Ứng dụng web tạo và biến thể ảnh bằng AI (Gemini, OpenAI DALL·E 3, Seedance), kết hợp Firebase Auth/Firestore, Express và Vite.
 
-**Tài liệu chi tiết:** xem [DOCUMENTATION.md](./DOCUMENTATION.md) (trang mục lục) hoặc đọc trực tiếp bộ tài liệu trong thư mục `docs/`.
+**Tài liệu chi tiết:** xem [DOCUMENTATION.md](./DOCUMENTATION.md) (trang mục lục) hoặc đọc trực tiếp bộ tài liệu trong thư mục `docs/`. **Shell UI, logo làm mới vùng làm việc, banner Create, upload/kết quả:** [docs/02-frontend-architecture.md](./docs/02-frontend-architecture.md).
 
 ---
 

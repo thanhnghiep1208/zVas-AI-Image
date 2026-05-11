@@ -82,22 +82,26 @@ export const MergeImage: React.FC<MergeImageProps> = ({ onDownload, onFullscreen
   };
 
   return (
-    <div className="flex flex-col h-full bg-gray-900 text-gray-100 overflow-hidden">
-      <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
-        <div className="max-w-4xl mx-auto space-y-8">
-          <section className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-bold text-cyan-400 flex items-center gap-2">
-                <ImageIcon className="w-5 h-5" />
-                Tải lên hình ảnh để kết hợp
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden text-gray-100">
+      <div className="custom-scrollbar flex-1 overflow-y-auto p-4 sm:p-6">
+        <div className="mx-auto max-w-4xl space-y-8">
+          <section className="space-y-4 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-5 sm:p-6">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h2 className="flex items-center gap-2 text-lg font-semibold tracking-tight text-white sm:text-xl">
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-cyan-500/10 text-cyan-300">
+                  <ImageIcon className="h-5 w-5" />
+                </span>
+                Tải lên ảnh để kết hợp
               </h2>
-              <span className="text-xs text-gray-500">{images.length} ảnh đã chọn</span>
+              <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-xs text-gray-400">
+                {images.length} ảnh đã chọn
+              </span>
             </div>
 
             <div
               onDragOver={(e) => e.preventDefault()}
               onDrop={onDrop}
-              className="border-2 border-dashed border-gray-700 rounded-xl p-8 text-center hover:border-cyan-500/50 transition-colors bg-gray-800/30 group cursor-pointer"
+              className="group cursor-pointer rounded-2xl border-2 border-dashed border-white/10 bg-white/[0.03] p-8 text-center transition-colors hover:border-cyan-500/40"
               onClick={() => document.getElementById('merge-upload')?.click()}
             >
               <input
@@ -109,20 +113,20 @@ export const MergeImage: React.FC<MergeImageProps> = ({ onDownload, onFullscreen
                 onChange={(e) => handleFiles(Array.from(e.target.files || []))}
               />
               <div className="flex flex-col items-center space-y-3">
-                <div className="p-4 bg-gray-700/50 rounded-full group-hover:bg-cyan-500/10 transition-colors">
-                  <Upload className="w-8 h-8 text-gray-400 group-hover:text-cyan-400" />
+                <div className="rounded-full bg-white/[0.06] p-4 transition-colors group-hover:bg-cyan-500/10">
+                  <Upload className="h-8 w-8 text-gray-400 transition-colors group-hover:text-cyan-300" />
                 </div>
                 <div>
-                  <p className="text-lg font-medium">Kéo thả hoặc click để tải ảnh</p>
-                  <p className="text-sm text-gray-500">Tải lên nhiều ảnh để AI kết hợp chúng lại</p>
+                  <p className="text-lg font-medium text-white">Kéo thả hoặc bấm để tải ảnh</p>
+                  <p className="text-sm text-gray-500">Nhiều ảnh — AI gộp theo mô tả của bạn</p>
                 </div>
               </div>
             </div>
 
             {images.length > 0 && (
-              <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-4 mt-4">
+              <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4 md:grid-cols-5">
                 {images.map((img, idx) => (
-                  <div key={idx} className="relative group aspect-square rounded-lg overflow-hidden border border-gray-700 bg-black">
+                  <div key={idx} className="group relative aspect-square overflow-hidden rounded-xl border border-white/10 bg-black">
                     <img src={img.previewUrl} alt="preview" className="w-full h-full object-cover" />
                     <button
                       onClick={(e) => { e.stopPropagation(); removeImage(idx); }}
@@ -136,56 +140,64 @@ export const MergeImage: React.FC<MergeImageProps> = ({ onDownload, onFullscreen
             )}
           </section>
 
-          <section className="space-y-4">
-            <h2 className="text-xl font-bold text-cyan-400 flex items-center gap-2">
-              <Sparkles className="w-5 h-5" />
-              Nhập Prompt kết hợp
+          <section className="space-y-4 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-5 sm:p-6">
+            <h2 className="flex items-center gap-2 text-lg font-semibold tracking-tight text-white sm:text-xl">
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/10 text-amber-200">
+                <Sparkles className="h-5 w-5" />
+              </span>
+              Mô tả cách kết hợp
             </h2>
             <textarea
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               placeholder="Ví dụ: Kết hợp phong cách của ảnh 1 với chủ thể của ảnh 2, tạo ra một không gian huyền ảo..."
-              className="w-full h-32 bg-gray-800 border border-gray-700 rounded-xl p-4 text-gray-100 focus:ring-2 focus:ring-cyan-500 focus:border-transparent outline-none resize-none transition-all"
+              className="h-32 w-full resize-none rounded-xl border border-white/10 bg-white/[0.05] p-4 text-gray-100 outline-none transition-all placeholder:text-gray-600 focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/20"
             />
           </section>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             <AspectRatioSelector aspectRatio={aspectRatio} setAspectRatio={setAspectRatio} />
             <ImageSizeSelector imageSize={imageSize} setImageSize={setImageSize} />
           </div>
 
-          <div className="flex flex-col items-center pt-4">
+          <div className="flex flex-col items-center pt-2">
             <button
+              type="button"
               onClick={handleGenerate}
               disabled={isLoading || images.length === 0 || !prompt.trim()}
-              className={`w-full max-w-md py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-3 transition-all
+              className={`flex w-full max-w-md items-center justify-center gap-3 rounded-2xl py-4 text-lg font-semibold transition-all
                 ${isLoading || images.length === 0 || !prompt.trim()
-                  ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
-                  : 'bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white shadow-lg shadow-cyan-500/20 active:scale-[0.98]'
+                  ? 'cursor-not-allowed bg-white/5 text-gray-600'
+                  : 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg shadow-cyan-500/20 hover:brightness-110 active:scale-[0.99]'
                 }
               `}
             >
               {isLoading ? (
                 <>
-                  <Loader2 className="w-6 h-6 animate-spin" />
-                  Đang xử lý...
+                  <Loader2 className="h-6 w-6 animate-spin" />
+                  Đang xử lý…
                 </>
               ) : (
                 <>
-                  <Sparkles className="w-6 h-6" />
-                  Merge & Generate
+                  <Sparkles className="h-6 w-6" />
+                  Trộn &amp; tạo ảnh
                 </>
               )}
             </button>
-            {error && <p className="mt-4 text-red-400 text-sm font-medium">{error}</p>}
+            {error && <p className="mt-4 text-sm font-medium text-red-300">{error}</p>}
           </div>
 
           {results.length > 0 && (
-            <section className="pt-12 space-y-6">
-              <h2 className="text-2xl font-bold text-white border-b border-gray-800 pb-2">Kết quả kết hợp</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <section className="space-y-6 pt-8">
+              <h2 className="border-b border-white/[0.08] pb-3 text-xl font-semibold tracking-tight text-white sm:text-2xl">
+                Kết quả kết hợp
+              </h2>
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
                 {results.map((res, idx) => (
-                  <div key={idx} className="group relative bg-gray-800 rounded-xl overflow-hidden border border-gray-700 shadow-xl transition-all hover:border-cyan-500/50">
+                  <div
+                    key={idx}
+                    className="group relative overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03] shadow-xl transition-all hover:border-cyan-500/35"
+                  >
                     <div className="aspect-square bg-black relative">
                       {res.imageUrl === 'error' ? (
                         <div className="absolute inset-0 flex items-center justify-center p-6 text-center text-red-400">

@@ -49,17 +49,19 @@ const App: React.FC = () => {
   });
   const [backgroundStyle, setBackgroundStyle] = useState('none'); 
   const [userModelPreference, setUserModelPreference] = useState<Record<string, string>>({});
+  const [workspaceMountKey, setWorkspaceMountKey] = useState(0);
 
   const openAdminDashboard = useCallback(() => {
     setIsAdminDashboardOpen(true);
   }, []);
 
-  const resetAppState = useCallback(() => {
+  const resetAppState = useCallback((opts?: { preserveView?: boolean }) => {
     setImage(null);
     setReferenceImages([]);
     setPrompts(['']);
     setError(null);
     setFullscreenImage(null);
+    setIsStyleGuideVisible(false);
     setAspectRatio('1:1');
     setImageSize('1K');
     setSelectedStyle('');
@@ -74,7 +76,9 @@ const App: React.FC = () => {
     });
     setBackgroundStyle('none');
     setIsAdminDashboardOpen(false);
-    setCurrentView('create');
+    if (!opts?.preserveView) {
+      setCurrentView('create');
+    }
   }, []);
 
   const onLoginSuccess = useCallback((uid: string) => {
@@ -133,6 +137,7 @@ const App: React.FC = () => {
     generatedImages,
     setGeneratedImages,
     handleGenerateClick,
+    resetGenerationWorkspace,
   } = useImageGeneration({
     user,
     prompts,
@@ -152,6 +157,14 @@ const App: React.FC = () => {
     setHistoryImages,
     setError,
   });
+
+  const handleLogoWorkspaceRefresh = useCallback(() => {
+    if (image) URL.revokeObjectURL(image.previewUrl);
+    referenceImages.forEach((ref) => URL.revokeObjectURL(ref.previewUrl));
+    resetGenerationWorkspace();
+    resetAppState({ preserveView: true });
+    setWorkspaceMountKey((k) => k + 1);
+  }, [image, referenceImages, resetAppState, resetGenerationWorkspace]);
 
   const handleOptionChange = (option: keyof typeof promptOptions) => {
     setPromptOptions(prevOptions => ({
@@ -273,7 +286,16 @@ const App: React.FC = () => {
   return (
     <>
       <Toaster position="top-right" richColors />
-      <div className="flex flex-col h-screen bg-gray-900 text-gray-200 font-sans overflow-hidden">
+      <div className="relative flex h-screen flex-col overflow-hidden bg-[#05080c] font-sans text-gray-200">
+        <div
+          className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_75%_50%_at_50%_-20%,rgba(34,211,238,0.1),transparent_55%)]"
+          aria-hidden
+        />
+        <div
+          className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_45%_35%_at_100%_100%,rgba(59,130,246,0.07),transparent_50%)]"
+          aria-hidden
+        />
+        <div className="relative z-10 flex min-h-0 flex-1 flex-col">
         <AppHeader
           user={user}
           userProfile={userProfile}
@@ -297,9 +319,13 @@ const App: React.FC = () => {
           getProviderKey={getProviderKey}
           onModelPreferenceChange={handleModelPreferenceChange}
           onLogout={handleLogout}
+          onLogoWorkspaceRefresh={handleLogoWorkspaceRefresh}
         />
 
-        <div className="flex flex-col lg:flex-row flex-1 overflow-y-auto lg:overflow-hidden">
+        <div
+          key={workspaceMountKey}
+          className="flex min-h-0 flex-1 flex-col overflow-y-auto lg:flex-row lg:overflow-hidden"
+        >
           {currentView === 'create' ? (
             <CreateView
               prompts={prompts}
@@ -357,7 +383,7 @@ const App: React.FC = () => {
               onClearHistory={handleClearHistory}
             />
           ) : (
-            <main className="flex-shrink-0 lg:flex-1 bg-gray-900 flex flex-col lg:overflow-hidden">
+            <main className="flex min-h-0 flex-shrink-0 flex-col lg:flex-1 lg:overflow-hidden">
               <MergeImage 
                 onDownload={handleDownloadImage}
                 onFullscreen={setFullscreenImage}
@@ -370,6 +396,7 @@ const App: React.FC = () => {
           activeModelLabel={getEffectiveModel()}
           providerLabel={globalSettings?.defaultProvider || 'Gemini'}
         />
+        </div>
       </div>
 
       {isStyleGuideVisible && (
