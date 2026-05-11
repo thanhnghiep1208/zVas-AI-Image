@@ -1,5 +1,5 @@
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Upload, X, Sparkles, Image as ImageIcon, Loader2, Download, Maximize2 } from 'lucide-react';
 import type { ImageFile, GeneratedImage, ImageSize } from '../types';
 import { generateImageVariations } from '../services/geminiService';
@@ -19,6 +19,15 @@ export const MergeImage: React.FC<MergeImageProps> = ({ onDownload, onFullscreen
   const [aspectRatio, setAspectRatio] = useState('1:1');
   const [imageSize, setImageSize] = useState<ImageSize>('1K');
   const [error, setError] = useState<string | null>(null);
+
+  const imagesRef = useRef(images);
+  imagesRef.current = images;
+  useEffect(
+    () => () => {
+      imagesRef.current.forEach((img) => URL.revokeObjectURL(img.previewUrl));
+    },
+    []
+  );
 
   const onDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();

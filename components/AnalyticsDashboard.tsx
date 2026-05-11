@@ -1,6 +1,13 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { calculateMonthlyAnalytics, MonthlyAnalytics, getMonthlyErrorBreakdown, MonthlyErrorBreakdownItem, getMonthlyTokenStats, MonthlyTokenStats, getMonthlyTopModelStats, MonthlyTopModelStats } from '../services/analyticsService';
-import { db, collection, query, where, getCountFromServer, onSnapshot, handleFirestoreError, OperationType } from '../firebase';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import type { QueryDocumentSnapshot } from 'firebase/firestore';
+import {
+  loadMonthlyDashboardBundle,
+  MonthlyAnalytics,
+  MonthlyErrorBreakdownItem,
+  MonthlyTokenStats,
+  MonthlyTopModelStats,
+} from '../services/analyticsService';
+import { db, collection, query, where, getDocs, doc, getDoc, orderBy, limit, startAfter } from '../firebase';
 import { BarChart3, Users, Image as ImageIcon, CheckCircle, XCircle, DollarSign, Activity, Pencil, ChevronDown, ChevronRight, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 import { LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer } from 'recharts';
@@ -26,7 +33,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
   latencyStats,
   readOnly = false,
 }) => {
-  const ANALYTICS_CACHE_TTL_MS = 5 * 60 * 1000;
+  const ANALYTICS_CACHE_TTL_MS = 15 * 60 * 1000;
 
   const readCache = <T,>(key: string): T | null => {
     try {
@@ -116,20 +123,17 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
           return;
         }
 
-        const data = await calculateMonthlyAnalytics(monthKey);
-        setAnalytics(data);
-        const monthlyErrorBreakdown = await getMonthlyErrorBreakdown(monthKey);
-        setErrorBreakdown(monthlyErrorBreakdown);
-        const monthlyTokenStats = await getMonthlyTokenStats(monthKey);
-        setTokenStats(monthlyTokenStats);
-        const monthlyTopModelStats = await getMonthlyTopModelStats(monthKey);
-        setTopModelStats(monthlyTopModelStats);
+        const bundle = await loadMonthlyDashboardBundle(monthKey);
+        setAnalytics(bundle.analytics);
+        setErrorBreakdown(bundle.errorBreakdown);
+        setTokenStats(bundle.tokenStats);
+        setTopModelStats(bundle.topModelStats);
 
         writeCache(cacheKey, {
-          analytics: data,
-          errorBreakdown: monthlyErrorBreakdown,
-          tokenStats: monthlyTokenStats,
-          topModelStats: monthlyTopModelStats,
+          analytics: bundle.analytics,
+          errorBreakdown: bundle.errorBreakdown,
+          tokenStats: bundle.tokenStats,
+          topModelStats: bundle.topModelStats,
         });
       } catch (error) {
         console.error('Error loading analytics:', error);
@@ -251,7 +255,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
 
           <ModelUsageCard modelBreakdown={topModelStats.modelBreakdown} />
 
-          <TrendsSection
+          <DeferredTrendsSection
             activeMetric={activeTrendMetric}
             onMetricChange={setActiveTrendMetric}
           />
@@ -304,11 +308,20 @@ interface AnalyticsUserRow {
   photoURL: string;
 }
 
+const STATS_BY_USER_MONTH_COLLECTION = 'stats_by_user_month';
+const HISTORY_AGG_PAGE_SIZE = 500;
+
+interface UserHistoryScanInfo {
+  mode: 'precomputed' | 'paginated';
+  docCount?: number;
+}
+
 const UserHistoryCountsPanel: React.FC<{ monthKey: string }> = ({ monthKey }) => {
   const [users, setUsers] = useState<AnalyticsUserRow[]>([]);
   const [userCounts, setUserCounts] = useState<Record<string, number>>({});
   const [isUsersLoading, setIsUsersLoading] = useState(true);
   const [isCountsLoading, setIsCountsLoading] = useState(false);
+  const [scanInfo, setScanInfo] = useState<UserHistoryScanInfo | null>(null);
 
   const monthRange = useMemo(() => {
     const [yearStr, monthStr] = monthKey.split('-');
@@ -326,70 +339,107 @@ const UserHistoryCountsPanel: React.FC<{ monthKey: string }> = ({ monthKey }) =>
     };
   }, [monthKey]);
 
-  useEffect(() => {
-    const usersRef = collection(db, 'users');
-    const unsub = onSnapshot(
-      usersRef,
-      (snapshot) => {
+  const loadPanelData = useCallback(
+    async (forceClientScan: boolean) => {
+      setIsUsersLoading(true);
+      setIsCountsLoading(true);
+      setUserCounts({});
+      setScanInfo(null);
+
+      try {
+        const usersSnap = await getDocs(collection(db, 'users'));
         const list: AnalyticsUserRow[] = [];
-        snapshot.forEach((docSnap) => {
+        usersSnap.forEach((docSnap) => {
           const d = docSnap.data() as Partial<AnalyticsUserRow>;
           list.push({
             uid: d.uid ?? docSnap.id,
             email: d.email ?? '',
             displayName: d.displayName ?? '',
-            photoURL: d.photoURL ?? ''
+            photoURL: d.photoURL ?? '',
           });
         });
         setUsers(list);
         setIsUsersLoading(false);
-      },
-      (error) => {
-        handleFirestoreError(error, OperationType.LIST, 'users');
-        setIsUsersLoading(false);
-      }
-    );
-    return () => unsub();
-  }, []);
 
-  const loadCounts = useCallback(async (userList: AnalyticsUserRow[]) => {
-    if (userList.length === 0) {
-      setUserCounts({});
-      setIsCountsLoading(false);
-      return;
-    }
-    setIsCountsLoading(true);
-    const counts: Record<string, number> = {};
-    try {
-      for (const user of userList) {
-        try {
-          const historyQ = query(
+        if (list.length === 0) {
+          setUserCounts({});
+          setIsCountsLoading(false);
+          return;
+        }
+
+        if (!forceClientScan) {
+          try {
+            const statsSnap = await getDoc(doc(db, STATS_BY_USER_MONTH_COLLECTION, monthKey));
+            if (statsSnap.exists()) {
+              const raw = statsSnap.data() as { counts?: unknown };
+              const c = raw.counts;
+              if (c && typeof c === 'object' && !Array.isArray(c)) {
+                setUserCounts(c as Record<string, number>);
+                setScanInfo({ mode: 'precomputed' });
+                setIsCountsLoading(false);
+                return;
+              }
+            }
+          } catch {
+            /* fall through to client aggregation */
+          }
+        }
+
+        const counts: Record<string, number> = {};
+        let lastDoc: QueryDocumentSnapshot | undefined;
+        let totalDocs = 0;
+
+        while (true) {
+          const base = [
             collection(db, 'history'),
-            where('uid', '==', user.uid),
             where('createdAt', '>=', monthRange.startDate),
             where('createdAt', '<', monthRange.endDate),
-          );
-          const countSnapshot = await getCountFromServer(historyQ);
-          counts[user.uid] = countSnapshot.data().count;
-        } catch (err) {
-          console.error(`Error fetching count for user ${user.uid}:`, err);
-        }
-      }
-      setUserCounts(counts);
-    } finally {
-      setIsCountsLoading(false);
-    }
-  }, [monthRange.endDate, monthRange.startDate]);
+            orderBy('createdAt', 'asc'),
+            limit(HISTORY_AGG_PAGE_SIZE),
+          ] as const;
+          const historyQ = lastDoc
+            ? query(...base, startAfter(lastDoc))
+            : query(...base);
+          const historySnap = await getDocs(historyQ);
+          if (historySnap.empty) break;
 
-  const usersKey = useMemo(() => [...users].map((u) => u.uid).sort().join(','), [users]);
+          totalDocs += historySnap.size;
+          historySnap.forEach((docSnap) => {
+            const data = docSnap.data() as { uid?: string };
+            const uid = data.uid;
+            if (typeof uid === 'string') {
+              counts[uid] = (counts[uid] ?? 0) + 1;
+            }
+          });
+
+          lastDoc = historySnap.docs[historySnap.docs.length - 1];
+          if (historySnap.size < HISTORY_AGG_PAGE_SIZE) break;
+        }
+
+        setUserCounts(counts);
+        setScanInfo({ mode: 'paginated', docCount: totalDocs });
+      } catch (error: unknown) {
+        const msg = error instanceof Error ? error.message : String(error);
+        if (msg.includes('Quota exceeded')) {
+          toast.warning('Hết quota đọc Firestore — thử lại sau.');
+        } else {
+          console.error('UserHistoryCountsPanel:', error);
+          toast.error('Không tải được bảng đếm ảnh.');
+        }
+        setUsers([]);
+        setUserCounts({});
+        setScanInfo(null);
+      } finally {
+        setIsUsersLoading(false);
+        setIsCountsLoading(false);
+      }
+    },
+    [monthKey, monthRange.endDate, monthRange.startDate]
+  );
 
   useEffect(() => {
-    if (!usersKey) {
-      setUserCounts({});
-      return;
-    }
-    loadCounts(users);
-  }, [usersKey, users, loadCounts, monthKey]);
+    void loadPanelData(false);
+  }, [loadPanelData]);
 
   const sortedUsers = useMemo(() => {
     return [...users].sort((a, b) => {
@@ -400,8 +450,15 @@ const UserHistoryCountsPanel: React.FC<{ monthKey: string }> = ({ monthKey }) =>
   }, [users, userCounts]);
 
   const handleRefreshCounts = () => {
-    loadCounts(users);
+    void loadPanelData(true);
   };
+
+  const scanHint =
+    scanInfo?.mode === 'precomputed'
+      ? 'Nguồn: doc stats_by_user_month/{tháng} (1 lần đọc). Bấm cập nhật để quét lại history trên client.'
+      : scanInfo?.mode === 'paginated' && typeof scanInfo.docCount === 'number'
+        ? `Đã quét ${scanInfo.docCount.toLocaleString('vi-VN')} bản ghi history (pagination ${HISTORY_AGG_PAGE_SIZE}/trang).`
+        : null;
 
   return (
     <div className="overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-sm">
@@ -414,13 +471,17 @@ const UserHistoryCountsPanel: React.FC<{ monthKey: string }> = ({ monthKey }) =>
             Số ảnh đã tạo theo người dùng
           </h3>
           <p className="mt-1 text-xs text-gray-500">
-            Đếm theo tháng đang chọn từ collection <code className="text-gray-400">history</code> trên Firestore.
+            Một lần đọc <code className="text-gray-400">users</code>
+            {scanInfo?.mode === 'precomputed'
+              ? ' + doc tổng hợp theo tháng (Cloud Function / job có thể ghi sẵn).'
+              : ' + history theo tháng (pagination getDocs + orderBy createdAt).'}
+            {scanHint ? <span className="mt-1 block text-gray-500">{scanHint}</span> : null}
           </p>
         </div>
         <button
           type="button"
           onClick={handleRefreshCounts}
-          disabled={isCountsLoading || users.length === 0}
+          disabled={isUsersLoading || isCountsLoading || users.length === 0}
           className="flex shrink-0 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.06] px-3 py-2 text-xs font-medium text-gray-200 transition hover:bg-white/10 disabled:pointer-events-none disabled:opacity-50"
         >
           <Clock className="w-3 h-3" />
@@ -673,6 +734,45 @@ const MonthlyBudgetCard = ({
           >
             Save
           </button>
+        </div>
+      )}
+    </div>
+  );
+};
+
+/** Chỉ mount TrendsSection (và hook useTrendData / Firestore) khi gần viewport — giảm tải khi vừa mở Analytics. */
+const DeferredTrendsSection = ({
+  activeMetric,
+  onMetricChange,
+}: {
+  activeMetric: TrendMetric;
+  onMetricChange: (metric: TrendMetric) => void;
+}) => {
+  const [mountChart, setMountChart] = useState(false);
+  const anchorRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const el = anchorRef.current;
+    if (!el || mountChart) return undefined;
+    const obs = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) setMountChart(true);
+      },
+      { root: null, rootMargin: '160px 0px', threshold: 0 }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [mountChart]);
+
+  return (
+    <div>
+      <div ref={anchorRef} className="h-px w-full" aria-hidden />
+      {mountChart ? (
+        <TrendsSection activeMetric={activeMetric} onMetricChange={onMetricChange} />
+      ) : (
+        <div className="flex h-72 flex-col items-center justify-center gap-2 rounded-2xl border border-white/[0.08] bg-white/[0.03] px-4 text-center text-sm text-gray-500">
+          <span>Cuộn tới mục xu hướng để tải biểu đồ</span>
+          <span className="text-xs text-gray-600">(tránh gọi Firestore trend khi chưa cần)</span>
         </div>
       )}
     </div>

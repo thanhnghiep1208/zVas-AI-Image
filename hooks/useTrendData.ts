@@ -48,7 +48,7 @@ const formatWeekLabel = (date: Date): string =>
   `Wk ${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
 
 export const useTrendData = (metric: string, range: TrendRange): UseTrendDataResult => {
-  const TREND_CACHE_TTL_MS = 5 * 60 * 1000;
+  const TREND_CACHE_TTL_MS = 15 * 60 * 1000;
   const [data, setData] = useState<TrendPoint[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

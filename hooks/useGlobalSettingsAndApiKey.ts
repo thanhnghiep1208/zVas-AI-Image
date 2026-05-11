@@ -1,7 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { User } from 'firebase/auth';
-import { db, doc, onSnapshot, handleFirestoreError, OperationType } from '../firebase';
+import { db, doc, getDoc, handleFirestoreError, OperationType } from '../firebase';
 import { getRuntimeEnvValue, isLikelyPlaceholderKey } from '../utils/runtimeEnv';
+
+/** Không dùng onSnapshot — refetch theo chu kỳ + khi quay lại tab. */
+const SETTINGS_POLL_INTERVAL_MS = 3 * 60 * 1000;
+const SETTINGS_FOCUS_MIN_GAP_MS = 60 * 1000;
 
 export interface UseGlobalSettingsAndApiKeyResult {
   globalSettings: any;
@@ -63,37 +67,58 @@ export function useGlobalSettingsAndApiKey(
   useEffect(() => {
     if (!user) {
       setGlobalSettings(null);
-      return;
+      return undefined;
     }
 
-    const settingsRef = doc(db, 'settings', 'global');
-    const unsubscribeSettings = onSnapshot(
-      settingsRef,
-      (docSnap) => {
+    let pollTimer: ReturnType<typeof setInterval> | undefined;
+    let lastFetchAt = 0;
+
+    const fetchSettings = async () => {
+      const settingsRef = doc(db, 'settings', 'global');
+      try {
+        const docSnap = await getDoc(settingsRef);
+        lastFetchAt = Date.now();
         if (docSnap.exists()) {
           const settingsData = docSnap.data();
           setGlobalSettings(settingsData);
           setSystemApiKey(settingsData.systemApiKey || null);
-
           sessionStorage.setItem('global_settings', JSON.stringify(settingsData));
-
           if (settingsData.systemApiKey) {
             setHasApiKey(true);
           }
         }
-      },
-      (error) => {
-        if (error.message.includes('Quota exceeded')) {
+      } catch (error: unknown) {
+        const msg = error instanceof Error ? error.message : String(error);
+        if (msg.includes('Quota exceeded')) {
           console.warn('Settings quota exceeded, using cache.');
           const cached = sessionStorage.getItem('global_settings');
-          if (cached) setGlobalSettings(JSON.parse(cached));
+          if (cached) {
+            try {
+              setGlobalSettings(JSON.parse(cached));
+            } catch {
+              /* ignore */
+            }
+          }
         } else {
           handleFirestoreError(error, OperationType.GET, 'settings/global');
         }
       }
-    );
+    };
 
-    return () => unsubscribeSettings();
+    void fetchSettings();
+    pollTimer = setInterval(() => void fetchSettings(), SETTINGS_POLL_INTERVAL_MS);
+
+    const onVisibility = () => {
+      if (document.visibilityState !== 'visible') return;
+      if (Date.now() - lastFetchAt < SETTINGS_FOCUS_MIN_GAP_MS) return;
+      void fetchSettings();
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+
+    return () => {
+      if (pollTimer) clearInterval(pollTimer);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
   }, [user]);
 
   const handleSelectApiKey = useCallback(async () => {

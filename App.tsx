@@ -1,10 +1,9 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, lazy, Suspense } from 'react';
 import type { ImageFile, GeneratedImage, ImageSize } from './types';
 import { FullscreenViewer } from './components/FullscreenViewer';
 import { MergeImage } from './components/MergeImage';
 import { MultipleImage } from './components/MultipleImage';
 import { StyleGuideViewer } from './components/StyleGuideViewer';
-import { AdminDashboard } from './components/AdminDashboard';
 import { AuthLoadingScreen } from './components/layout/AuthLoadingScreen';
 import { LandingPage } from './components/landing/LandingPage';
 import { RejectedAccessScreen } from './components/guards/RejectedAccessScreen';
@@ -22,6 +21,17 @@ import { useGlobalSettingsAndApiKey } from './hooks/useGlobalSettingsAndApiKey';
 import { useHistoryImages } from './hooks/useHistoryImages';
 import { usePendingUsersNotifier } from './hooks/usePendingUsersNotifier';
 import { useImageGeneration } from './hooks/useImageGeneration';
+
+const AdminDashboard = lazy(() =>
+  import('./components/AdminDashboard').then((m) => ({ default: m.AdminDashboard }))
+);
+
+const AdminDashboardFallback = () => (
+  <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-3 bg-[#05080c]/95 backdrop-blur-md">
+    <div className="h-11 w-11 animate-spin rounded-full border-2 border-cyan-500/30 border-t-cyan-400" />
+    <p className="text-sm text-gray-400">Đang tải bảng điều khiển…</p>
+  </div>
+);
 
 const App: React.FC = () => {
   const [isAdminDashboardOpen, setIsAdminDashboardOpen] = useState(false);
@@ -179,8 +189,11 @@ const App: React.FC = () => {
 
   const handleImageSelect = useCallback((file: File) => {
     const previewUrl = URL.createObjectURL(file);
-    setImage({ file, previewUrl });
-    
+    setImage((prev) => {
+      if (prev) URL.revokeObjectURL(prev.previewUrl);
+      return { file, previewUrl };
+    });
+
     const img = new Image();
     img.onload = () => {
       const closest = getClosestAspectRatio(img.naturalWidth, img.naturalHeight);
@@ -415,11 +428,13 @@ const App: React.FC = () => {
         />
       )}
       {isAdminDashboardOpen && (
-        <AdminDashboard
-          onClose={() => setIsAdminDashboardOpen(false)}
-          initialTab={userProfile?.role === 'advice' ? 'analytics' : adminInitialTab}
-          analyticsOnly={userProfile?.role === 'advice'}
-        />
+        <Suspense fallback={<AdminDashboardFallback />}>
+          <AdminDashboard
+            onClose={() => setIsAdminDashboardOpen(false)}
+            initialTab={userProfile?.role === 'advice' ? 'analytics' : adminInitialTab}
+            analyticsOnly={userProfile?.role === 'advice'}
+          />
+        </Suspense>
       )}
     </>
   );

@@ -1,3 +1,4 @@
+import type { QueryDocumentSnapshot } from 'firebase/firestore';
 import {
   addDoc,
   collection,
@@ -5,11 +6,20 @@ import {
   doc,
   getDoc,
   getDocs,
+  limit,
+  orderBy,
   query,
   serverTimestamp,
   setDoc,
-  where
+  startAfter,
+  where,
 } from '../firebase';
+
+/** Giới hạn mỗi lần getDocs — tránh một response quá lớn khi analytics_events dày. */
+export const ANALYTICS_EVENTS_PAGE_SIZE = 500;
+
+/** Doc `analytics_monthly_rollups/{YYYY-MM}` do Cloud Function / job ghi — dashboard đọc 1 doc thay vì quét events. */
+export const ANALYTICS_MONTHLY_ROLLUPS_COLLECTION = 'analytics_monthly_rollups';
 
 export interface AnalyticsEventRecord {
   event_name?: string;
@@ -51,13 +61,27 @@ export async function getAnalyticsEventsByDateRange(
   endDate: Date
 ): Promise<AnalyticsEventRecord[]> {
   const eventsRef = collection(db, 'analytics_events');
-  const q = query(
-    eventsRef,
-    where('timestamp', '>=', startDate),
-    where('timestamp', '<', endDate)
-  );
-  const snapshot = await getDocs(q);
-  return snapshot.docs.map((eventDoc) => eventDoc.data() as AnalyticsEventRecord);
+  const out: AnalyticsEventRecord[] = [];
+  let lastDoc: QueryDocumentSnapshot | undefined;
+
+  while (true) {
+    const base = [
+      where('timestamp', '>=', startDate),
+      where('timestamp', '<', endDate),
+      orderBy('timestamp', 'asc'),
+      limit(ANALYTICS_EVENTS_PAGE_SIZE),
+    ] as const;
+    const q = lastDoc ? query(eventsRef, ...base, startAfter(lastDoc)) : query(eventsRef, ...base);
+    const snapshot = await getDocs(q);
+    if (snapshot.empty) break;
+    snapshot.docs.forEach((eventDoc) => {
+      out.push(eventDoc.data() as AnalyticsEventRecord);
+    });
+    lastDoc = snapshot.docs[snapshot.docs.length - 1];
+    if (snapshot.size < ANALYTICS_EVENTS_PAGE_SIZE) break;
+  }
+
+  return out;
 }
 
 export async function getAnalyticsEventsByDateRangeAndName(
@@ -66,14 +90,36 @@ export async function getAnalyticsEventsByDateRangeAndName(
   eventName: string
 ): Promise<AnalyticsEventRecord[]> {
   const eventsRef = collection(db, 'analytics_events');
-  const q = query(
-    eventsRef,
-    where('timestamp', '>=', startDate),
-    where('timestamp', '<', endDate),
-    where('event_name', '==', eventName)
-  );
-  const snapshot = await getDocs(q);
-  return snapshot.docs.map((eventDoc) => eventDoc.data() as AnalyticsEventRecord);
+  const out: AnalyticsEventRecord[] = [];
+  let lastDoc: QueryDocumentSnapshot | undefined;
+
+  while (true) {
+    const base = [
+      where('event_name', '==', eventName),
+      where('timestamp', '>=', startDate),
+      where('timestamp', '<', endDate),
+      orderBy('timestamp', 'asc'),
+      limit(ANALYTICS_EVENTS_PAGE_SIZE),
+    ] as const;
+    const q = lastDoc ? query(eventsRef, ...base, startAfter(lastDoc)) : query(eventsRef, ...base);
+    const snapshot = await getDocs(q);
+    if (snapshot.empty) break;
+    snapshot.docs.forEach((eventDoc) => {
+      out.push(eventDoc.data() as AnalyticsEventRecord);
+    });
+    lastDoc = snapshot.docs[snapshot.docs.length - 1];
+    if (snapshot.size < ANALYTICS_EVENTS_PAGE_SIZE) break;
+  }
+
+  return out;
+}
+
+/** Dữ liệu rollup thô (Firestore) — service layer kiểm tra `version` và các field bắt buộc. */
+export async function getAnalyticsMonthlyRollupRaw(monthKey: string): Promise<Record<string, unknown> | null> {
+  const ref = doc(db, ANALYTICS_MONTHLY_ROLLUPS_COLLECTION, monthKey);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return null;
+  return snap.data() as Record<string, unknown>;
 }
 
 export async function saveMonthlyCostsRecord(

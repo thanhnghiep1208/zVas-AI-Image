@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { db, collection, query, onSnapshot, updateDoc, doc, getDoc, setDoc, deleteDoc, handleFirestoreError, OperationType, auth, where, orderBy, limit } from '../firebase';
+import React, { useState, useEffect, useCallback, Suspense, lazy } from 'react';
+import { db, collection, query, getDocs, updateDoc, doc, getDoc, setDoc, deleteDoc, handleFirestoreError, OperationType, auth, where, orderBy, limit } from '../firebase';
 import {
   ArrowLeft,
   BarChart3,
   CheckCircle,
   History,
   LayoutDashboard,
+  RefreshCw,
   Settings,
   Shield,
   Sparkles,
@@ -15,7 +16,16 @@ import {
   XCircle,
 } from 'lucide-react';
 
-import { AnalyticsDashboard } from './AnalyticsDashboard';
+const AnalyticsDashboard = lazy(() =>
+  import('./AnalyticsDashboard').then((m) => ({ default: m.AnalyticsDashboard }))
+);
+
+const AnalyticsTabFallback = () => (
+  <div className="flex min-h-[320px] flex-col items-center justify-center gap-3 rounded-2xl border border-white/[0.08] bg-gray-950/50 p-8">
+    <div className="h-10 w-10 animate-spin rounded-full border-2 border-cyan-500/25 border-t-cyan-400" />
+    <p className="text-sm text-gray-500">Đang tải Analytics…</p>
+  </div>
+);
 
 interface UserProfile {
   uid: string;
@@ -61,61 +71,78 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [userHistoryImages, setUserHistoryImages] = useState<any[]>([]);
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
 
+  const loadUsersFromFirestore = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const snapshot = await getDocs(collection(db, 'users'));
+      const usersData: UserProfile[] = [];
+      snapshot.forEach((d) => {
+        usersData.push(d.data() as UserProfile);
+      });
+      setUsers(usersData);
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : String(error);
+      if (msg.includes('Quota exceeded')) {
+        console.warn('Users list fetch quota exceeded.');
+      } else {
+        handleFirestoreError(error, OperationType.LIST, 'users');
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (!selectedUserHistory) {
       setUserHistoryImages([]);
-      return;
+      return undefined;
     }
 
+    let cancelled = false;
     setIsHistoryLoading(true);
     const historyRef = collection(db, 'history');
     const q = query(
-      historyRef, 
-      where('uid', '==', selectedUserHistory.uid), 
+      historyRef,
+      where('uid', '==', selectedUserHistory.uid),
       orderBy('createdAt', 'desc'),
-      limit(50)
+      limit(50),
     );
 
-    const unsubscribeHistory = onSnapshot(q, (snapshot) => {
-      const images = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setUserHistoryImages(images);
-      setIsHistoryLoading(false);
-    }, (error) => {
-      handleFirestoreError(error, OperationType.GET, 'history');
-      setIsHistoryLoading(false);
-    });
+    void (async () => {
+      try {
+        const snapshot = await getDocs(q);
+        if (!cancelled) {
+          setUserHistoryImages(
+            snapshot.docs.map((d) => ({
+              id: d.id,
+              ...d.data(),
+            })),
+          );
+        }
+      } catch (error) {
+        if (!cancelled) {
+          handleFirestoreError(error, OperationType.GET, 'history');
+          setUserHistoryImages([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setIsHistoryLoading(false);
+        }
+      }
+    })();
 
-    return () => unsubscribeHistory();
+    return () => {
+      cancelled = true;
+    };
   }, [selectedUserHistory]);
 
   useEffect(() => {
     if (analyticsOnly) {
       setUsers([]);
       setIsLoading(false);
-      return;
+      return undefined;
     }
 
-    // Load users (keep onSnapshot for real-time status updates, but remove nested loops)
-    const q = query(collection(db, 'users'));
-    const unsubscribeUsers = onSnapshot(q, (snapshot) => {
-      const usersData: UserProfile[] = [];
-      snapshot.forEach((doc) => {
-        usersData.push(doc.data() as UserProfile);
-      });
-      setUsers(usersData);
-      setIsLoading(false);
-    }, (error) => {
-      if (error.message.includes('Quota exceeded')) {
-        console.warn("Users list fetch quota exceeded.");
-      } else {
-        handleFirestoreError(error, OperationType.LIST, 'users');
-      }
-    });
-
-    // Load system settings
     const loadSettings = async () => {
       try {
         const settingsRef = doc(db, 'settings', 'global');
@@ -131,13 +158,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           setDefaultProvider(data.defaultProvider || 'gemini');
         }
       } catch (err) {
-        console.error("Error loading settings:", err);
+        console.error('Error loading settings:', err);
       }
     };
-    loadSettings();
 
-    return () => unsubscribeUsers();
-  }, [analyticsOnly]);
+    void loadUsersFromFirestore();
+    void loadSettings();
+    return undefined;
+  }, [analyticsOnly, loadUsersFromFirestore]);
 
   const handleSaveSettings = async () => {
     setIsSavingSettings(true);
@@ -165,6 +193,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     try {
       const userRef = doc(db, 'users', userId);
       await updateDoc(userRef, { status: newStatus });
+      await loadUsersFromFirestore();
     } catch (err) {
       handleFirestoreError(err, OperationType.UPDATE, `users/${userId}`);
     }
@@ -174,6 +203,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     try {
       const userRef = doc(db, 'users', userId);
       await updateDoc(userRef, { role: newRole });
+      await loadUsersFromFirestore();
     } catch (err) {
       handleFirestoreError(err, OperationType.UPDATE, `users/${userId}`);
     }
@@ -193,6 +223,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       const userRef = doc(db, 'users', userId);
       await deleteDoc(userRef);
       alert('Đã xóa người dùng thành công.');
+      await loadUsersFromFirestore();
     } catch (err) {
       handleFirestoreError(err, OperationType.DELETE, `users/${userId}`);
     }
@@ -291,7 +322,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         <div className="mx-auto max-w-6xl space-y-8">
           {activeTab === 'users' && (
             <section>
-              <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+              <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                 <div className="flex items-start gap-3">
                   <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/10 bg-gradient-to-br from-cyan-500/15 to-blue-600/10">
                     <User className="h-5 w-5 text-cyan-200" />
@@ -303,6 +334,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     </p>
                   </div>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => void loadUsersFromFirestore()}
+                  disabled={isLoading}
+                  className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.06] px-3 py-2 text-xs font-medium text-gray-200 transition hover:bg-white/10 disabled:pointer-events-none disabled:opacity-50"
+                  title="Tải lại danh sách từ Firestore"
+                >
+                  <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? 'animate-spin' : ''}`} aria-hidden />
+                  Làm mới danh sách
+                </button>
               </div>
 
               {isLoading ? (
@@ -592,7 +633,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
           {activeTab === 'analytics' && (
             <section className="rounded-2xl border border-white/[0.06] bg-gray-950/35 p-4 backdrop-blur-sm sm:p-6">
-              <AnalyticsDashboard readOnly={analyticsOnly} />
+              <Suspense fallback={<AnalyticsTabFallback />}>
+                <AnalyticsDashboard readOnly={analyticsOnly} />
+              </Suspense>
             </section>
           )}
         </div>
