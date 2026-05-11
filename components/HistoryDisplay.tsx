@@ -1,5 +1,4 @@
-
-import React from 'react';
+import React, { memo } from 'react';
 import type { GeneratedImage } from '../types';
 import { SparklesIcon } from './icons/SparklesIcon';
 import { DownloadIcon } from './icons/DownloadIcon';
@@ -12,7 +11,7 @@ interface HistoryDisplayProps {
   onClear?: () => void;
 }
 
-export const HistoryDisplay: React.FC<HistoryDisplayProps> = ({ images, onImageSelect, onUseAsInput, onDownload, onClear }) => {
+function HistoryDisplayInner({ images, onImageSelect, onUseAsInput, onDownload, onClear }: HistoryDisplayProps) {
   if (images.length === 0) {
     return (
         <div className="h-full flex items-center justify-center border-2 border-dashed border-gray-800 rounded-lg opacity-30">
@@ -25,20 +24,20 @@ export const HistoryDisplay: React.FC<HistoryDisplayProps> = ({ images, onImageS
     <div className="h-full flex flex-col">
       <div className="flex items-center justify-between mb-1 px-1">
         <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Gần đây (10 hình mới nhất)</span>
-        {onClear && (
+        {onClear ? (
             <button 
                 onClick={onClear}
                 className="text-[10px] text-gray-500 hover:text-red-400 uppercase font-bold tracking-tighter transition-colors"
             >
                 Xóa lịch sử
             </button>
-        )}
+        ) : null}
       </div>
       <div className="flex-1 flex space-x-3 overflow-x-auto custom-scrollbar pb-2 px-1">
         {images.map((image, index) => (
           <div 
             key={`${index}-${image.prompt.slice(0, 10)}`}
-            className="flex-shrink-0 group relative w-24 h-full bg-black rounded-md overflow-hidden border border-gray-700 hover:border-cyan-500 transition-all cursor-pointer shadow-lg"
+            className="flex-shrink-0 group relative w-24 h-full bg-black rounded-md overflow-hidden border border-gray-700 hover:border-cyan-500 transition-all cursor-pointer shadow-lg [content-visibility:auto] [contain-intrinsic-size:96px_64px]"
           >
             <img 
                 src={image.imageUrl} 
@@ -74,4 +73,6 @@ export const HistoryDisplay: React.FC<HistoryDisplayProps> = ({ images, onImageS
       </div>
     </div>
   );
-};
+}
+
+export const HistoryDisplay = memo(HistoryDisplayInner);

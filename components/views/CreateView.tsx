@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, memo } from 'react';
 import { Sparkles, X } from 'lucide-react';
 import type { ImageFile, GeneratedImage, ImageSize } from '../../types';
 import { ImageUploader } from '../ImageUploader';
@@ -67,7 +67,7 @@ function readWelcomeDismissedFromStorage(): boolean {
   }
 }
 
-export const CreateView: React.FC<CreateViewProps> = ({
+function CreateViewComponent({
   prompts,
   setPrompts,
   promptOptions,
@@ -103,17 +103,17 @@ export const CreateView: React.FC<CreateViewProps> = ({
   onDownload,
   onForceRemoveBackgroundDownload,
   onClearHistory,
-}) => {
+}: CreateViewProps) {
   const [welcomeDismissed, setWelcomeDismissed] = useState(readWelcomeDismissedFromStorage);
 
-  const dismissWelcomeBanner = () => {
+  const dismissWelcomeBanner = useCallback(() => {
     try {
       localStorage.setItem(CREATE_WELCOME_DISMISSED_KEY, '1');
     } catch {
       /* ignore quota / private mode */
     }
     setWelcomeDismissed(true);
-  };
+  }, []);
 
   return (
   <>
@@ -251,4 +251,6 @@ export const CreateView: React.FC<CreateViewProps> = ({
     </main>
   </>
   );
-};
+}
+
+export const CreateView = memo(CreateViewComponent);

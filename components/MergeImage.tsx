@@ -1,5 +1,5 @@
 
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useRef, memo } from 'react';
 import { Upload, X, Sparkles, Image as ImageIcon, Loader2, Download, Maximize2 } from 'lucide-react';
 import type { ImageFile, GeneratedImage, ImageSize } from '../types';
 import { generateImageVariations } from '../services/geminiService';
@@ -11,7 +11,7 @@ interface MergeImageProps {
   onFullscreen: (image: GeneratedImage) => void;
 }
 
-export const MergeImage: React.FC<MergeImageProps> = ({ onDownload, onFullscreen }) => {
+function MergeImageComponent({ onDownload, onFullscreen }: MergeImageProps) {
   const [images, setImages] = useState<ImageFile[]>([]);
   const [prompt, setPrompt] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -246,4 +246,6 @@ export const MergeImage: React.FC<MergeImageProps> = ({ onDownload, onFullscreen
       </div>
     </div>
   );
-};
+}
+
+export const MergeImage = memo(MergeImageComponent);

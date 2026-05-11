@@ -24,6 +24,30 @@ export default defineConfig(({ mode }) => {
         include: ['p-retry'],
         exclude: ['@google/genai', 'firebase', 'gaxios', 'node-fetch', 'formdata-polyfill', 'whatwg-fetch', 'isomorphic-fetch', 'cross-fetch', 'unfetch', 'isomorphic-unfetch', 'isomorphic-form-data', 'form-data']
       },
+      build: {
+        rollupOptions: {
+          output: {
+            manualChunks(id) {
+              if (/node_modules\/(react\/|react-dom\/|scheduler\/)/.test(id)) {
+                return 'react-vendor';
+              }
+              if (id.includes('node_modules/firebase/')) {
+                return 'firebase-vendor';
+              }
+              if (id.includes('node_modules/lucide-react/')) {
+                return 'lucide-vendor';
+              }
+              if (id.includes('node_modules/recharts/')) {
+                return 'recharts-vendor';
+              }
+              if (id.includes('node_modules/sonner/')) {
+                return 'sonner-vendor';
+              }
+              return undefined;
+            },
+          },
+        },
+      },
       resolve: {
         alias: [
           { find: '@', replacement: path.resolve(__dirname, '.') },

@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, memo } from 'react';
 
 interface StyleGuideViewerProps {
   onClose: () => void;
@@ -73,7 +73,7 @@ activeStyles.forEach((name, index) => {
     });
 });
 
-export const StyleGuideViewer: React.FC<StyleGuideViewerProps> = ({ onClose, onStyleSelect }) => {
+function StyleGuideViewerInner({ onClose, onStyleSelect }: StyleGuideViewerProps) {
   useEffect(() => {
     const handleEscKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
@@ -159,4 +159,6 @@ export const StyleGuideViewer: React.FC<StyleGuideViewerProps> = ({ onClose, onS
       </div>
     </div>
   );
-};
+}
+
+export const StyleGuideViewer = memo(StyleGuideViewerInner);

@@ -1,16 +1,11 @@
 import React, { useState, useCallback, useEffect, lazy, Suspense } from 'react';
 import type { ImageFile, GeneratedImage, ImageSize } from './types';
-import { FullscreenViewer } from './components/FullscreenViewer';
-import { MergeImage } from './components/MergeImage';
-import { MultipleImage } from './components/MultipleImage';
-import { StyleGuideViewer } from './components/StyleGuideViewer';
 import { AuthLoadingScreen } from './components/layout/AuthLoadingScreen';
 import { LandingPage } from './components/landing/LandingPage';
 import { RejectedAccessScreen } from './components/guards/RejectedAccessScreen';
-import { AppHeader } from './components/layout/AppHeader';
+import { AppHeaderWithPending } from './components/layout/AppHeaderWithPending';
 import type { AppView } from './components/layout/AppHeader';
 import { AppFooter } from './components/layout/AppFooter';
-import { CreateView } from './components/views/CreateView';
 import { trackEvent } from './services/analyticsService';
 import { Toaster, toast } from 'sonner';
 import { dataURLtoFile } from './utils/imageDataUrl';
@@ -19,11 +14,39 @@ import { useGeneratedImageDownload } from './hooks/useGeneratedImageDownload';
 import { useAuthAndProfile } from './hooks/useAuthAndProfile';
 import { useGlobalSettingsAndApiKey } from './hooks/useGlobalSettingsAndApiKey';
 import { useHistoryImages } from './hooks/useHistoryImages';
-import { usePendingUsersNotifier } from './hooks/usePendingUsersNotifier';
 import { useImageGeneration } from './hooks/useImageGeneration';
 
 const AdminDashboard = lazy(() =>
   import('./components/AdminDashboard').then((m) => ({ default: m.AdminDashboard }))
+);
+
+const CreateView = lazy(() =>
+  import('./components/views/CreateView').then((m) => ({ default: m.CreateView }))
+);
+const MultipleImage = lazy(() =>
+  import('./components/MultipleImage').then((m) => ({ default: m.MultipleImage }))
+);
+const MergeImage = lazy(() =>
+  import('./components/MergeImage').then((m) => ({ default: m.MergeImage }))
+);
+const StyleGuideViewer = lazy(() =>
+  import('./components/StyleGuideViewer').then((m) => ({ default: m.StyleGuideViewer }))
+);
+const FullscreenViewer = lazy(() =>
+  import('./components/FullscreenViewer').then((m) => ({ default: m.FullscreenViewer }))
+);
+
+const WorkspaceViewFallback = () => (
+  <div className="flex min-h-[280px] flex-1 flex-col items-center justify-center gap-3 text-gray-400">
+    <div className="h-10 w-10 animate-spin rounded-full border-2 border-cyan-500/25 border-t-cyan-400" />
+    <p className="text-sm">Đang tải giao diện…</p>
+  </div>
+);
+
+const ModalLoadingOverlay = () => (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-[2px]">
+    <div className="h-10 w-10 animate-spin rounded-full border-2 border-cyan-500/30 border-t-cyan-400" />
+  </div>
 );
 
 const AdminDashboardFallback = () => (
@@ -107,11 +130,6 @@ const App: React.FC = () => {
 
   const { historyImages, setHistoryImages, handleClearHistory } = useHistoryImages(user);
 
-  const pendingUsersCount = usePendingUsersNotifier(
-    userProfile?.role === 'admin',
-    openAdminDashboard
-  );
-
   // Check for API Key selection (required for gemini-3.1-flash-image-preview)
   useEffect(() => {
     const savedPreference = localStorage.getItem('preferred_generation_models');
@@ -133,14 +151,41 @@ const App: React.FC = () => {
     getEffectiveModel,
   } = useGlobalSettingsAndApiKey(user, userModelPreference);
 
-  const handleModelPreferenceChange = (newModel: string) => {
+  const handleModelPreferenceChange = useCallback((newModel: string) => {
     const providerKey = getProviderKey();
     setUserModelPreference((prev) => {
       const next = { ...prev, [providerKey]: newModel };
       localStorage.setItem('preferred_generation_models', JSON.stringify(next));
       return next;
     });
-  };
+  }, [getProviderKey]);
+
+  const handleOpenAdminSettings = useCallback(() => {
+    setAdminInitialTab('settings');
+    setIsAdminDashboardOpen(true);
+  }, []);
+
+  const handleOpenAdminUsers = useCallback(() => {
+    setAdminInitialTab('users');
+    setIsAdminDashboardOpen(true);
+  }, []);
+
+  const handleOpenAdminAnalytics = useCallback(() => {
+    setAdminInitialTab('analytics');
+    setIsAdminDashboardOpen(true);
+  }, []);
+
+  const handleCloseAdminDashboard = useCallback(() => {
+    setIsAdminDashboardOpen(false);
+  }, []);
+
+  const handleShowStyleGuide = useCallback(() => {
+    setIsStyleGuideVisible(true);
+  }, []);
+
+  const handleCloseStyleGuide = useCallback(() => {
+    setIsStyleGuideVisible(false);
+  }, []);
 
   const {
     isLoading,
@@ -176,16 +221,16 @@ const App: React.FC = () => {
     setWorkspaceMountKey((k) => k + 1);
   }, [image, referenceImages, resetAppState, resetGenerationWorkspace]);
 
-  const handleOptionChange = (option: keyof typeof promptOptions) => {
-    setPromptOptions(prevOptions => ({
+  const handleOptionChange = useCallback((option: keyof typeof promptOptions) => {
+    setPromptOptions((prevOptions) => ({
       ...prevOptions,
       [option]: !prevOptions[option],
     }));
-  };
+  }, []);
 
-  const handleBackgroundRemovalStrengthChange = (strength: 'soft' | 'strong') => {
-    setPromptOptions(prev => ({ ...prev, backgroundRemovalStrength: strength }));
-  };
+  const handleBackgroundRemovalStrengthChange = useCallback((strength: 'soft' | 'strong') => {
+    setPromptOptions((prev) => ({ ...prev, backgroundRemovalStrength: strength }));
+  }, []);
 
   const handleImageSelect = useCallback((file: File) => {
     const previewUrl = URL.createObjectURL(file);
@@ -203,7 +248,7 @@ const App: React.FC = () => {
 
     setGeneratedImages([]);
     setError(null);
-  }, []);
+  }, [setGeneratedImages]);
   
   const handleImageRemove = useCallback(() => {
     if (image) {
@@ -214,7 +259,7 @@ const App: React.FC = () => {
     setReferenceImages([]);
     setGeneratedImages([]);
     setError(null);
-  }, [image, referenceImages]);
+  }, [image, referenceImages, setGeneratedImages]);
 
   const handleAddReferenceImage = useCallback((file: File) => {
     setReferenceImages(prev => [...prev, {
@@ -260,7 +305,7 @@ const App: React.FC = () => {
     setGeneratedImages([]);
     setReferenceImages([]);
     setError(null);
-  }, [image, referenceImages]);
+  }, [image, referenceImages, setGeneratedImages]);
 
   const onDownloadTracked = useCallback(() => {
     if (user) {
@@ -281,6 +326,28 @@ const App: React.FC = () => {
     await handleUseImageAsInput(generatedImage);
     setFullscreenImage(null);
   }, [handleUseImageAsInput]);
+
+  const handleCloseFullscreen = useCallback(() => {
+    setFullscreenImage(null);
+  }, []);
+
+  const handleFullscreenDownload = useCallback(() => {
+    if (fullscreenImage) {
+      void handleDownloadImage(fullscreenImage);
+    }
+  }, [fullscreenImage, handleDownloadImage]);
+
+  const handleFullscreenForceRemoveBackgroundDownload = useCallback(() => {
+    if (fullscreenImage) {
+      void handleForceRemoveBackgroundDownload(fullscreenImage);
+    }
+  }, [fullscreenImage, handleForceRemoveBackgroundDownload]);
+
+  const handleFullscreenUseAsInput = useCallback(() => {
+    if (fullscreenImage) {
+      void handleUseImageFromViewer(fullscreenImage);
+    }
+  }, [fullscreenImage, handleUseImageFromViewer]);
 
   const canGenerate = prompts.some(p => p.trim() !== '') && !isLoading;
 
@@ -309,25 +376,16 @@ const App: React.FC = () => {
           aria-hidden
         />
         <div className="relative z-10 flex min-h-0 flex-1 flex-col">
-        <AppHeader
+        <AppHeaderWithPending
           user={user}
           userProfile={userProfile}
           currentView={currentView}
           onViewChange={setCurrentView}
           onSelectApiKey={handleSelectApiKey}
-          pendingUsersCount={pendingUsersCount}
-          onOpenAdminSettings={() => {
-            setAdminInitialTab('settings');
-            setIsAdminDashboardOpen(true);
-          }}
-          onOpenAdminUsers={() => {
-            setAdminInitialTab('users');
-            setIsAdminDashboardOpen(true);
-          }}
-          onOpenAdminAnalytics={() => {
-            setAdminInitialTab('analytics');
-            setIsAdminDashboardOpen(true);
-          }}
+          onPendingToastOpen={openAdminDashboard}
+          onOpenAdminSettings={handleOpenAdminSettings}
+          onOpenAdminUsers={handleOpenAdminUsers}
+          onOpenAdminAnalytics={handleOpenAdminAnalytics}
           getEffectiveModel={getEffectiveModel}
           getProviderKey={getProviderKey}
           onModelPreferenceChange={handleModelPreferenceChange}
@@ -339,6 +397,7 @@ const App: React.FC = () => {
           key={workspaceMountKey}
           className="flex min-h-0 flex-1 flex-col overflow-y-auto lg:flex-row lg:overflow-hidden"
         >
+          <Suspense fallback={<WorkspaceViewFallback />}>
           {currentView === 'create' ? (
             <CreateView
               prompts={prompts}
@@ -364,7 +423,7 @@ const App: React.FC = () => {
               onAspectRatioChange={setAspectRatio}
               imageSize={imageSize}
               onImageSizeChange={setImageSize}
-              onShowStyleGuide={() => setIsStyleGuideVisible(true)}
+              onShowStyleGuide={handleShowStyleGuide}
               onGenerate={handleGenerateClick}
               canGenerate={canGenerate}
               isLoading={isLoading}
@@ -403,6 +462,7 @@ const App: React.FC = () => {
               />
             </main>
           )}
+          </Suspense>
         </div>
 
         <AppFooter
@@ -413,24 +473,28 @@ const App: React.FC = () => {
       </div>
 
       {isStyleGuideVisible && (
-        <StyleGuideViewer
-          onClose={() => setIsStyleGuideVisible(false)}
-          onStyleSelect={handleStyleSelectFromGuide}
-        />
+        <Suspense fallback={<ModalLoadingOverlay />}>
+          <StyleGuideViewer
+            onClose={handleCloseStyleGuide}
+            onStyleSelect={handleStyleSelectFromGuide}
+          />
+        </Suspense>
       )}
       {fullscreenImage && (
-        <FullscreenViewer 
+        <Suspense fallback={<ModalLoadingOverlay />}>
+          <FullscreenViewer 
             image={fullscreenImage} 
-            onClose={() => setFullscreenImage(null)}
-            onDownload={() => handleDownloadImage(fullscreenImage)}
-            onForceRemoveBackgroundDownload={() => handleForceRemoveBackgroundDownload(fullscreenImage)}
-            onUseAsInput={() => handleUseImageFromViewer(fullscreenImage)}
-        />
+            onClose={handleCloseFullscreen}
+            onDownload={handleFullscreenDownload}
+            onForceRemoveBackgroundDownload={handleFullscreenForceRemoveBackgroundDownload}
+            onUseAsInput={handleFullscreenUseAsInput}
+          />
+        </Suspense>
       )}
       {isAdminDashboardOpen && (
         <Suspense fallback={<AdminDashboardFallback />}>
           <AdminDashboard
-            onClose={() => setIsAdminDashboardOpen(false)}
+            onClose={handleCloseAdminDashboard}
             initialTab={userProfile?.role === 'advice' ? 'analytics' : adminInitialTab}
             analyticsOnly={userProfile?.role === 'advice'}
           />

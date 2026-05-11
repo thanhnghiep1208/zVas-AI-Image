@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, memo } from 'react';
 import type { GeneratedImage } from '../types';
 import { DownloadIcon } from './icons/DownloadIcon';
 import { SparklesIcon } from './icons/SparklesIcon';
@@ -11,7 +11,7 @@ interface FullscreenViewerProps {
   onUseAsInput: () => void;
 }
 
-export const FullscreenViewer: React.FC<FullscreenViewerProps> = ({ image, onClose, onDownload, onForceRemoveBackgroundDownload, onUseAsInput }) => {
+function FullscreenViewerInner({ image, onClose, onDownload, onForceRemoveBackgroundDownload, onUseAsInput }: FullscreenViewerProps) {
   const [dimensions, setDimensions] = useState<{ width: number; height: number } | null>(null);
 
   useEffect(() => {
@@ -108,4 +108,6 @@ export const FullscreenViewer: React.FC<FullscreenViewerProps> = ({ image, onClo
       </div>
     </div>
   );
-};
+}
+
+export const FullscreenViewer = memo(FullscreenViewerInner);

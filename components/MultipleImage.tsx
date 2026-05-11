@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, memo } from 'react';
 import { ImageUploader } from './ImageUploader';
 import { ImageFile, GeneratedImage } from '../types';
 import { TrashIcon } from './icons/TrashIcon';
@@ -25,7 +25,7 @@ interface MultipleImageProps {
   onClearHistory: () => void;
 }
 
-export const MultipleImage: React.FC<MultipleImageProps> = ({
+function MultipleImageComponent({
   image,
   onImageSelect,
   onImageRemove,
@@ -41,7 +41,7 @@ export const MultipleImage: React.FC<MultipleImageProps> = ({
   onDownload,
   onForceRemoveBackgroundDownload,
   onClearHistory
-}) => {
+}: MultipleImageProps) {
   const [numImages, setNumImages] = useState(prompts.length || 1);
 
   useEffect(() => {
@@ -178,4 +178,6 @@ export const MultipleImage: React.FC<MultipleImageProps> = ({
       </main>
     </div>
   );
-};
+}
+
+export const MultipleImage = memo(MultipleImageComponent);

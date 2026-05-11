@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo, useCallback } from 'react';
 import type { User } from 'firebase/auth';
 import {
   BarChart3,
@@ -40,7 +40,7 @@ export interface AppHeaderProps {
   onLogoWorkspaceRefresh: () => void;
 }
 
-export const AppHeader: React.FC<AppHeaderProps> = ({
+function AppHeaderComponent({
   user,
   userProfile,
   currentView,
@@ -55,7 +55,17 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   onModelPreferenceChange,
   onLogout,
   onLogoWorkspaceRefresh,
-}) => {
+}: AppHeaderProps) {
+  const handleNavViewClick = useCallback(
+    (e: React.MouseEvent<HTMLButtonElement>) => {
+      const raw = e.currentTarget.getAttribute('data-view');
+      if (raw === 'create' || raw === 'merge' || raw === 'multiple') {
+        onViewChange(raw);
+      }
+    },
+    [onViewChange]
+  );
+
   const showApiKeyButton =
     typeof window !== 'undefined' &&
     !!(window as Window & { aistudio?: { openSelectKey?: () => Promise<void> } }).aistudio?.openSelectKey;
@@ -93,7 +103,8 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
               <button
                 key={view}
                 type="button"
-                onClick={() => onViewChange(view)}
+                data-view={view}
+                onClick={handleNavViewClick}
                 className={`flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-xl px-2.5 py-2 text-xs font-medium transition-all sm:flex-initial sm:px-3.5 sm:py-2 sm:text-sm ${
                   active
                     ? 'bg-gradient-to-r from-cyan-500/25 to-blue-600/20 text-white shadow-[0_0_20px_-10px_rgba(34,211,238,0.5)] ring-1 ring-cyan-500/35'
@@ -194,4 +205,6 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
       </div>
     </header>
   );
-};
+}
+
+export const AppHeader = memo(AppHeaderComponent);
