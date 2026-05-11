@@ -43,6 +43,12 @@
 - `npm run build`: build frontend ra `dist/`.
 - `npm start`: chạy server production phục vụ static + API.
 
+## Cấu hình Firebase client (local, không commit)
+
+- File **`firebase-applet-config.json`** có trong `.gitignore`; trong repo chỉ giữ **`firebase-applet-config.example.json`** làm mẫu.
+- Sau khi clone: sao chép example → `firebase-applet-config.json` rồi điền `projectId`, `apiKey`, `firestoreDatabaseId`, v.v. File này được `import` trong `firebase.ts` (bundle Vite) và đọc trong `server.ts` (Firebase Admin: `projectId` + database).
+- **Docker / CI:** trước `docker build` cần đặt `firebase-applet-config.json` trong ngữ cảnh build (secret CI hoặc bước generate từ biến môi trường của bạn) — không lấy từ Git.
+
 ## Sơ đồ Mermaid
 
 ### Tổng thể frontend-to-backend
