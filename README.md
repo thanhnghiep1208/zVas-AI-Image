@@ -2,7 +2,7 @@
 
 Ứng dụng web tạo và biến thể ảnh bằng AI (Gemini, OpenAI DALL·E 3, Seedance), kết hợp Firebase Auth/Firestore, Express và Vite.
 
-**Tài liệu chi tiết:** xem [DOCUMENTATION.md](./DOCUMENTATION.md) (trang mục lục) hoặc đọc trực tiếp bộ tài liệu trong thư mục `docs/`.
+**Tài liệu chi tiết:** xem [DOCUMENTATION.md](./DOCUMENTATION.md) (trang mục lục) hoặc đọc trực tiếp bộ tài liệu trong thư mục `docs/`. **Shell UI, logo làm mới vùng làm việc, banner Create, upload/kết quả:** [docs/02-frontend-architecture.md](./docs/02-frontend-architecture.md).
 
 ---
 
@@ -19,7 +19,7 @@ npm install
 Cấu hình khóa API phía **server** (không đặt key thật trong `VITE_`*):
 
 - **Mẫu env:** `[.env.example](./.env.example)` — sao chép thành `.env` hoặc `.env.local` (đã gitignore).
-- **Mẫu Firebase client:** `[firebase-applet-config.example.json](./firebase-applet-config.example.json)` — dùng làm `firebase-applet-config.json` khi clone mới (key web nên giới hạn domain trong Firebase Console).
+- **Mẫu Firebase client:** `[firebase-applet-config.example.json](./firebase-applet-config.example.json)` — sao chép thành `firebase-applet-config.json` (file này **không** có trong repo, đã `.gitignore`; key web nên giới hạn domain trong Firebase Console).
 - Biến môi trường: `GEMINI_API_KEY`, hoặc `OPENAI_API_KEY`, `SEEDANCE_API_KEY` tùy provider.
 - Hoặc cấu hình trong Firestore `settings/global` qua **Admin Dashboard** sau khi đăng nhập admin.
 
@@ -63,7 +63,7 @@ docker run --rm -p 8080:8080 \
   ai-image-zvas:1.0405
 ```
 
-File `firebase-applet-config.json` được copy vào image (project / database id). Không nhúng secret API vào image; truyền bằng `-e` hoặc secret manager trên nền tảng bạn dùng.
+Khi `docker build`, cần có `firebase-applet-config.json` trong **ngữ cảnh build** (tạo từ file `.example` trên máy/CI — không lưu trong Git). File được `COPY` vào image cho `server.ts` và đã được bundle lúc `npm run build`. API key nhà cung cấp AI vẫn truyền qua `-e` / secret manager, không nhúng vào repo.
 
 ---
 
@@ -89,6 +89,7 @@ React 19, TypeScript, Vite 6, Tailwind CSS 4, Firebase (Auth + Firestore), Expre
 ## Bảo mật
 
 - Không commit API key thật.
+- **`firebase-applet-config.json`** không được đưa lên Git (chỉ dùng bản `.example` trong repo). Nếu bản thật từng nằm trong lịch sử commit, nên **xoay / thu hồi Web API key** trong Firebase Console và cân nhắc dọn lịch sử (`git filter-repo` / BFG).
 - Ưu tiên Secret Manager / biến môi trường trên Cloud Run cho các key nhà cung cấp AI.
 - Chi tiết mục **Bảo mật** trong [DOCUMENTATION.md](./DOCUMENTATION.md).
 

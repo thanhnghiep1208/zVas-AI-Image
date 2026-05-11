@@ -31,9 +31,9 @@ GoogleService-Info.plist
 *.p12
 *.pfx
 
-# Optional: bản cấu hình Firebase client chỉ dùng local (nếu team tách khỏi repo)
-# firebase-applet-config.json
-# firebase-applet-config.local.json
+# Firebase client (web app) — tạo từ firebase-applet-config.example.json; không commit
+firebase-applet-config.json
+firebase-applet-config.local.json
 
 # Firebase CLI cache
 .firebase/

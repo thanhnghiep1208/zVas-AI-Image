@@ -16,7 +16,8 @@ Tài liệu đã được tách theo từng chức năng để dễ đọc và b
 - Muốn nắm tổng quan nhanh: bắt đầu từ `docs/01-overview.md`.
 - Muốn hiểu luồng tạo ảnh + analytics: xem `docs/04-workflow-analytics.md`.
 - Chuẩn bị lên production: xem `docs/06-live-deployment.md`.
+- **UI shell, logo làm mới vùng làm việc, banner Create, upload/kết quả:** xem mục mới trong `docs/02-frontend-architecture.md` (cập nhật tháng 5/2026).
 
 ---
 
-*Tài liệu split: tháng 5/2026.*
+*Tài liệu split: tháng 5/2026. Bổ sung mô tả shell & hành vi logo/banner: tháng 5/2026.*
