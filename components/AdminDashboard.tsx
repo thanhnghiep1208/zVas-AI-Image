@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { describeApiOrNetworkError } from '../utils/userFacingError';
+import { normalizeGeminiModelId } from '../constants/aiModels';
 
 const AnalyticsDashboard = lazy(() =>
   import('./AnalyticsDashboard').then((m) => ({ default: m.AnalyticsDashboard }))
@@ -165,7 +166,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           setOpenaiApiKey(data.openaiApiKey || '');
           setSeedanceApiKey(data.seedanceApiKey || '');
           setSeedanceBaseUrl(data.seedanceBaseUrl || '');
-          setGeminiModel(data.geminiModel || 'gemini-3.1-flash-image-preview');
+          setGeminiModel(normalizeGeminiModelId(data.geminiModel));
           setSeedanceModel(data.seedanceModel || 'seed-1.5-pro');
           setDefaultProvider(data.defaultProvider || 'gemini');
         }
@@ -581,9 +582,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       onChange={(e) => setGeminiModel(e.target.value)}
                       className="rounded-xl border border-white/10 bg-white/[0.05] px-4 py-3 text-white outline-none transition-all focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/20"
                     >
-                      <option value="gemini-3.1-flash-image-preview">Nano Banana 2 (3.1 Flash)</option>
-                      <option value="gemini-3-pro-image-preview">Nano Banana Pro (3 Pro)</option>
-                      <option value="gemini-2.5-flash-image">Gemini 2.5 Flash Image</option>
+                      <option value="gemini-3-pro-image-preview">Nano Banana Pro</option>
+                      <option value="gemini-3.1-flash-image-preview">Nano Banana 2</option>
                     </select>
                   </div>
 

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { User } from 'firebase/auth';
 import { db, doc, getDoc, handleFirestoreError, isFirestoreOfflineOrTransient, OperationType } from '../firebase';
+import { ALLOWED_GEMINI_MODEL_IDS, normalizeGeminiModelId } from '../constants/aiModels';
 import { getRuntimeEnvValue, isLikelyPlaceholderKey } from '../utils/runtimeEnv';
 
 /** Không dùng onSnapshot — refetch theo chu kỳ + khi quay lại tab. */
@@ -154,15 +155,18 @@ export function useGlobalSettingsAndApiKey(
   const getEffectiveModel = useCallback(() => {
     const providerKey = getProviderKey();
     const fallbackByProvider: Record<string, string> = {
-      gemini: globalSettings?.geminiModel || 'gemini-3.1-flash-image-preview',
+      gemini: normalizeGeminiModelId(globalSettings?.geminiModel),
       openai: 'dall-e-3',
       seedance: globalSettings?.seedanceModel || 'seed-1.5-pro',
     };
-    return (
+    let model =
       userModelPreference[providerKey] ||
       fallbackByProvider[providerKey] ||
-      fallbackByProvider.gemini
-    );
+      fallbackByProvider.gemini;
+    if (providerKey === 'gemini' && !ALLOWED_GEMINI_MODEL_IDS.has(model)) {
+      model = fallbackByProvider.gemini;
+    }
+    return model;
   }, [getProviderKey, globalSettings, userModelPreference]);
 
   return {

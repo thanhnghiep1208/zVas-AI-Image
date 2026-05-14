@@ -118,6 +118,7 @@ gcloud run deploy ai-image-zvas \
 ## 5) Smoke test
 
 - Mở URL live, hard refresh.
+- Model (khi provider mặc định là Gemini): đổi dropdown Nano Banana 2 / Pro; bấm icon info — popup so sánh từ `docs/so-sanh-model-gemini.md` hiển thị đủ, đóng bằng X / nền / Escape.
 - Login Google.
 - Generate ảnh.
 - Kiểm tra Analytics:

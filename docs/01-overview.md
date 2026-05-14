@@ -31,3 +31,4 @@ AI Image ZVAS là ứng dụng web tạo và biến thể hình ảnh bằng AI,
 - Workflow/Analytics: `docs/04-workflow-analytics.md`
 - Security/Roles: `docs/05-security-roles.md`
 - Live Deploy: `docs/06-live-deployment.md`
+- So sánh model ảnh Gemini (Nano Banana 2 vs Pro, dùng trong popup header): `docs/so-sanh-model-gemini.md`

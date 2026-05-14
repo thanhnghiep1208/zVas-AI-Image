@@ -24,6 +24,7 @@
 - Yêu cầu token Firebase hợp lệ.
 - Input gồm `prompt`, model/provider, ảnh main/reference (base64).
 - Provider hỗ trợ: `gemini`, `openai`, `seedance`.
+- **Gemini (image):** id model trên client/admin nên khớp bộ cho phép trong `constants/aiModels.ts` — hiện **Nano Banana Pro** `gemini-3-pro-image-preview`, **Nano Banana 2** `gemini-3.1-flash-image-preview` (mô tả so sánh: `docs/so-sanh-model-gemini.md`).
 - Trả về `imageBase64` + metadata token usage.
 
 ## Quy tắc key/provider

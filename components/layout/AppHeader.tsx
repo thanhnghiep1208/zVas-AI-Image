@@ -1,7 +1,8 @@
-import React, { memo, useCallback } from 'react';
+import React, { memo, useCallback, useState } from 'react';
 import type { User } from 'firebase/auth';
 import {
   BarChart3,
+  CircleHelp,
   Key,
   LayoutGrid,
   Layers2,
@@ -12,6 +13,7 @@ import {
 } from 'lucide-react';
 import { PROVIDER_MODEL_OPTIONS } from '../../constants/aiModels';
 import type { UserProfile } from '../../hooks/useAuthAndProfile';
+import { GeminiModelComparisonModal } from './GeminiModelComparisonModal';
 
 export type AppView = 'create' | 'merge' | 'multiple';
 
@@ -59,6 +61,7 @@ function AppHeaderComponent({
   onLogout,
   onLogoWorkspaceRefresh,
 }: AppHeaderProps) {
+  const [modelHelpOpen, setModelHelpOpen] = useState(false);
   const handleNavViewClick = useCallback(
     (e: React.MouseEvent<HTMLButtonElement>) => {
       const raw = e.currentTarget.getAttribute('data-view');
@@ -178,18 +181,34 @@ function AppHeaderComponent({
 
         <div className="hidden items-center gap-2 rounded-xl border border-[var(--lp-border)] bg-[var(--lp-accent-dim)] px-2.5 py-1.5 sm:flex">
           <span className="text-[10px] font-medium uppercase tracking-wide text-[var(--lp-muted)]">Model</span>
-          <select
-            value={getEffectiveModel()}
-            onChange={(e) => onModelPreferenceChange(e.target.value)}
-            className="max-w-[140px] cursor-pointer rounded-lg border border-[var(--lp-border)] bg-[var(--lp-ink)] px-2 py-1 text-xs text-[var(--lp-text)] outline-none transition focus:border-[var(--lp-border-strong)] focus:ring-2 focus:ring-[var(--lp-accent-dim)] md:max-w-[200px]"
-          >
-            {(PROVIDER_MODEL_OPTIONS[getProviderKey()] || PROVIDER_MODEL_OPTIONS.gemini).map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
+          <div className="flex items-center gap-1">
+            <select
+              value={getEffectiveModel()}
+              onChange={(e) => onModelPreferenceChange(e.target.value)}
+              className="max-w-[140px] cursor-pointer rounded-lg border border-[var(--lp-border)] bg-[var(--lp-ink)] px-2 py-1 text-xs text-[var(--lp-text)] outline-none transition focus:border-[var(--lp-border-strong)] focus:ring-2 focus:ring-[var(--lp-accent-dim)] md:max-w-[200px]"
+              aria-label="Chọn model tạo ảnh"
+            >
+              {(PROVIDER_MODEL_OPTIONS[getProviderKey()] || PROVIDER_MODEL_OPTIONS.gemini).map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            {getProviderKey() === 'gemini' && (
+              <button
+                type="button"
+                onClick={() => setModelHelpOpen(true)}
+                className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-[var(--lp-border)] bg-[var(--lp-ink)] text-[var(--lp-muted)] transition hover:border-[var(--lp-border-strong)] hover:text-[var(--lp-accent)]"
+                title="So sánh Nano Banana 2 và Nano Banana Pro"
+                aria-label="Mở hướng dẫn so sánh model Gemini"
+              >
+                <CircleHelp className="h-4 w-4" aria-hidden />
+              </button>
+            )}
+          </div>
         </div>
+
+        <GeminiModelComparisonModal open={modelHelpOpen} onClose={() => setModelHelpOpen(false)} />
 
         <div className="flex items-center gap-2 rounded-full border border-[var(--lp-border)] bg-[var(--lp-surface-elevated)] py-1 pl-1 pr-2 sm:pr-3">
           <img

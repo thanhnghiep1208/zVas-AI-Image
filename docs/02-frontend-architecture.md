@@ -20,10 +20,10 @@
 | `components/ImageUploader.tsx`          | Ảnh chính (kéo thả; prop `showLabel`)           |
 | `components/ReferenceImageUploader.tsx` | Ảnh tham chiếu (nhiều file)                     |
 | `components/ResultsDisplay.tsx`         | Lưới ảnh gốc + kết quả, trạng thái rỗng/loading |
-| `components/layout/`                    | Header/Footer/Auth loading                      |
+| `components/layout/`                    | Header/Footer/Auth loading + `GeminiModelComparisonModal` (popup so sánh model) |
 | `hooks/`                                | Business logic tách khỏi UI                     |
 | `lib/buildGenerationPrompts.ts`         | Prompt pipeline                                 |
-| `constants/`                            | Model/prompt maps                               |
+| `constants/`                            | Model/prompt maps (`aiModels.ts`: Gemini + `normalizeGeminiModelId`)           |
 | `services/`                             | API client + analytics service                  |
 | `utils/`                                | Helper xử lý ảnh/runtime env                    |
 
@@ -87,6 +87,8 @@ flowchart TD
 
 - **Nền:** `App.tsx` bọc nội dung trong lớp tối (`#05080c`) + gradient radial nhẹ (cyan/blue) để đồng bộ với landing/admin.
 - **Header / footer:** `components/layout/AppHeader.tsx`, `AppFooter.tsx` — viền kính (`border-white/[0.08]`), blur; tab chế độ dạng segmented control có icon; các nút icon dùng `cursor-pointer` để rõ hành động bấm.
+- **Chọn model (Gemini):** trên header (`sm` trở lên), dropdown **Model** lấy option từ `constants/aiModels.ts` → `PROVIDER_MODEL_OPTIONS.gemini`: **Nano Banana Pro** (`gemini-3-pro-image-preview`), **Nano Banana 2** (`gemini-3.1-flash-image-preview`). Kế bên có nút **info** (`CircleHelp`); khi provider đang là `gemini`, bấm mở `GeminiModelComparisonModal` — nội dung đọc trực tiếp từ `docs/so-sanh-model-gemini.md` qua import Vite `?raw`, render markdown tối giản (tiêu đề, bảng, list, `**bold**`, `` `code` ``). Modal dùng **`createPortal(..., document.body)`** để tránh bị cắt do `backdrop-filter` trên header / `overflow-hidden` shell; `max-w-[820px]`, vùng nội dung cuộn độc lập.
+- **Chuẩn hóa model id:** `normalizeGeminiModelId` + `ALLOWED_GEMINI_MODEL_IDS` trong `constants/aiModels.ts` — dùng khi load `settings/global` (Admin), preference `localStorage` key `preferred_generation_models` (`App.tsx`), và `getEffectiveModel()` trong `useGlobalSettingsAndApiKey` để id cũ không còn trong danh sách tự map về fallback hợp lệ.
 - **Create / Multiple:** panel phụ (`aside`) dùng nền kính mỏng; CTA chính gradient cyan–blue, bo `rounded-2xl`.
 
 ## Logo thương hiệu (AI Image ZVAS)

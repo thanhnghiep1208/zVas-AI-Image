@@ -15,6 +15,7 @@ import { useAuthAndProfile } from './hooks/useAuthAndProfile';
 import { useGlobalSettingsAndApiKey } from './hooks/useGlobalSettingsAndApiKey';
 import { useHistoryImages } from './hooks/useHistoryImages';
 import { useImageGeneration } from './hooks/useImageGeneration';
+import { normalizeGeminiModelId } from './constants/aiModels';
 
 const AdminDashboard = lazy(() =>
   import('./components/AdminDashboard').then((m) => ({ default: m.AdminDashboard }))
@@ -151,7 +152,11 @@ const App: React.FC = () => {
     const savedPreference = localStorage.getItem('preferred_generation_models');
     if (savedPreference) {
       try {
-        setUserModelPreference(JSON.parse(savedPreference));
+        const parsed = JSON.parse(savedPreference) as Record<string, string>;
+        if (parsed && typeof parsed === 'object' && typeof parsed.gemini === 'string') {
+          parsed.gemini = normalizeGeminiModelId(parsed.gemini);
+        }
+        setUserModelPreference(parsed);
       } catch (error) {
         console.warn('Invalid model preference in localStorage');
       }
@@ -170,7 +175,9 @@ const App: React.FC = () => {
   const handleModelPreferenceChange = useCallback((newModel: string) => {
     const providerKey = getProviderKey();
     setUserModelPreference((prev) => {
-      const next = { ...prev, [providerKey]: newModel };
+      const value =
+        providerKey === 'gemini' ? normalizeGeminiModelId(newModel) : newModel;
+      const next = { ...prev, [providerKey]: value };
       localStorage.setItem('preferred_generation_models', JSON.stringify(next));
       return next;
     });
