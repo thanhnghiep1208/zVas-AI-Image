@@ -28,6 +28,7 @@ Các event chính được ghi vào `analytics_events`:
 - Trends chart.
 - Bảng **Số ảnh đã tạo theo người dùng** lọc theo tháng (`history.createdAt`).
 - Loading skeleton cho toàn trang khi đang tải.
+- Hiển thị **thời gian cập nhật lần cuối** của bundle tổng quan (KPI + token + model): lấy từ `savedAt` của cache session hoặc thời điểm vừa tải xong từ server (kể cả làm mới nền mỗi 6 giờ).
 
 ## Những phần đã bỏ khỏi UI
 

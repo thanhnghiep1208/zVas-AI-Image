@@ -16,6 +16,17 @@ import { describeApiOrNetworkError } from '../utils/userFacingError';
 
 type TrendMetric = 'generations' | 'activeUsers' | 'cost';
 
+function formatAnalyticsBundleFetchedAt(timestamp: number): string {
+  return new Date(timestamp).toLocaleString('vi-VN', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
+}
+
 /** Cache session khi mở lại tab gần đây — tránh gọi API dư. */
 const ANALYTICS_CACHE_TTL_MS = 15 * 60 * 1000;
 /** Tự động tải lại bundle analytics (bỏ qua cache) định kỳ. */
@@ -39,7 +50,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
   latencyStats,
   readOnly = false,
 }) => {
-  const readCache = <T,>(key: string): T | null => {
+  const readCacheEntry = <T,>(key: string): { data: T; savedAt: number } | null => {
     try {
       const raw = sessionStorage.getItem(key);
       if (!raw) return null;
@@ -49,8 +60,8 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
         sessionStorage.removeItem(key);
         return null;
       }
-      return parsed.data;
-    } catch (error) {
+      return { data: parsed.data, savedAt: parsed.savedAt };
+    } catch {
       return null;
     }
   };
@@ -100,6 +111,8 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
   const [isEditingBudget, setIsEditingBudget] = useState(false);
   const [requestVersion, setRequestVersion] = useState(0);
   const [loadedMonthKey, setLoadedMonthKey] = useState<string | null>(null);
+  /** Thời điểm bundle KPI (analytics + token + model) được lấy từ server hoặc từ cache session — hiển thị cho user. */
+  const [dashboardBundleFetchedAt, setDashboardBundleFetchedAt] = useState<number | null>(null);
 
   useEffect(() => {
     const saved = window.localStorage.getItem('analytics_monthly_budget_limit');
@@ -130,6 +143,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
         modelBreakdown: []
       });
       setIsErrorBreakdownOpen(false);
+      setDashboardBundleFetchedAt(null);
     }
   }, [loadedMonthKey, monthKey]);
 
@@ -141,18 +155,19 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
     try {
       const cacheKey = `analytics_dashboard_${monthKey}`;
       if (!forceRefresh) {
-        const cached = readCache<{
+        const cached = readCacheEntry<{
           analytics: MonthlyAnalytics;
           errorBreakdown: MonthlyErrorBreakdownItem[];
           tokenStats: MonthlyTokenStats;
           topModelStats: MonthlyTopModelStats;
         }>(cacheKey);
         if (cached) {
-          setAnalytics(cached.analytics);
-          setErrorBreakdown(cached.errorBreakdown);
-          setTokenStats(cached.tokenStats);
-          setTopModelStats(cached.topModelStats);
+          setAnalytics(cached.data.analytics);
+          setErrorBreakdown(cached.data.errorBreakdown);
+          setTokenStats(cached.data.tokenStats);
+          setTopModelStats(cached.data.topModelStats);
           setLoadedMonthKey(monthKey);
+          setDashboardBundleFetchedAt(cached.savedAt);
           setRequestVersion((v) => v + 1);
           return;
         }
@@ -178,6 +193,7 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
         tokenStats: bundle.tokenStats,
         topModelStats: bundle.topModelStats,
       });
+      setDashboardBundleFetchedAt(Date.now());
     } catch (error) {
       console.error('Error loading analytics:', error);
       const raw = error instanceof Error ? error.message : String(error);
@@ -256,6 +272,22 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
           </button>
         </div>
       </div>
+
+      {dashboardBundleFetchedAt !== null && loadedMonthKey === monthKey && (
+        <div className="-mt-2 flex flex-wrap items-center gap-1.5 text-xs text-gray-500 sm:-mt-1">
+          <Clock className="h-3.5 w-3.5 shrink-0 text-cyan-500/75" aria-hidden />
+          <span>
+            Dữ liệu tổng quan tháng <span className="font-medium text-gray-400">{loadedMonthKey}</span> cập nhật lần
+            cuối:{' '}
+            <time
+              dateTime={new Date(dashboardBundleFetchedAt).toISOString()}
+              className="font-medium tabular-nums text-cyan-100/90"
+            >
+              {formatAnalyticsBundleFetchedAt(dashboardBundleFetchedAt)}
+            </time>
+          </span>
+        </div>
+      )}
 
       {isLoading ? (
         <AnalyticsPageSkeleton />
