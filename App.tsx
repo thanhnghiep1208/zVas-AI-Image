@@ -39,22 +39,31 @@ const FullscreenViewer = lazy(() =>
 );
 
 const WorkspaceViewFallback = () => (
-  <div className="flex min-h-[280px] flex-1 flex-col items-center justify-center gap-3 text-gray-400">
-    <div className="h-10 w-10 animate-spin rounded-full border-2 border-cyan-500/25 border-t-cyan-400" />
+  <div className="flex min-h-[280px] flex-1 flex-col items-center justify-center gap-3 text-[var(--lp-muted)]">
+    <div
+      className="h-10 w-10 animate-spin rounded-full border-2 border-[var(--lp-accent-dim)] border-t-[var(--lp-accent)]"
+      aria-hidden
+    />
     <p className="text-sm">Đang tải giao diện…</p>
   </div>
 );
 
 const ModalLoadingOverlay = () => (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-[2px]">
-    <div className="h-10 w-10 animate-spin rounded-full border-2 border-cyan-500/30 border-t-cyan-400" />
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--lp-void)]/75 backdrop-blur-[2px]">
+    <div
+      className="h-10 w-10 animate-spin rounded-full border-2 border-[var(--lp-accent-dim)] border-t-[var(--lp-accent)]"
+      aria-hidden
+    />
   </div>
 );
 
 const AdminDashboardFallback = () => (
-  <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-3 bg-[#05080c]/95 backdrop-blur-md">
-    <div className="h-11 w-11 animate-spin rounded-full border-2 border-cyan-500/30 border-t-cyan-400" />
-    <p className="text-sm text-gray-400">Đang tải bảng điều khiển…</p>
+  <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-3 bg-[var(--lp-void)]/95 backdrop-blur-md">
+    <div
+      className="h-11 w-11 animate-spin rounded-full border-2 border-[var(--lp-accent-dim)] border-t-[var(--lp-accent)]"
+      aria-hidden
+    />
+    <p className="text-sm text-[var(--lp-muted)]">Đang tải bảng điều khiển…</p>
   </div>
 );
 
@@ -129,6 +138,11 @@ const App: React.FC = () => {
     onLoginError,
     onLoginSuccess,
   });
+
+  const handleLoginWithClear = useCallback(() => {
+    setError(null);
+    void handleLogin();
+  }, [handleLogin]);
 
   const { historyImages, setHistoryImages, handleClearHistory } = useHistoryImages(user);
 
@@ -294,7 +308,7 @@ const App: React.FC = () => {
     const file = dataURLtoFile(generatedImage.imageUrl, newFileName);
 
     if (!file) {
-      setError("Could not use this image as input.");
+      setError('Không dùng được ảnh này làm đầu vào. Thử tải lại hoặc chọn ảnh khác.');
       return;
     }
     
@@ -368,7 +382,7 @@ const App: React.FC = () => {
   }
 
   if (!user) {
-    return <LandingPage onLogin={handleLogin} />;
+    return <LandingPage onLogin={handleLoginWithClear} loginError={error} />;
   }
 
   if (userProfile && userProfile.status === 'rejected' && userProfile.role !== 'admin') {
@@ -378,15 +392,16 @@ const App: React.FC = () => {
   return (
     <>
       <Toaster position="top-right" richColors />
-      <div className="relative flex h-screen flex-col overflow-hidden bg-[#05080c] font-sans text-gray-200">
+      <div className="app-shell relative flex h-screen flex-col overflow-hidden bg-[var(--lp-void)] font-sans text-[var(--lp-text)]">
         <div
-          className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_75%_50%_at_50%_-20%,rgba(34,211,238,0.1),transparent_55%)]"
+          className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_75%_50%_at_50%_-20%,var(--lp-glow-teal),transparent_55%)]"
           aria-hidden
         />
         <div
-          className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_45%_35%_at_100%_100%,rgba(59,130,246,0.07),transparent_50%)]"
+          className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_45%_35%_at_100%_100%,var(--lp-glow-blue),transparent_50%)]"
           aria-hidden
         />
+        <div className="lp-grain pointer-events-none absolute inset-0 opacity-[0.32] mix-blend-overlay" aria-hidden />
         <div className="relative z-10 flex min-h-0 flex-1 flex-col">
         <AppHeaderWithPending
           user={user}

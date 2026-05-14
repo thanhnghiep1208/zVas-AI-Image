@@ -28,20 +28,20 @@ function FullscreenViewerInner({ image, onClose, onDownload, onForceRemoveBackgr
 
   return (
     <div
-      className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 sm:p-6 lg:p-8"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--lp-void)]/85 p-4 backdrop-blur-sm sm:p-6 lg:p-8"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
       aria-labelledby="fullscreen-prompt-title"
     >
       <div
-        className="relative flex flex-col lg:flex-row bg-gray-900 shadow-2xl rounded-xl w-full max-w-6xl max-h-[95vh] overflow-hidden"
+        className="relative flex max-h-[95vh] w-full max-w-6xl flex-col overflow-hidden rounded-xl border border-[var(--lp-border)] bg-[var(--lp-surface-elevated)] shadow-2xl lg:flex-row"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-3 right-3 z-20 p-2 bg-black/50 rounded-full text-gray-300 hover:text-white hover:bg-red-600 transition-colors"
+          className="absolute right-3 top-3 z-20 rounded-full border border-[var(--lp-border)] bg-[var(--lp-surface)] p-2 text-[var(--lp-muted)] transition-colors hover:bg-red-600 hover:text-white"
           aria-label="Close fullscreen view"
         >
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">

@@ -1,12 +1,59 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Outfit", ui-sans-serif, system-ui, sans-serif;
+  --font-family-display: "Fraunces", ui-serif, Georgia, "Times New Roman", serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
 }
 
+/* Premium studio tokens — shared by landing + authenticated app */
+:root {
+  --lp-void: #020408;
+  --lp-ink: #050a12;
+  --lp-surface: rgba(10, 16, 26, 0.78);
+  --lp-surface-elevated: rgba(16, 24, 38, 0.92);
+  --lp-border: rgba(255, 255, 255, 0.07);
+  --lp-border-strong: rgba(45, 212, 191, 0.22);
+  --lp-accent: #5eead4;
+  --lp-accent-dim: rgba(94, 234, 212, 0.14);
+  --lp-accent-glow: rgba(45, 212, 191, 0.35);
+  --lp-glow-teal: rgba(34, 211, 238, 0.1);
+  --lp-glow-blue: rgba(59, 130, 246, 0.07);
+  --lp-text: #e2e8f0;
+  --lp-muted: #8b9cb3;
+  --lp-faint: #4a5d73;
+}
+
 body {
-  @apply bg-gray-900 text-gray-100;
+  background-color: var(--lp-void);
+  color: var(--lp-text);
+}
+
+@keyframes landing-hero-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.landing-premium .lp-anim-hero {
+  animation: landing-hero-in 0.75s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.landing-premium .lp-anim-hero-delay {
+  animation-delay: 0.1s;
+}
+
+.landing-premium .lp-anim-panel {
+  animation: landing-hero-in 0.85s cubic-bezier(0.22, 1, 0.36, 1) 0.12s both;
+}
+
+.lp-grain {
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");
 }
 
 .custom-scrollbar::-webkit-scrollbar {
@@ -18,5 +65,11 @@ body {
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  @apply bg-gray-700 rounded-full hover:bg-gray-600 transition-colors;
+  border-radius: 9999px;
+  background-color: color-mix(in oklab, var(--lp-muted) 38%, transparent);
+  transition: background-color 0.15s ease;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: color-mix(in oklab, var(--lp-muted) 55%, transparent);
 }

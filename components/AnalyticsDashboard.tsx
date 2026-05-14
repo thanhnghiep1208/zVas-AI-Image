@@ -12,8 +12,14 @@ import { BarChart3, Users, Image as ImageIcon, CheckCircle, XCircle, DollarSign,
 import { toast } from 'sonner';
 import { LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer } from 'recharts';
 import { useTrendData } from '../hooks/useTrendData';
+import { describeApiOrNetworkError } from '../utils/userFacingError';
 
 type TrendMetric = 'generations' | 'activeUsers' | 'cost';
+
+/** Cache session khi mở lại tab gần đây — tránh gọi API dư. */
+const ANALYTICS_CACHE_TTL_MS = 15 * 60 * 1000;
+/** Tự động tải lại bundle analytics (bỏ qua cache) định kỳ. */
+const ANALYTICS_AUTO_REFRESH_MS = 6 * 60 * 60 * 1000;
 
 const TREND_METRIC_CONFIG: Record<TrendMetric, { label: string; range: '30d' | '8w'; color: string }> = {
   generations: { label: 'Generations per day (last 30 days)', range: '30d', color: '#22d3ee' },
@@ -33,8 +39,6 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
   latencyStats,
   readOnly = false,
 }) => {
-  const ANALYTICS_CACHE_TTL_MS = 15 * 60 * 1000;
-
   const readCache = <T,>(key: string): T | null => {
     try {
       const raw = sessionStorage.getItem(key);
@@ -129,24 +133,35 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
     }
   }, [loadedMonthKey, monthKey]);
 
-  const handleRequestData = useCallback(async () => {
-    setIsLoading(true);
+  const handleRequestData = useCallback(async (forceRefresh = false, options?: { background?: boolean }) => {
+    const background = options?.background ?? false;
+    if (!background) {
+      setIsLoading(true);
+    }
     try {
       const cacheKey = `analytics_dashboard_${monthKey}`;
-      const cached = readCache<{
-        analytics: MonthlyAnalytics;
-        errorBreakdown: MonthlyErrorBreakdownItem[];
-        tokenStats: MonthlyTokenStats;
-        topModelStats: MonthlyTopModelStats;
-      }>(cacheKey);
-      if (cached) {
-        setAnalytics(cached.analytics);
-        setErrorBreakdown(cached.errorBreakdown);
-        setTokenStats(cached.tokenStats);
-        setTopModelStats(cached.topModelStats);
-        setLoadedMonthKey(monthKey);
-        setRequestVersion((v) => v + 1);
-        return;
+      if (!forceRefresh) {
+        const cached = readCache<{
+          analytics: MonthlyAnalytics;
+          errorBreakdown: MonthlyErrorBreakdownItem[];
+          tokenStats: MonthlyTokenStats;
+          topModelStats: MonthlyTopModelStats;
+        }>(cacheKey);
+        if (cached) {
+          setAnalytics(cached.analytics);
+          setErrorBreakdown(cached.errorBreakdown);
+          setTokenStats(cached.tokenStats);
+          setTopModelStats(cached.topModelStats);
+          setLoadedMonthKey(monthKey);
+          setRequestVersion((v) => v + 1);
+          return;
+        }
+      } else {
+        try {
+          sessionStorage.removeItem(cacheKey);
+        } catch {
+          /* ignore */
+        }
       }
 
       const bundle = await loadMonthlyDashboardBundle(monthKey);
@@ -165,11 +180,29 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
       });
     } catch (error) {
       console.error('Error loading analytics:', error);
-      toast.error('Failed to load analytics data');
+      const raw = error instanceof Error ? error.message : String(error);
+      toast.error('Không tải được dữ liệu analytics', {
+        description: describeApiOrNetworkError(raw),
+      });
     } finally {
-      setIsLoading(false);
+      if (!background) {
+        setIsLoading(false);
+      }
     }
   }, [monthKey]);
+
+  // Mở trang / đổi tháng: tải từ cache nếu còn hạn, không thì gọi API.
+  useEffect(() => {
+    void handleRequestData(false);
+  }, [monthKey, handleRequestData]);
+
+  // Mỗi 6 giờ: tải mới từ server (bỏ qua cache), không che UI bằng skeleton.
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      void handleRequestData(true, { background: true });
+    }, ANALYTICS_AUTO_REFRESH_MS);
+    return () => window.clearInterval(id);
+  }, [monthKey, handleRequestData]);
 
   const formatCurrency = (val: number) => `$${val.toFixed(2)}`;
   const formatNumber = (val: number) => new Intl.NumberFormat('en-US').format(val);
@@ -196,6 +229,10 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
           <p className="mt-1 max-w-lg text-sm text-gray-500">
             Số liệu nội bộ theo tháng — tập trung vào người dùng, lượt tạo và chi phí.
           </p>
+          <p className="mt-2 max-w-xl text-xs text-gray-600">
+            Dữ liệu tự làm mới đầy đủ mỗi <span className="font-medium text-gray-400">6 giờ</span>. Dùng nút{' '}
+            <span className="font-medium text-gray-400">Tải dữ liệu mới</span> khi cần cập nhật ngay.
+          </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <label htmlFor="analytics-month" className="text-sm text-gray-500">
@@ -210,11 +247,12 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
           />
           <button
             type="button"
-            onClick={() => void handleRequestData()}
+            onClick={() => void handleRequestData(true)}
             disabled={isLoading}
+            title="Luôn tải mới từ server, bỏ qua bản cache trên trình duyệt"
             className="rounded-xl border border-cyan-500/30 bg-cyan-500/15 px-3 py-2 text-xs font-medium text-cyan-100 transition hover:bg-cyan-500/25 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {isLoading ? 'Đang tải...' : 'Yêu cầu dữ liệu'}
+            {isLoading ? 'Đang tải...' : 'Tải dữ liệu mới'}
           </button>
         </div>
       </div>
@@ -328,7 +366,9 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
         </>
       ) : (
         <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] py-14 text-center text-sm text-gray-500">
-          Chưa tải dữ liệu cho tháng này. Nhấn <span className="font-semibold text-gray-300">Yêu cầu dữ liệu</span> để cập nhật.
+          Chưa có dữ liệu cho tháng này (đang tải hoặc lỗi mạng). Nhấn{' '}
+          <span className="font-semibold text-gray-300">Tải dữ liệu mới</span> để thử lại — hệ thống cũng tự làm mới
+          mỗi 6 giờ.
         </div>
       )}
     </div>
@@ -465,7 +505,9 @@ const UserHistoryCountsPanel: React.FC<{ monthKey: string }> = ({ monthKey }) =>
           toast.warning('Hết quota đọc Firestore — thử lại sau.');
         } else {
           console.error('UserHistoryCountsPanel:', error);
-          toast.error('Không tải được bảng đếm ảnh.');
+          toast.error('Không tải được bảng đếm ảnh', {
+            description: describeApiOrNetworkError(msg),
+          });
         }
         setUsers([]);
         setUserCounts({});

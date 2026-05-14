@@ -15,15 +15,17 @@ import {
   Users,
   XCircle,
 } from 'lucide-react';
+import { toast } from 'sonner';
+import { describeApiOrNetworkError } from '../utils/userFacingError';
 
 const AnalyticsDashboard = lazy(() =>
   import('./AnalyticsDashboard').then((m) => ({ default: m.AnalyticsDashboard }))
 );
 
 const AnalyticsTabFallback = () => (
-  <div className="flex min-h-[320px] flex-col items-center justify-center gap-3 rounded-2xl border border-white/[0.08] bg-gray-950/50 p-8">
-    <div className="h-10 w-10 animate-spin rounded-full border-2 border-cyan-500/25 border-t-cyan-400" />
-    <p className="text-sm text-gray-500">Đang tải Analytics…</p>
+  <div className="flex min-h-[320px] flex-col items-center justify-center gap-3 rounded-2xl border border-[var(--lp-border)] bg-[var(--lp-surface)] p-8">
+    <div className="h-10 w-10 animate-spin rounded-full border-2 border-[var(--lp-accent-dim)] border-t-[var(--lp-accent)]" />
+    <p className="text-sm text-[var(--lp-muted)]">Đang tải Analytics…</p>
   </div>
 );
 
@@ -84,8 +86,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       const msg = error instanceof Error ? error.message : String(error);
       if (msg.includes('Quota exceeded')) {
         console.warn('Users list fetch quota exceeded.');
+        toast.warning('Hết hạn mức đọc Firestore', {
+          description: 'Danh sách người dùng có thể chưa cập nhật. Thử lại sau vài phút.',
+        });
       } else {
         handleFirestoreError(error, OperationType.LIST, 'users');
+        toast.error('Không tải được danh sách người dùng', {
+          description: describeApiOrNetworkError(msg),
+        });
       }
     } finally {
       setIsLoading(false);
@@ -123,6 +131,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         if (!cancelled) {
           handleFirestoreError(error, OperationType.GET, 'history');
           setUserHistoryImages([]);
+          const msg = error instanceof Error ? error.message : String(error);
+          toast.error('Không tải được lịch sử ảnh', {
+            description: describeApiOrNetworkError(msg),
+          });
         }
       } finally {
         if (!cancelled) {
@@ -159,6 +171,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         }
       } catch (err) {
         console.error('Error loading settings:', err);
+        const msg = err instanceof Error ? err.message : String(err);
+        toast.error('Không tải được cấu hình hệ thống', {
+          description: describeApiOrNetworkError(msg),
+        });
       }
     };
 
@@ -181,9 +197,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         defaultProvider,
         updatedAt: new Date().toISOString()
       }, { merge: true });
-      alert('Đã lưu cấu hình hệ thống thành công.');
+      toast.success('Đã lưu cấu hình hệ thống.');
     } catch (err) {
       handleFirestoreError(err, OperationType.UPDATE, 'settings/global');
+      const msg = err instanceof Error ? err.message : String(err);
+      toast.error('Chưa lưu được cấu hình', {
+        description: describeApiOrNetworkError(msg),
+      });
     } finally {
       setIsSavingSettings(false);
     }
@@ -196,6 +216,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       await loadUsersFromFirestore();
     } catch (err) {
       handleFirestoreError(err, OperationType.UPDATE, `users/${userId}`);
+      const msg = err instanceof Error ? err.message : String(err);
+      toast.error('Chưa cập nhật được trạng thái', {
+        description: describeApiOrNetworkError(msg),
+      });
     }
   };
 
@@ -206,12 +230,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       await loadUsersFromFirestore();
     } catch (err) {
       handleFirestoreError(err, OperationType.UPDATE, `users/${userId}`);
+      const msg = err instanceof Error ? err.message : String(err);
+      toast.error('Chưa cập nhật được vai trò', {
+        description: describeApiOrNetworkError(msg),
+      });
     }
   };
 
   const handleDeleteUser = async (userId: string, userEmail: string) => {
     if (userId === auth.currentUser?.uid) {
-      alert('Bạn không thể tự xóa chính mình!');
+      toast.error('Không thể tự xóa chính mình', {
+        description: 'Chọn một tài khoản khác để xóa.',
+      });
       return;
     }
 
@@ -222,25 +252,29 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     try {
       const userRef = doc(db, 'users', userId);
       await deleteDoc(userRef);
-      alert('Đã xóa người dùng thành công.');
+      toast.success('Đã xóa người dùng.');
       await loadUsersFromFirestore();
     } catch (err) {
       handleFirestoreError(err, OperationType.DELETE, `users/${userId}`);
+      const msg = err instanceof Error ? err.message : String(err);
+      toast.error('Chưa xóa được người dùng', {
+        description: describeApiOrNetworkError(msg),
+      });
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col overflow-hidden bg-[#05080c] text-gray-200">
+    <div className="fixed inset-0 z-50 flex flex-col overflow-hidden bg-[var(--lp-void)] text-[var(--lp-text)]">
       <div
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_70%_45%_at_50%_-15%,rgba(34,211,238,0.12),transparent_55%)]"
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_70%_45%_at_50%_-15%,var(--lp-glow-teal),transparent_55%)]"
         aria-hidden
       />
       <div
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_50%_35%_at_100%_0%,rgba(59,130,246,0.08),transparent_45%)]"
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_50%_35%_at_100%_0%,var(--lp-glow-blue),transparent_45%)]"
         aria-hidden
       />
 
-      <header className="relative z-10 border-b border-white/[0.08] bg-gray-950/40 px-4 py-4 backdrop-blur-xl sm:px-6 sm:py-5">
+      <header className="relative z-10 border-b border-[var(--lp-border)] bg-[var(--lp-surface)] px-4 py-4 backdrop-blur-xl sm:px-6 sm:py-5">
         <div className="mx-auto flex max-w-6xl flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-wrap items-center gap-3 sm:gap-4">
             <button
@@ -352,7 +386,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   <p className="text-sm text-gray-500">Đang tải danh sách…</p>
                 </div>
               ) : (
-                <div className="overflow-hidden rounded-2xl border border-white/[0.08] bg-gray-950/50 shadow-[0_24px_60px_-24px_rgba(0,0,0,0.6)] backdrop-blur-sm">
+                <div className="overflow-hidden rounded-2xl border border-white/[0.08] bg-[var(--lp-surface)] shadow-[0_24px_60px_-24px_rgba(0,0,0,0.6)] backdrop-blur-sm">
                   <div className="overflow-x-auto">
                     <table className="w-full border-collapse text-left">
                       <thead>
@@ -483,7 +517,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           )}
 
           {activeTab === 'settings' && (
-            <section className="mx-auto max-w-4xl overflow-hidden rounded-2xl border border-white/[0.08] bg-gray-950/50 p-5 shadow-[0_24px_60px_-24px_rgba(0,0,0,0.55)] backdrop-blur-sm sm:p-8">
+            <section className="mx-auto max-w-4xl overflow-hidden rounded-2xl border border-white/[0.08] bg-[var(--lp-surface)] p-5 shadow-[0_24px_60px_-24px_rgba(0,0,0,0.55)] backdrop-blur-sm sm:p-8">
               <div className="mb-8 flex items-start gap-4">
                 <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-cyan-500/25 bg-gradient-to-br from-cyan-500/20 to-blue-600/10">
                   <Shield className="h-7 w-7 text-cyan-200" />
@@ -516,7 +550,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             value={provider}
                             checked={defaultProvider === provider}
                             onChange={(e) => setDefaultProvider(e.target.value as any)}
-                            className="w-4 h-4 text-cyan-500 bg-gray-900 border-gray-700 focus:ring-cyan-500"
+                            className="h-4 w-4 border-[var(--lp-border)] bg-[var(--lp-ink)] text-[var(--lp-accent)] focus:ring-[var(--lp-accent)]"
                           />
                           <span className={`font-bold transition-colors ${defaultProvider === provider ? 'text-white' : 'text-gray-400'}`}>
                             {provider.charAt(0).toUpperCase() + provider.slice(1)}
@@ -632,7 +666,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           )}
 
           {activeTab === 'analytics' && (
-            <section className="rounded-2xl border border-white/[0.06] bg-gray-950/35 p-4 backdrop-blur-sm sm:p-6">
+            <section className="rounded-2xl border border-white/[0.06] bg-[var(--lp-surface)] p-4 backdrop-blur-sm sm:p-6">
               <Suspense fallback={<AnalyticsTabFallback />}>
                 <AnalyticsDashboard readOnly={analyticsOnly} />
               </Suspense>
@@ -644,7 +678,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       {/* User History Modal */}
       {selectedUserHistory && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/75 p-4 backdrop-blur-md">
-          <div className="flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-white/[0.1] bg-gray-950/95 shadow-[0_32px_80px_-20px_rgba(0,0,0,0.85)] backdrop-blur-xl">
+          <div className="flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-white/[0.1] bg-[var(--lp-surface-elevated)] shadow-[0_32px_80px_-20px_rgba(0,0,0,0.85)] backdrop-blur-xl">
             <header className="flex items-center justify-between gap-4 border-b border-white/[0.08] bg-white/[0.02] px-5 py-4">
               <div className="min-w-0">
                 <h3 className="truncate text-lg font-semibold text-white">Lịch sử tạo ảnh</h3>
@@ -677,7 +711,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   {userHistoryImages.map((img) => (
                     <div
                       key={img.id}
-                      className="group relative aspect-square overflow-hidden rounded-xl border border-white/[0.08] bg-[#0a1016]"
+                      className="group relative aspect-square overflow-hidden rounded-xl border border-white/[0.08] bg-[var(--lp-ink)]"
                     >
                       {/* Note: In a real app, we'd need to fetch from IDB or have a cloud URL. 
                           Since history uses 'idb' placeholder, admin can't see images from other machines.

@@ -88,27 +88,27 @@ function StyleGuideViewerInner({ onClose, onStyleSelect }: StyleGuideViewerProps
 
   return (
     <div
-      className="fixed inset-0 bg-black/95 backdrop-blur-md flex items-center justify-center z-50 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--lp-void)]/95 p-4 backdrop-blur-md"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
       aria-labelledby="style-guide-title"
     >
       <div
-        className="relative bg-gray-900 shadow-2xl rounded-2xl w-full max-w-5xl max-h-[95vh] overflow-hidden flex flex-col border border-gray-700"
+        className="relative flex max-h-[95vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-[var(--lp-border)] bg-[var(--lp-surface-elevated)] shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex-shrink-0 p-4 border-b border-gray-800 flex items-center justify-between bg-gray-900/80">
+        <div className="flex flex-shrink-0 items-center justify-between border-b border-[var(--lp-border)] bg-[var(--lp-surface)] p-4">
             <div>
-                <h2 id="style-guide-title" className="text-xl font-bold text-white tracking-tight">
-                    Thư viện Phong cách <span className="text-cyan-400 font-mono text-sm ml-2">23 Mẫu • Lưới 6 Cột</span>
+                <h2 id="style-guide-title" className="font-display text-xl font-bold tracking-tight text-[var(--lp-text)]">
+                    Thư viện Phong cách <span className="ml-2 font-mono text-sm text-[var(--lp-accent)]">23 Mẫu • Lưới 6 Cột</span>
                 </h2>
-                <p className="text-xs text-gray-400 mt-0.5">Click vào hình thu nhỏ để áp dụng vào Prompt</p>
+                <p className="mt-0.5 text-xs text-[var(--lp-muted)]">Click vào hình thu nhỏ để áp dụng vào Prompt</p>
             </div>
             <button
               onClick={onClose}
-              className="p-2 bg-gray-800 rounded-lg text-gray-400 hover:text-white hover:bg-red-500/20 border border-gray-700 transition-all shadow-lg"
+              className="rounded-lg border border-[var(--lp-border)] bg-[var(--lp-accent-dim)] p-2 text-[var(--lp-muted)] shadow-lg transition-all hover:bg-red-500/20 hover:text-[var(--lp-text)]"
               aria-label="Đóng"
             >
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
@@ -118,12 +118,12 @@ function StyleGuideViewerInner({ onClose, onStyleSelect }: StyleGuideViewerProps
         </div>
         
         {/* Image Content */}
-        <div className="flex-1 overflow-auto p-4 bg-gray-950 flex justify-center custom-scrollbar">
-          <div className="relative inline-block w-full max-w-4xl h-fit">
+        <div className="custom-scrollbar flex flex-1 justify-center overflow-auto bg-[var(--lp-void)] p-4">
+          <div className="relative inline-block h-fit w-full max-w-4xl">
             <img
               src={STYLE_GUIDE_IMAGE_URL}
               alt="Style guide grid"
-              className="block w-full h-auto shadow-2xl rounded-lg border border-gray-800"
+              className="block h-auto w-full rounded-lg border border-[var(--lp-border)] shadow-2xl"
             />
             {styleHotspots.map(hotspot => (
                 <div

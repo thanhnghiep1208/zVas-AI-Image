@@ -9,6 +9,7 @@ import { PromptOptions } from '../PromptOptions';
 import { AspectRatioSelector } from '../AspectRatioSelector';
 import { ImageSizeSelector } from '../ImageSizeSelector';
 import { HistoryDisplay } from '../HistoryDisplay';
+import { isQuotaOrUsageLimitUserMessage } from '../../utils/userFacingError';
 
 type PromptOptionsState = {
   styleSimplified: boolean;
@@ -173,7 +174,7 @@ function CreateViewComponent({
         <ImageSizeSelector imageSize={imageSize} setImageSize={onImageSizeChange} />
       </div>
 
-      <div className="sticky bottom-0 z-10 border-t border-white/[0.08] bg-[#0a1016]/90 p-5 backdrop-blur-lg lg:static lg:bg-[#0a1016]/80">
+      <div className="sticky bottom-0 z-10 border-t border-[var(--lp-border)] bg-[var(--lp-surface)] p-5 backdrop-blur-lg lg:static lg:bg-[var(--lp-surface)]/90">
         <button
           type="button"
           onClick={onGenerate}
@@ -206,11 +207,16 @@ function CreateViewComponent({
           )}
         </button>
         {error && (
-          <div className="mt-4 rounded-xl border border-red-500/25 bg-red-500/[0.08] p-3 text-sm">
-            {error.includes('Quota exceeded') ? (
+          <div
+            className={`mt-4 rounded-xl border p-3 text-sm ${
+              isQuotaOrUsageLimitUserMessage(error)
+                ? 'border-amber-500/30 bg-amber-500/[0.08]'
+                : 'border-red-500/25 bg-red-500/[0.08]'
+            }`}
+          >
+            {isQuotaOrUsageLimitUserMessage(error) ? (
               <p className="text-amber-200/95">
-                <span className="font-semibold text-amber-100">Hết quota:</span> đã đạt giới hạn miễn phí trong ngày.
-                Thử lại sau hoặc nhờ admin hỗ trợ nâng hạn mức.
+                <span className="font-semibold text-amber-100">Tạm thời bị giới hạn:</span> {error}
               </p>
             ) : (
               <p className="text-red-300">{error}</p>

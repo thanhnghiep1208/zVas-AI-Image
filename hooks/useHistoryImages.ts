@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import type { User } from 'firebase/auth';
 import type { GeneratedImage } from '../types';
 import * as idb from 'idb-keyval';
-import { handleFirestoreError, OperationType } from '../firebase';
+import { handleFirestoreError, isFirestoreOfflineOrTransient, OperationType } from '../firebase';
 import { toast } from 'sonner';
 import { clearHistoryByUser, listRecentHistoryByUser } from '../repositories/historyRepository';
 
@@ -32,8 +32,12 @@ export function useHistoryImages(user: User | null) {
       return images;
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
-      if (message.includes('Quota exceeded')) {
-        console.warn('History fetch quota exceeded.');
+      if (message.includes('Quota exceeded') || isFirestoreOfflineOrTransient(error)) {
+        if (isFirestoreOfflineOrTransient(error)) {
+          console.warn('History fetch unavailable (offline/transient).');
+        } else {
+          console.warn('History fetch quota exceeded.');
+        }
       } else {
         handleFirestoreError(error, OperationType.GET, 'history');
       }

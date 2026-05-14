@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { User } from 'firebase/auth';
-import { db, doc, getDoc, handleFirestoreError, OperationType } from '../firebase';
+import { db, doc, getDoc, handleFirestoreError, isFirestoreOfflineOrTransient, OperationType } from '../firebase';
 import { getRuntimeEnvValue, isLikelyPlaceholderKey } from '../utils/runtimeEnv';
 
 /** Không dùng onSnapshot — refetch theo chu kỳ + khi quay lại tab. */
@@ -89,12 +89,23 @@ export function useGlobalSettingsAndApiKey(
         }
       } catch (error: unknown) {
         const msg = error instanceof Error ? error.message : String(error);
-        if (msg.includes('Quota exceeded')) {
-          console.warn('Settings quota exceeded, using cache.');
+        const useCache =
+          msg.includes('Quota exceeded') || isFirestoreOfflineOrTransient(error);
+        if (useCache) {
+          if (isFirestoreOfflineOrTransient(error)) {
+            console.warn('Settings: Firestore unavailable (offline/transient), using cache if any.');
+          } else {
+            console.warn('Settings quota exceeded, using cache.');
+          }
           const cached = sessionStorage.getItem('global_settings');
           if (cached) {
             try {
-              setGlobalSettings(JSON.parse(cached));
+              const parsed = JSON.parse(cached);
+              setGlobalSettings(parsed);
+              setSystemApiKey(parsed.systemApiKey || null);
+              if (parsed.systemApiKey) {
+                setHasApiKey(true);
+              }
             } catch {
               /* ignore */
             }

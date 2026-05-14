@@ -11,6 +11,7 @@ import {
 import * as idb from 'idb-keyval';
 import { buildFinalPrompts, buildEffectiveSettings } from '../lib/buildGenerationPrompts';
 import { createHistoryEntry } from '../repositories/historyRepository';
+import { describeApiOrNetworkError } from '../utils/userFacingError';
 
 export interface UseImageGenerationParams {
   user: User | null;
@@ -61,41 +62,6 @@ export function useImageGeneration(params: UseImageGenerationParams) {
 
   const [isLoading, setIsLoading] = useState(false);
   const [generatedImages, setGeneratedImages] = useState<GeneratedImage[]>([]);
-
-  const getFriendlyErrorMessage = useCallback((rawError: string): string => {
-    const normalized = rawError.toLowerCase();
-    if (
-      normalized.includes('permission_denied') ||
-      normalized.includes('missing or insufficient permissions') ||
-      normalized.includes('403') ||
-      normalized.includes('unregistered callers') ||
-      normalized.includes('api_key_invalid') ||
-      normalized.includes('identity')
-    ) {
-      return 'Bạn chưa có quyền truy cập hoặc API key chưa hợp lệ. Vui lòng kiểm tra đăng nhập và cấu hình API.';
-    }
-    if (
-      normalized.includes('timeout') ||
-      normalized.includes('deadline exceeded') ||
-      normalized.includes('timed out')
-    ) {
-      return 'Hệ thống đang phản hồi chậm. Vui lòng thử lại sau ít phút.';
-    }
-    if (
-      normalized.includes('rate limit') ||
-      normalized.includes('too many requests') ||
-      normalized.includes('quota')
-    ) {
-      return 'Bạn đang thao tác quá nhanh hoặc đã chạm giới hạn tạm thời. Vui lòng đợi rồi thử lại.';
-    }
-    if (normalized.includes('filter') || normalized.includes('safety')) {
-      return 'Nội dung prompt bị bộ lọc an toàn chặn. Vui lòng chỉnh lại mô tả.';
-    }
-    if (normalized.includes('invalid') || normalized.includes('prompt')) {
-      return 'Prompt chưa hợp lệ. Vui lòng kiểm tra và thử lại.';
-    }
-    return 'Đã xảy ra lỗi khi tạo ảnh. Vui lòng thử lại.';
-  }, []);
 
   useEffect(() => {
     if (!user) {
@@ -245,14 +211,14 @@ export function useImageGeneration(params: UseImageGenerationParams) {
     } catch (err: unknown) {
       console.error('Generation error:', err);
 
-      let errorMessage = 'An unexpected error occurred during generation.';
+      let errorMessage = 'Lỗi không xác định khi tạo ảnh.';
       if (err instanceof Error) {
         errorMessage = err.message;
       } else if (typeof err === 'object' && err !== null) {
         errorMessage = JSON.stringify(err);
       }
 
-      setError(getFriendlyErrorMessage(errorMessage));
+      setError(describeApiOrNetworkError(errorMessage));
 
       if (user) {
         trackEvent('image_generation_failed', {

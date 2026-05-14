@@ -12,8 +12,10 @@ import {
   setDoc,
   serverTimestamp,
   handleFirestoreError,
+  isFirestoreOfflineOrTransient,
   OperationType,
 } from '../firebase';
+import { describeAuthSignInError } from '../utils/userFacingError';
 
 const DEFAULT_ADMIN_EMAIL = 'thanhnghiep1208@gmail.com';
 
@@ -85,6 +87,8 @@ export function useAuthAndProfile({
         const msg = err instanceof Error ? err.message : String(err);
         if (msg.includes('Quota exceeded')) {
           console.warn('Profile fetch quota exceeded, keeping last known profile.');
+        } else if (isFirestoreOfflineOrTransient(err)) {
+          console.warn('Profile fetch unavailable (offline/transient), keeping last known profile.', msg);
         } else if (options?.isInitial) {
           handleFirestoreError(err, OperationType.GET, path);
         } else {
@@ -143,19 +147,7 @@ export function useAuthAndProfile({
       }
     } catch (err: unknown) {
       console.error('Login failed', err);
-      const code =
-        err && typeof err === 'object' && 'code' in err
-          ? String((err as { code?: string }).code)
-          : '';
-      if (code === 'auth/requests-from-referer-blocked') {
-        onLoginError?.(
-          "Lỗi: Tên miền này chưa được cho phép trong Firebase. Vui lòng thêm '" +
-            window.location.hostname +
-            "' vào danh sách 'Authorized domains' trong Firebase Console."
-        );
-      } else {
-        onLoginError?.('Đăng nhập thất bại. Vui lòng thử lại.');
-      }
+      onLoginError?.(describeAuthSignInError(err));
     }
   }, [onLoginError, onLoginSuccess]);
 

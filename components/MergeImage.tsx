@@ -3,6 +3,7 @@ import React, { useState, useCallback, useEffect, useRef, memo } from 'react';
 import { Upload, X, Sparkles, Image as ImageIcon, Loader2, Download, Maximize2 } from 'lucide-react';
 import type { ImageFile, GeneratedImage, ImageSize } from '../types';
 import { generateImageVariations } from '../services/geminiService';
+import { describeApiOrNetworkError, isQuotaOrUsageLimitUserMessage } from '../utils/userFacingError';
 import { AspectRatioSelector } from './AspectRatioSelector';
 import { ImageSizeSelector } from './ImageSizeSelector';
 
@@ -83,8 +84,9 @@ function MergeImageComponent({ onDownload, onFullscreen }: MergeImageProps) {
       );
 
       setResults(prev => [...generated, ...prev]);
-    } catch (err: any) {
-      setError(err.message || 'Có lỗi xảy ra khi tạo ảnh.');
+    } catch (err: unknown) {
+      const raw = err instanceof Error ? err.message : String(err ?? '');
+      setError(describeApiOrNetworkError(raw));
     } finally {
       setIsLoading(false);
     }
@@ -193,7 +195,23 @@ function MergeImageComponent({ onDownload, onFullscreen }: MergeImageProps) {
                 </>
               )}
             </button>
-            {error && <p className="mt-4 text-sm font-medium text-red-300">{error}</p>}
+            {error && (
+              <div
+                className={`mt-4 rounded-xl border p-3 text-sm font-medium ${
+                  isQuotaOrUsageLimitUserMessage(error)
+                    ? 'border-amber-500/30 bg-amber-500/[0.08] text-amber-200/95'
+                    : 'border-red-500/25 bg-red-500/[0.08] text-red-300'
+                }`}
+              >
+                {isQuotaOrUsageLimitUserMessage(error) ? (
+                  <>
+                    <span className="text-amber-100">Tạm thời bị giới hạn:</span> {error}
+                  </>
+                ) : (
+                  error
+                )}
+              </div>
+            )}
           </div>
 
           {results.length > 0 && (

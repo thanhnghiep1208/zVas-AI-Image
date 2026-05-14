@@ -32,7 +32,41 @@ firebase deploy --only firestore --project zvas-ai-image
 
 (hoặc `npx firebase-tools@latest ...` nếu chưa cài global)
 
-## 3) Secrets strategy
+## 3) Chọn mode deploy (quan trọng)
+
+### Mode A — Deploy nhanh hằng ngày (không đổi cấu hình)
+
+Dùng khi chỉ đổi code/app, **không** đổi secrets/env/IAM.
+
+```bash
+gcloud run deploy ai-image-zvas \
+  --source . \
+  --region us-west1 \
+  --platform managed \
+  --allow-unauthenticated \
+  --clear-base-image
+```
+
+Lưu ý: mode này tái sử dụng cấu hình service hiện có trên Cloud Run (secrets/env đã gắn từ revision trước).
+
+### Mode B — Deploy có thay đổi cấu hình runtime
+
+Dùng khi thêm/xoá/đổi provider key, xoay secret, hoặc dọn env cũ.
+
+- Có thể dùng `--update-secrets`, `--remove-secrets`, `--remove-env-vars`.
+- Đây là mode “explicit”, an toàn hơn khi thay đổi cấu hình.
+
+### Mode C — Bootstrap môi trường mới / service mới
+
+Dùng lần đầu tạo service hoặc môi trường clean:
+
+1. Tạo secrets + add versions.
+2. Grant IAM `secretAccessor` cho runtime service account.
+3. Deploy bằng `--update-secrets=...`.
+
+---
+
+## 4) Secrets strategy
 
 ### A. Chỉ 1 key (Gemini-only)
 
@@ -81,7 +115,7 @@ gcloud run deploy ai-image-zvas \
   --clear-base-image
 ```
 
-## 4) Smoke test
+## 5) Smoke test
 
 - Mở URL live, hard refresh.
 - Login Google.
@@ -92,7 +126,7 @@ gcloud run deploy ai-image-zvas \
   - Trong bảng số ảnh theo user: ưu tiên dữ liệu `stats_by_user_month/{YYYY-MM}`; nếu thiếu thì chỉ quét history khi bấm **Cập nhật số ảnh**.
 - Kiểm tra role `advice` chỉ thấy Analytics.
 
-## 5) Logs và rollback
+## 6) Logs và rollback
 
 ```bash
 gcloud logging read \
@@ -104,4 +138,21 @@ gcloud logging read \
 gcloud run revisions list --service ai-image-zvas --region us-west1
 gcloud run services update-traffic ai-image-zvas --region us-west1 --to-revisions=REVISION_NAME=100
 ```
+
+## 7) Decision matrix nhanh
+
+
+| Tình huống                         | Lệnh nên dùng                            |
+| ---------------------------------- | ---------------------------------------- |
+| Chỉ đổi code/UI/API nội bộ         | **Mode A** (deploy nhanh)                |
+| Đổi key provider / biến môi trường | **Mode B** (deploy explicit secrets/env) |
+| Dựng môi trường mới hoàn toàn      | **Mode C** (bootstrap đầy đủ)            |
+
+
+## 8) Checklist trước khi bấm deploy
+
+- `firebase-applet-config.json` tồn tại trong working tree (không commit).
+- Firestore rules/indexes đã deploy đúng project/database.
+- Secrets mới đã có version và IAM đúng.
+- Chọn đúng mode (A/B/C) theo thay đổi của phiên deploy.
 

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { getAnalyticsEventsByDateRange } from '../repositories/analyticsRepository';
+import { describeApiOrNetworkError } from '../utils/userFacingError';
 
 export type TrendMetric = 'generations' | 'activeUsers' | 'cost';
 export type TrendRange = '30d' | '8w';
@@ -218,7 +219,8 @@ export const useTrendData = (metric: string, range: TrendRange): UseTrendDataRes
         }
       } catch (err) {
         console.error('Failed to load trend data:', err);
-        setError('Failed to load trend data');
+        const raw = err instanceof Error ? err.message : String(err);
+        setError(describeApiOrNetworkError(raw));
       } finally {
         setIsLoading(false);
       }
@@ -227,7 +229,7 @@ export const useTrendData = (metric: string, range: TrendRange): UseTrendDataRes
     const normalizedMetric = metric as TrendMetric;
     if (normalizedMetric !== 'generations' && normalizedMetric !== 'activeUsers' && normalizedMetric !== 'cost') {
       setData([]);
-      setError('Unknown metric');
+      setError('Chỉ số không được hỗ trợ.');
       return;
     }
 

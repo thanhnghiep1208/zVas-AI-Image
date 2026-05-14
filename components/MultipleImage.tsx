@@ -6,6 +6,7 @@ import { TrashIcon } from './icons/TrashIcon';
 import { PlusIcon } from './icons/PlusIcon';
 import { ResultsDisplay } from './ResultsDisplay';
 import { HistoryDisplay } from './HistoryDisplay';
+import { isQuotaOrUsageLimitUserMessage } from '../utils/userFacingError';
 
 interface MultipleImageProps {
   image: ImageFile | null;
@@ -121,7 +122,7 @@ function MultipleImageComponent({
           </section>
         </div>
 
-        <div className="sticky bottom-0 z-10 border-t border-white/[0.08] bg-[#0a1016]/90 p-5 backdrop-blur-lg lg:static lg:bg-[#0a1016]/80">
+        <div className="sticky bottom-0 z-10 border-t border-[var(--lp-border)] bg-[var(--lp-surface)] p-5 backdrop-blur-lg lg:static lg:bg-[var(--lp-surface)]/90">
           <button
             type="button"
             onClick={onGenerate}
@@ -144,7 +145,23 @@ function MultipleImageComponent({
               'Tạo nhiều biến thể'
             )}
           </button>
-          {error && <p className="mt-3 text-center text-sm text-red-300">{error}</p>}
+          {error && (
+            <div
+              className={`mt-3 rounded-xl border p-3 text-center text-sm ${
+                isQuotaOrUsageLimitUserMessage(error)
+                  ? 'border-amber-500/30 bg-amber-500/[0.08] text-amber-200/95'
+                  : 'border-red-500/25 bg-red-500/[0.08] text-red-300'
+              }`}
+            >
+              {isQuotaOrUsageLimitUserMessage(error) ? (
+                <>
+                  <span className="font-semibold text-amber-100">Tạm thời bị giới hạn:</span> {error}
+                </>
+              ) : (
+                error
+              )}
+            </div>
+          )}
         </div>
       </aside>
 
