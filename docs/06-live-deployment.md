@@ -10,6 +10,7 @@ npm run build
 
 Đảm bảo có:
 
+- **GA4:** Measurement ID `G-W5YSHKJ7ZD` trong `index.html`; custom event chỉ gửi từ bản production — chi tiết map event: `docs/04-workflow-analytics.md`.
 - `firebase.json`
 - `.firebaserc`
 - `firestore.indexes.json`

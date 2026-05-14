@@ -22,7 +22,7 @@ AI Image ZVAS là ứng dụng web tạo và biến thể hình ảnh bằng AI,
 - Frontend: React 19 + TypeScript + Vite 6 + Tailwind CSS 4.
 - Backend: Express 5 (`server.ts`).
 - Database/Auth: Firebase Firestore + Firebase Auth.
-- Analytics UI: Recharts + dữ liệu `analytics_events`.
+- Analytics: Firestore `analytics_events` (dashboard nội bộ, Recharts) + **GA4** (`G-W5YSHKJ7ZD`, event qua `utils/gtagEvent.ts`, chỉ bản production build).
 
 ## Tài liệu liên quan
 

@@ -5,6 +5,12 @@ import type { ImageFile, GeneratedImage, ImageSize } from '../types';
 import { generateImageVariations } from '../services/geminiService';
 import { trackEvent } from '../services/analyticsService';
 import {
+  ga4BeginCheckout,
+  ga4Exception,
+  ga4Purchase,
+  newGa4TransactionId,
+} from '../utils/gtagEvent';
+import {
   handleFirestoreError,
   OperationType,
 } from '../firebase';
@@ -112,6 +118,7 @@ export function useImageGeneration(params: UseImageGenerationParams) {
     const startTime = Date.now();
     const activeModel = getEffectiveModel();
     const effectiveSettings = buildEffectiveSettings(globalSettings, activeModel);
+    const ga4TransactionId = newGa4TransactionId();
 
     if (user) {
       trackEvent('image_generation_started', {
@@ -119,6 +126,17 @@ export function useImageGeneration(params: UseImageGenerationParams) {
         model_name: activeModel,
         generation_type: currentView,
         image_count: finalPrompts.length,
+      });
+      ga4BeginCheckout({
+        value: 0,
+        items: [
+          {
+            item_id: activeModel,
+            item_name: activeModel,
+            quantity: Math.max(1, finalPrompts.length),
+            price: 0,
+          },
+        ],
       });
     }
 
@@ -170,6 +188,19 @@ export function useImageGeneration(params: UseImageGenerationParams) {
             completion_tokens: completionTokens,
             total_tokens: totalTokens,
           });
+          const qty = Math.max(1, validResults.length);
+          ga4Purchase({
+            transaction_id: ga4TransactionId,
+            value: estimatedCost,
+            items: [
+              {
+                item_id: activeModel,
+                item_name: activeModel,
+                quantity: qty,
+                price: estimatedCost / qty,
+              },
+            ],
+          });
         }
         if (failedResults.length > 0) {
           trackEvent('image_generation_failed', {
@@ -180,6 +211,7 @@ export function useImageGeneration(params: UseImageGenerationParams) {
             duration_ms: durationMs,
             error_code: failedResults[0]?.text || 'unknown_error',
           });
+          ga4Exception(String(failedResults[0]?.text || 'image_generation_failed'), false);
         }
       }
 
@@ -228,6 +260,7 @@ export function useImageGeneration(params: UseImageGenerationParams) {
           image_count: finalPrompts.length,
           error_code: errorMessage,
         });
+        ga4Exception(errorMessage, false);
       }
 
       const isAuthError =

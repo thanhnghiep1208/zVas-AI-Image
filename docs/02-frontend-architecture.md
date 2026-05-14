@@ -12,7 +12,7 @@
 
 | Đường dẫn                               | Vai trò                                         |
 | --------------------------------------- | ----------------------------------------------- |
-| `App.tsx`                               | Orchestrator: auth gate, view switch, overlays  |
+| `App.tsx`                               | Orchestrator: auth gate, view switch, overlays; **GA4** (prod): `login`, `select_content`, `select_item`, `file_download` |
 | `components/`                           | UI components                                   |
 | `components/views/CreateView.tsx`       | Màn create chính (banner chào, upload, kết quả) |
 | `components/MergeImage.tsx`             | Chế độ trộn nhiều ảnh                           |
@@ -20,12 +20,12 @@
 | `components/ImageUploader.tsx`          | Ảnh chính (kéo thả; prop `showLabel`)           |
 | `components/ReferenceImageUploader.tsx` | Ảnh tham chiếu (nhiều file)                     |
 | `components/ResultsDisplay.tsx`         | Lưới ảnh gốc + kết quả, trạng thái rỗng/loading |
-| `components/layout/`                    | Header/Footer/Auth loading + `GeminiModelComparisonModal` (popup so sánh model) |
+| `components/layout/`                    | Header/Footer/Auth loading + `GeminiModelComparisonModal` (popup so sánh model); header **GA4** `select_content` khi mở popup |
 | `hooks/`                                | Business logic tách khỏi UI                     |
 | `lib/buildGenerationPrompts.ts`         | Prompt pipeline                                 |
 | `constants/`                            | Model/prompt maps (`aiModels.ts`: Gemini + `normalizeGeminiModelId`)           |
-| `services/`                             | API client + analytics service                  |
-| `utils/`                                | Helper xử lý ảnh/runtime env                    |
+| `services/`                             | API client + analytics service (`trackEvent` → Firestore) |
+| `utils/`                                | Helper ảnh/runtime env + **`gtagEvent.ts`** (GA4, chỉ `import.meta.env.PROD`) |
 
 
 ## Custom hooks chính
@@ -34,7 +34,7 @@
 - `useGlobalSettingsAndApiKey`: `settings/global` bằng `**getDoc**` + refetch theo chu kỳ / visibility (không listener liên tục).
 - `useHistoryImages`: đồng bộ history + IndexedDB.
 - `usePendingUsersNotifier`: admin — `**getCountFromServer**` theo chu kỳ + toast khi số pending tăng.
-- `useImageGeneration`: pipeline generate + persist + optimistic update; export thêm `resetGenerationWorkspace()` (tắt loading, xóa ảnh vừa tạo trên UI).
+- `useImageGeneration`: pipeline generate + persist + optimistic update; export thêm `resetGenerationWorkspace()` (tắt loading, xóa ảnh vừa tạo trên UI). Gọi `trackEvent` + **GA4** (`begin_checkout`, `purchase`, `exception`) khi bản production (`utils/gtagEvent.ts`).
 - `useGeneratedImageDownload`: tải PNG/JPG + xử lý nền.
 
 ## Shell dev/prod

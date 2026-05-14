@@ -14,6 +14,7 @@ import {
 import { PROVIDER_MODEL_OPTIONS } from '../../constants/aiModels';
 import type { UserProfile } from '../../hooks/useAuthAndProfile';
 import { GeminiModelComparisonModal } from './GeminiModelComparisonModal';
+import { ga4SelectContent } from '../../utils/gtagEvent';
 
 export type AppView = 'create' | 'merge' | 'multiple';
 
@@ -197,7 +198,10 @@ function AppHeaderComponent({
             {getProviderKey() === 'gemini' && (
               <button
                 type="button"
-                onClick={() => setModelHelpOpen(true)}
+                onClick={() => {
+                  ga4SelectContent('help', 'model_comparison');
+                  setModelHelpOpen(true);
+                }}
                 className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-[var(--lp-border)] bg-[var(--lp-ink)] text-[var(--lp-muted)] transition hover:border-[var(--lp-border-strong)] hover:text-[var(--lp-accent)]"
                 title="So sánh Nano Banana 2 và Nano Banana Pro"
                 aria-label="Mở hướng dẫn so sánh model Gemini"
