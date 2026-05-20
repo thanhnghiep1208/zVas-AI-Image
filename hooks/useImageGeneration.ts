@@ -18,6 +18,7 @@ import * as idb from 'idb-keyval';
 import { buildFinalPrompts, buildEffectiveSettings } from '../lib/buildGenerationPrompts';
 import { createHistoryEntry } from '../repositories/historyRepository';
 import { describeApiOrNetworkError } from '../utils/userFacingError';
+import type { ProviderKey } from '../constants/aiModels';
 
 export interface UseImageGenerationParams {
   user: User | null;
@@ -39,6 +40,7 @@ export interface UseImageGenerationParams {
   };
   globalSettings: any;
   systemApiKey: string | null;
+  getProviderKey: () => ProviderKey;
   getEffectiveModel: () => string;
   currentView: 'create' | 'merge' | 'multiple';
   setHistoryImages: Dispatch<SetStateAction<GeneratedImage[]>>;
@@ -60,6 +62,7 @@ export function useImageGeneration(params: UseImageGenerationParams) {
     promptOptions,
     globalSettings,
     systemApiKey,
+    getProviderKey,
     getEffectiveModel,
     currentView,
     setHistoryImages,
@@ -87,17 +90,7 @@ export function useImageGeneration(params: UseImageGenerationParams) {
     setError(null);
     setGeneratedImages([]);
 
-    const cachedSettingsRaw = sessionStorage.getItem('global_settings');
-    let cachedSettings: any = null;
-    if (cachedSettingsRaw) {
-      try {
-        cachedSettings = JSON.parse(cachedSettingsRaw);
-      } catch {
-        cachedSettings = null;
-      }
-    }
-    const runtimeSystemApiKey =
-      systemApiKey || globalSettings?.systemApiKey || cachedSettings?.systemApiKey || null;
+    const runtimeSystemApiKey = systemApiKey || null;
 
     const finalPrompts = buildFinalPrompts({
       activePrompts,
@@ -116,8 +109,9 @@ export function useImageGeneration(params: UseImageGenerationParams) {
 
     console.log('DEBUG: handleGenerateClick triggered');
     const startTime = Date.now();
+    const activeProvider = getProviderKey();
     const activeModel = getEffectiveModel();
-    const effectiveSettings = buildEffectiveSettings(globalSettings, activeModel);
+    const effectiveSettings = buildEffectiveSettings(globalSettings, activeProvider, activeModel);
     const ga4TransactionId = newGa4TransactionId();
 
     if (user) {
@@ -255,7 +249,7 @@ export function useImageGeneration(params: UseImageGenerationParams) {
       if (user) {
         trackEvent('image_generation_failed', {
           user_id: user.uid,
-          model_name: globalSettings?.defaultProvider || 'gemini',
+          model_name: activeModel,
           generation_type: currentView,
           image_count: finalPrompts.length,
           error_code: errorMessage,

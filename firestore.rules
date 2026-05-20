@@ -56,6 +56,19 @@ service cloud.firestore {
       return request.resource.data.keys().hasAll(fields);
     }
 
+    function isSafeGlobalSettings() {
+      return request.resource.data.keys().hasOnly([
+        'enabledProviders',
+        'geminiModel',
+        'openaiModel',
+        'seedanceModel',
+        'seedanceBaseUrl',
+        'seedreamModel',
+        'seedreamBaseUrl',
+        'updatedAt'
+      ]);
+    }
+
     function isValidUser(data) {
       return hasRequiredFields(['uid', 'email', 'role', 'status']) &&
         hasOnlyAllowedFields(['uid', 'email', 'displayName', 'photoURL', 'role', 'status', 'createdAt']) &&
@@ -93,7 +106,7 @@ service cloud.firestore {
 
     match /settings/global {
       allow read: if isAuthenticated();
-      allow write: if isAdmin();
+      allow write: if isAdmin() && isSafeGlobalSettings();
     }
 
     match /history/{historyId} {

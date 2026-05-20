@@ -1,7 +1,15 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { User } from 'firebase/auth';
 import { db, doc, getDoc, handleFirestoreError, isFirestoreOfflineOrTransient, OperationType } from '../firebase';
-import { ALLOWED_GEMINI_MODEL_IDS, normalizeGeminiModelId } from '../constants/aiModels';
+import {
+  DEFAULT_ENABLED_PROVIDERS,
+  getEnabledModelOptions,
+  modelKeyFrom,
+  normalizeEnabledProviders,
+  resolveModelKey,
+  type ProviderKey,
+  type ProviderModelOption,
+} from '../constants/aiModels';
 import { getRuntimeEnvValue, isLikelyPlaceholderKey } from '../utils/runtimeEnv';
 
 /** Không dùng onSnapshot — refetch theo chu kỳ + khi quay lại tab. */
@@ -13,14 +21,17 @@ export interface UseGlobalSettingsAndApiKeyResult {
   systemApiKey: string | null;
   hasApiKey: boolean;
   isCheckingApiKey: boolean;
+  enabledProviders: ProviderKey[];
+  availableModelOptions: ProviderModelOption[];
   handleSelectApiKey: () => Promise<void>;
-  getProviderKey: () => string;
+  getProviderKey: () => ProviderKey;
   getEffectiveModel: () => string;
+  getSelectedModelKey: () => string;
 }
 
 export function useGlobalSettingsAndApiKey(
   user: User | null,
-  userModelPreference: Record<string, string>
+  selectedModelKey: string | null
 ): UseGlobalSettingsAndApiKeyResult {
   const [globalSettings, setGlobalSettings] = useState<any>(null);
   const [systemApiKey, setSystemApiKey] = useState<string | null>(null);
@@ -34,8 +45,6 @@ export function useGlobalSettingsAndApiKey(
         if (cachedSettings) {
           const parsed = JSON.parse(cachedSettings);
           setGlobalSettings(parsed);
-          setSystemApiKey(parsed.systemApiKey || null);
-          setHasApiKey(!!parsed.systemApiKey);
         }
 
         const w = window as Window & {
@@ -65,6 +74,13 @@ export function useGlobalSettingsAndApiKey(
     loadConfigAndCheckKey();
   }, []);
 
+  const enabledProviders = normalizeEnabledProviders(globalSettings?.enabledProviders);
+  const availableModelOptions = getEnabledModelOptions(enabledProviders);
+
+  const getSelectedModelOption = useCallback(() => {
+    return resolveModelKey(enabledProviders, selectedModelKey);
+  }, [enabledProviders, selectedModelKey]);
+
   useEffect(() => {
     if (!user) {
       setGlobalSettings(null);
@@ -82,11 +98,7 @@ export function useGlobalSettingsAndApiKey(
         if (docSnap.exists()) {
           const settingsData = docSnap.data();
           setGlobalSettings(settingsData);
-          setSystemApiKey(settingsData.systemApiKey || null);
           sessionStorage.setItem('global_settings', JSON.stringify(settingsData));
-          if (settingsData.systemApiKey) {
-            setHasApiKey(true);
-          }
         }
       } catch (error: unknown) {
         const msg = error instanceof Error ? error.message : String(error);
@@ -103,10 +115,6 @@ export function useGlobalSettingsAndApiKey(
             try {
               const parsed = JSON.parse(cached);
               setGlobalSettings(parsed);
-              setSystemApiKey(parsed.systemApiKey || null);
-              if (parsed.systemApiKey) {
-                setHasApiKey(true);
-              }
             } catch {
               /* ignore */
             }
@@ -148,34 +156,30 @@ export function useGlobalSettingsAndApiKey(
   }, []);
 
   const getProviderKey = useCallback(
-    () => globalSettings?.defaultProvider || 'gemini',
-    [globalSettings]
+    () => getSelectedModelOption().provider,
+    [getSelectedModelOption]
   );
 
   const getEffectiveModel = useCallback(() => {
-    const providerKey = getProviderKey();
-    const fallbackByProvider: Record<string, string> = {
-      gemini: normalizeGeminiModelId(globalSettings?.geminiModel),
-      openai: 'dall-e-3',
-      seedance: globalSettings?.seedanceModel || 'seed-1.5-pro',
-    };
-    let model =
-      userModelPreference[providerKey] ||
-      fallbackByProvider[providerKey] ||
-      fallbackByProvider.gemini;
-    if (providerKey === 'gemini' && !ALLOWED_GEMINI_MODEL_IDS.has(model)) {
-      model = fallbackByProvider.gemini;
-    }
-    return model;
-  }, [getProviderKey, globalSettings, userModelPreference]);
+    return getSelectedModelOption().value;
+  }, [getSelectedModelOption]);
+
+  const getSelectedModelKey = useCallback(() => {
+    const option = getSelectedModelOption();
+    return modelKeyFrom(option.provider, option.value);
+  }, [getSelectedModelOption]);
 
   return {
     globalSettings,
     systemApiKey,
     hasApiKey,
     isCheckingApiKey,
+    enabledProviders:
+      enabledProviders.length > 0 ? enabledProviders : [...DEFAULT_ENABLED_PROVIDERS],
+    availableModelOptions,
     handleSelectApiKey,
     getProviderKey,
     getEffectiveModel,
+    getSelectedModelKey,
   };
 }

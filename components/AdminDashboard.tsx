@@ -17,7 +17,13 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { describeApiOrNetworkError } from '../utils/userFacingError';
-import { normalizeGeminiModelId } from '../constants/aiModels';
+import {
+  ALLOWED_GEMINI_MODEL_IDS,
+  DEFAULT_ENABLED_PROVIDERS,
+  normalizeEnabledProviders,
+  normalizeGeminiModelId,
+  type ProviderKey,
+} from '../constants/aiModels';
 
 const AnalyticsDashboard = lazy(() =>
   import('./AnalyticsDashboard').then((m) => ({ default: m.AnalyticsDashboard }))
@@ -62,14 +68,24 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       setActiveTab('analytics');
     }
   }, [analyticsOnly]);
-  const [systemApiKey, setSystemApiKey] = useState('');
-  const [openaiApiKey, setOpenaiApiKey] = useState('');
-  const [seedanceApiKey, setSeedanceApiKey] = useState('');
   const [seedanceBaseUrl, setSeedanceBaseUrl] = useState('');
+  const [seedreamBaseUrl, setSeedreamBaseUrl] = useState('');
   const [geminiModel, setGeminiModel] = useState('gemini-3.1-flash-image-preview');
   const [seedanceModel, setSeedanceModel] = useState('seed-1.5-pro');
-  const [defaultProvider, setDefaultProvider] = useState<'gemini' | 'openai' | 'seedance'>('gemini');
+  const [seedreamModel, setSeedreamModel] = useState('seedream-4.0');
+  const [enabledProviders, setEnabledProviders] = useState<ProviderKey[]>([
+    ...DEFAULT_ENABLED_PROVIDERS,
+  ]);
   const [isSavingSettings, setIsSavingSettings] = useState(false);
+  const [isTestingProvider, setIsTestingProvider] = useState(false);
+  const [initialSettingsSnapshot, setInitialSettingsSnapshot] = useState<{
+    seedanceBaseUrl: string;
+    seedreamBaseUrl: string;
+    geminiModel: string;
+    seedanceModel: string;
+    seedreamModel: string;
+    enabledProviders: ProviderKey[];
+  } | null>(null);
   const [selectedUserHistory, setSelectedUserHistory] = useState<{uid: string, email: string} | null>(null);
   const [userHistoryImages, setUserHistoryImages] = useState<any[]>([]);
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
@@ -162,13 +178,26 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         const settingsSnap = await getDoc(settingsRef);
         if (settingsSnap.exists()) {
           const data = settingsSnap.data();
-          setSystemApiKey(data.systemApiKey || '');
-          setOpenaiApiKey(data.openaiApiKey || '');
-          setSeedanceApiKey(data.seedanceApiKey || '');
-          setSeedanceBaseUrl(data.seedanceBaseUrl || '');
-          setGeminiModel(normalizeGeminiModelId(data.geminiModel));
-          setSeedanceModel(data.seedanceModel || 'seed-1.5-pro');
-          setDefaultProvider(data.defaultProvider || 'gemini');
+          const normalizedGeminiModel = normalizeGeminiModelId(data.geminiModel);
+          const normalizedEnabledProviders = normalizeEnabledProviders(
+            data.enabledProviders ??
+              (data.defaultProvider ? [data.defaultProvider] : DEFAULT_ENABLED_PROVIDERS)
+          );
+          const normalized = {
+            seedanceBaseUrl: data.seedanceBaseUrl || '',
+            seedreamBaseUrl: data.seedreamBaseUrl || '',
+            geminiModel: normalizedGeminiModel,
+            seedanceModel: data.seedanceModel || 'seed-1.5-pro',
+            seedreamModel: data.seedreamModel || 'seedream-4.0',
+            enabledProviders: normalizedEnabledProviders,
+          };
+          setSeedanceBaseUrl(normalized.seedanceBaseUrl);
+          setSeedreamBaseUrl(normalized.seedreamBaseUrl);
+          setGeminiModel(normalized.geminiModel);
+          setSeedanceModel(normalized.seedanceModel);
+          setSeedreamModel(normalized.seedreamModel);
+          setEnabledProviders(normalized.enabledProviders);
+          setInitialSettingsSnapshot(normalized);
         }
       } catch (err) {
         console.error('Error loading settings:', err);
@@ -184,20 +213,147 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     return undefined;
   }, [analyticsOnly, loadUsersFromFirestore]);
 
+  const toggleEnabledProvider = (provider: ProviderKey) => {
+    setEnabledProviders((prev) => {
+      if (prev.includes(provider)) {
+        return prev.filter((item) => item !== provider);
+      }
+      return [...prev, provider];
+    });
+  };
+
+  const validateSettings = () => {
+    const normalizedEnabledProviders = Array.from(
+      new Set(
+        enabledProviders.filter(
+          (provider): provider is ProviderKey =>
+            provider === 'gemini' ||
+            provider === 'openai' ||
+            provider === 'seedance' ||
+            provider === 'seedream'
+        )
+      )
+    );
+    const trimmedSeedanceBaseUrl = seedanceBaseUrl.trim();
+    const trimmedSeedreamBaseUrl = seedreamBaseUrl.trim();
+    const trimmedSeedanceModel = seedanceModel.trim();
+    const trimmedSeedreamModel = seedreamModel.trim();
+    const normalizedGeminiModel = normalizeGeminiModelId(geminiModel);
+
+    if (!ALLOWED_GEMINI_MODEL_IDS.has(normalizedGeminiModel)) {
+      return {
+        ok: false as const,
+        message: 'Gemini model không hợp lệ.',
+      };
+    }
+
+    if (normalizedEnabledProviders.length === 0) {
+      return {
+        ok: false as const,
+        message: 'Cần bật ít nhất một provider.',
+      };
+    }
+
+    if (normalizedEnabledProviders.includes('seedance')) {
+      if (!trimmedSeedanceModel) {
+        return {
+          ok: false as const,
+          message: 'Seedance model không được để trống khi dùng Seedance.',
+        };
+      }
+    }
+    if (normalizedEnabledProviders.includes('seedream')) {
+      if (!trimmedSeedreamModel) {
+        return {
+          ok: false as const,
+          message: 'Seedream model không được để trống khi dùng Seedream.',
+        };
+      }
+    }
+
+    if (trimmedSeedanceBaseUrl) {
+      try {
+        const parsed = new URL(trimmedSeedanceBaseUrl);
+        if (parsed.protocol !== 'https:') {
+          return {
+            ok: false as const,
+            message: 'Seedance base URL phải dùng https://',
+          };
+        }
+      } catch {
+        return {
+          ok: false as const,
+          message: 'Seedance base URL không đúng định dạng URL.',
+        };
+      }
+    }
+    if (trimmedSeedreamBaseUrl) {
+      try {
+        const parsed = new URL(trimmedSeedreamBaseUrl);
+        if (parsed.protocol !== 'https:') {
+          return {
+            ok: false as const,
+            message: 'Seedream base URL phải dùng https://',
+          };
+        }
+      } catch {
+        return {
+          ok: false as const,
+          message: 'Seedream base URL không đúng định dạng URL.',
+        };
+      }
+    }
+
+    const warnings: string[] = [];
+    if (initialSettingsSnapshot) {
+      const before = initialSettingsSnapshot.enabledProviders.join(', ');
+      const after = normalizedEnabledProviders.join(', ');
+      if (before !== after) {
+        warnings.push(
+          `Bạn đang đổi danh sách provider bật từ [${before}] sang [${after}].`
+        );
+      }
+    }
+
+    return {
+      ok: true as const,
+      normalized: {
+        seedanceBaseUrl: trimmedSeedanceBaseUrl,
+        seedreamBaseUrl: trimmedSeedreamBaseUrl,
+        geminiModel: normalizedGeminiModel,
+        seedanceModel: trimmedSeedanceModel || 'seed-1.5-pro',
+        seedreamModel: trimmedSeedreamModel || 'seedream-4.0',
+        enabledProviders: normalizedEnabledProviders,
+      },
+      warnings,
+    };
+  };
+
   const handleSaveSettings = async () => {
+    const validation = validateSettings();
+    if (!validation.ok) {
+      toast.error('Cấu hình chưa hợp lệ', {
+        description: validation.message,
+      });
+      return;
+    }
+    if (validation.warnings.length > 0) {
+      const shouldContinue = window.confirm(
+        `Cảnh báo trước khi lưu:\n- ${validation.warnings.join('\n- ')}\n\nBạn vẫn muốn tiếp tục lưu?`
+      );
+      if (!shouldContinue) {
+        return;
+      }
+    }
+
     setIsSavingSettings(true);
     try {
       const settingsRef = doc(db, 'settings', 'global');
       await setDoc(settingsRef, { 
-        systemApiKey,
-        openaiApiKey,
-        seedanceApiKey,
-        seedanceBaseUrl,
-        geminiModel,
-        seedanceModel,
-        defaultProvider,
+        ...validation.normalized,
         updatedAt: new Date().toISOString()
       }, { merge: true });
+      setInitialSettingsSnapshot(validation.normalized);
       toast.success('Đã lưu cấu hình hệ thống.');
     } catch (err) {
       handleFirestoreError(err, OperationType.UPDATE, 'settings/global');
@@ -207,6 +363,71 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       });
     } finally {
       setIsSavingSettings(false);
+    }
+  };
+
+  const handleTestProvider = async () => {
+    const validation = validateSettings();
+    if (!validation.ok) {
+      toast.error('Không thể test provider', {
+        description: validation.message,
+      });
+      return;
+    }
+
+    if (!auth.currentUser) {
+      toast.error('Phiên đăng nhập đã hết hạn', {
+        description: 'Vui lòng đăng nhập lại để test provider.',
+      });
+      return;
+    }
+
+    setIsTestingProvider(true);
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const failedProviders: string[] = [];
+      const okProviders: string[] = [];
+
+      for (const provider of validation.normalized.enabledProviders) {
+        const response = await fetch('/api/provider-test', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            provider,
+            seedanceBaseUrl: validation.normalized.seedanceBaseUrl,
+            seedreamBaseUrl: validation.normalized.seedreamBaseUrl,
+          }),
+        });
+
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok || payload?.ok === false) {
+          const detail = payload?.error || `HTTP ${response.status}`;
+          failedProviders.push(`${provider}: ${detail}`);
+        } else {
+          okProviders.push(provider);
+        }
+      }
+
+      if (failedProviders.length > 0) {
+        toast.error('Test provider thất bại', {
+          description: failedProviders.join(' | '),
+        });
+        return;
+      }
+
+      toast.success('Test provider thành công', {
+        description: `Đã kiểm tra: ${okProviders.join(', ')}`,
+      });
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      toast.error('Test provider thất bại', {
+        description: describeApiOrNetworkError(msg),
+      });
+    } finally {
+      setIsTestingProvider(false);
     }
   };
 
@@ -519,121 +740,151 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
           {activeTab === 'settings' && (
             <section className="mx-auto max-w-4xl overflow-hidden rounded-2xl border border-white/[0.08] bg-[var(--lp-surface)] p-5 shadow-[0_24px_60px_-24px_rgba(0,0,0,0.55)] backdrop-blur-sm sm:p-8">
-              <div className="mb-8 flex items-start gap-4">
+              <div className="mb-6 flex items-start gap-4">
                 <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-cyan-500/25 bg-gradient-to-br from-cyan-500/20 to-blue-600/10">
                   <Shield className="h-7 w-7 text-cyan-200" />
                 </div>
                 <div>
                   <h2 className="text-2xl font-semibold tracking-tight text-white">Cấu hình hệ thống</h2>
                   <p className="mt-1 text-sm text-gray-500">
-                    Cài đặt API và provider mặc định — lưu một lần, áp dụng cho cả team (khi không dùng key cá nhân).
+                    Bật/tắt provider và chọn model runtime. API key hệ thống được quản lý phía server (secrets/env), không lưu ở client.
                   </p>
                 </div>
               </div>
               
-              <div className="space-y-8">
-                <div className="flex flex-col space-y-4">
-                  <label className="text-sm font-medium text-gray-400">Provider mặc định</label>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    {['gemini', 'openai', 'seedance'].map((provider) => (
-                      <label 
-                        key={provider} 
-                        className={`flex cursor-pointer items-center justify-between rounded-xl border-2 p-4 transition-all ${
-                          defaultProvider === provider
-                            ? 'border-cyan-500/60 bg-cyan-500/10 shadow-[0_0_24px_-8px_rgba(34,211,238,0.35)]'
-                            : 'border-white/10 bg-white/[0.03] hover:border-white/20'
+              <div className="space-y-6">
+                <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-4">
+                  <label className="mb-3 block text-xs font-semibold uppercase tracking-wider text-gray-400">
+                    Provider đang bật
+                  </label>
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                    {(['gemini', 'openai', 'seedance', 'seedream'] as ProviderKey[]).map((provider) => (
+                      <button
+                        key={provider}
+                        type="button"
+                        onClick={() => toggleEnabledProvider(provider)}
+                        className={`rounded-xl border px-3 py-3 text-left transition ${
+                          enabledProviders.includes(provider)
+                            ? 'border-cyan-500/60 bg-cyan-500/10 text-white shadow-[0_0_24px_-10px_rgba(34,211,238,0.45)]'
+                            : 'border-white/10 bg-white/[0.02] text-gray-400 hover:border-white/25 hover:text-gray-200'
                         }`}
                       >
-                        <div className="flex items-center space-x-3">
-                          <input 
-                            type="radio" 
-                            name="defaultProvider" 
-                            value={provider}
-                            checked={defaultProvider === provider}
-                            onChange={(e) => setDefaultProvider(e.target.value as any)}
-                            className="h-4 w-4 border-[var(--lp-border)] bg-[var(--lp-ink)] text-[var(--lp-accent)] focus:ring-[var(--lp-accent)]"
-                          />
-                          <span className={`font-bold transition-colors ${defaultProvider === provider ? 'text-white' : 'text-gray-400'}`}>
-                            {provider.charAt(0).toUpperCase() + provider.slice(1)}
-                          </span>
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-sm font-semibold">{provider.toUpperCase()}</span>
+                          {enabledProviders.includes(provider) && (
+                            <CheckCircle className="h-4 w-4 text-cyan-300" />
+                          )}
                         </div>
-                        {defaultProvider === provider && <CheckCircle className="w-5 h-5 text-cyan-400" />}
-                      </label>
+                      </button>
                     ))}
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 gap-6">
-                  <div className="flex flex-col space-y-2">
-                    <label className="text-sm font-medium text-gray-400">Gemini API Key</label>
-                    <input 
-                      type="password"
-                      value={systemApiKey}
-                      onChange={(e) => setSystemApiKey(e.target.value)}
-                      placeholder="Nhập Gemini API Key..."
-                      className="rounded-xl border border-white/10 bg-white/[0.05] px-4 py-3 text-white outline-none transition-all focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/20"
-                    />
+                <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                  <div className={`rounded-2xl border p-4 ${enabledProviders.includes('gemini') ? 'border-cyan-500/35 bg-cyan-500/[0.08]' : 'border-white/[0.08] bg-white/[0.02]'}`}>
+                    <h3 className="mb-3 text-sm font-semibold text-white">Gemini</h3>
+                    <div className="space-y-3">
+                      <div className="flex flex-col space-y-1.5">
+                        <label className="text-xs font-medium text-gray-400">Model</label>
+                        <select
+                          value={geminiModel}
+                          onChange={(e) => setGeminiModel(e.target.value)}
+                          className="rounded-lg border border-white/10 bg-white/[0.05] px-3 py-2.5 text-sm text-white outline-none transition focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/20"
+                        >
+                          <option value="gemini-3-pro-image-preview">Nano Banana Pro</option>
+                          <option value="gemini-3.1-flash-image-preview">Nano Banana 2</option>
+                        </select>
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="flex flex-col space-y-2">
-                    <label className="text-sm font-medium text-gray-400">Gemini model</label>
-                    <select 
-                      value={geminiModel}
-                      onChange={(e) => setGeminiModel(e.target.value)}
-                      className="rounded-xl border border-white/10 bg-white/[0.05] px-4 py-3 text-white outline-none transition-all focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/20"
-                    >
-                      <option value="gemini-3-pro-image-preview">Nano Banana Pro</option>
-                      <option value="gemini-3.1-flash-image-preview">Nano Banana 2</option>
-                    </select>
+                  <div className={`rounded-2xl border p-4 ${enabledProviders.includes('openai') ? 'border-cyan-500/35 bg-cyan-500/[0.08]' : 'border-white/[0.08] bg-white/[0.02]'}`}>
+                    <h3 className="mb-3 text-sm font-semibold text-white">OpenAI</h3>
+                    <div className="space-y-3">
+                      <p className="text-xs text-gray-400">
+                        API key OpenAI được lấy từ server environment/secrets.
+                      </p>
+                    </div>
                   </div>
 
-                  <div className="flex flex-col space-y-2">
-                    <label className="text-sm font-medium text-gray-400">OpenAI API Key</label>
-                    <input 
-                      type="password"
-                      value={openaiApiKey}
-                      onChange={(e) => setOpenaiApiKey(e.target.value)}
-                      placeholder="Nhập OpenAI API Key..."
-                      className="rounded-xl border border-white/10 bg-white/[0.05] px-4 py-3 text-white outline-none transition-all focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/20"
-                    />
+                  <div className={`rounded-2xl border p-4 ${enabledProviders.includes('seedance') ? 'border-cyan-500/35 bg-cyan-500/[0.08]' : 'border-white/[0.08] bg-white/[0.02]'}`}>
+                    <h3 className="mb-3 text-sm font-semibold text-white">Seedance</h3>
+                    <div className="space-y-3">
+                      <p className="text-xs text-gray-400">
+                        API key Seedance được lấy từ server environment/secrets.
+                      </p>
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        <div className="flex flex-col space-y-1.5">
+                          <label className="text-xs font-medium text-gray-400">Model</label>
+                          <input
+                            type="text"
+                            value={seedanceModel}
+                            onChange={(e) => setSeedanceModel(e.target.value)}
+                            placeholder="seed-1.5-pro"
+                            className="rounded-lg border border-white/10 bg-white/[0.05] px-3 py-2.5 text-sm text-white outline-none transition focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/20"
+                          />
+                        </div>
+                        <div className="flex flex-col space-y-1.5">
+                          <label className="text-xs font-medium text-gray-400">Base URL</label>
+                          <input
+                            type="text"
+                            value={seedanceBaseUrl}
+                            onChange={(e) => setSeedanceBaseUrl(e.target.value)}
+                            placeholder="https://api.seedance.com/v1"
+                            className="rounded-lg border border-white/10 bg-white/[0.05] px-3 py-2.5 text-sm text-white outline-none transition focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/20"
+                          />
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="flex flex-col space-y-2">
-                    <label className="text-sm font-medium text-gray-400">Seedance API Key</label>
-                    <input 
-                      type="password"
-                      value={seedanceApiKey}
-                      onChange={(e) => setSeedanceApiKey(e.target.value)}
-                      placeholder="Nhập Seedance API Key..."
-                      className="rounded-xl border border-white/10 bg-white/[0.05] px-4 py-3 text-white outline-none transition-all focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/20"
-                    />
-                  </div>
-
-                  <div className="flex flex-col space-y-2">
-                    <label className="text-sm font-medium text-gray-400">Seedance model</label>
-                    <input 
-                      type="text"
-                      value={seedanceModel}
-                      onChange={(e) => setSeedanceModel(e.target.value)}
-                      placeholder="seed-1.5-pro"
-                      className="rounded-xl border border-white/10 bg-white/[0.05] px-4 py-3 text-white outline-none transition-all focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/20"
-                    />
-                  </div>
-
-                  <div className="flex flex-col space-y-2">
-                    <label className="text-sm font-medium text-gray-400">Seedance base URL (tuỳ chọn)</label>
-                    <input 
-                      type="text"
-                      value={seedanceBaseUrl}
-                      onChange={(e) => setSeedanceBaseUrl(e.target.value)}
-                      placeholder="https://api.example.com/v1"
-                      className="rounded-xl border border-white/10 bg-white/[0.05] px-4 py-3 text-white outline-none transition-all focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/20"
-                    />
-                    <p className="text-[10px] text-gray-500 italic">Để trống nếu sử dụng endpoint mặc định của nhà cung cấp.</p>
+                  <div className={`rounded-2xl border p-4 ${enabledProviders.includes('seedream') ? 'border-cyan-500/35 bg-cyan-500/[0.08]' : 'border-white/[0.08] bg-white/[0.02]'}`}>
+                    <h3 className="mb-3 text-sm font-semibold text-white">Seedream</h3>
+                    <div className="space-y-3">
+                      <p className="text-xs text-gray-400">
+                        API key Seedream được lấy từ server environment/secrets.
+                      </p>
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        <div className="flex flex-col space-y-1.5">
+                          <label className="text-xs font-medium text-gray-400">Model</label>
+                          <input
+                            type="text"
+                            value={seedreamModel}
+                            onChange={(e) => setSeedreamModel(e.target.value)}
+                            placeholder="seedream-4.0"
+                            className="rounded-lg border border-white/10 bg-white/[0.05] px-3 py-2.5 text-sm text-white outline-none transition focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/20"
+                          />
+                        </div>
+                        <div className="flex flex-col space-y-1.5">
+                          <label className="text-xs font-medium text-gray-400">Base URL</label>
+                          <input
+                            type="text"
+                            value={seedreamBaseUrl}
+                            onChange={(e) => setSeedreamBaseUrl(e.target.value)}
+                            placeholder="https://ark.cn-beijing.volces.com/api/v3"
+                            className="rounded-lg border border-white/10 bg-white/[0.05] px-3 py-2.5 text-sm text-white outline-none transition focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/20"
+                          />
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
                 <div className="border-t border-white/[0.08] pt-6">
+                  <button
+                    onClick={handleTestProvider}
+                    disabled={isTestingProvider || isSavingSettings}
+                    className="mb-3 flex w-full items-center justify-center gap-2 rounded-2xl border border-cyan-500/35 bg-cyan-500/10 px-8 py-3 font-semibold text-cyan-100 transition hover:bg-cyan-500/15 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {isTestingProvider ? (
+                      <>
+                        <div className="h-5 w-5 animate-spin rounded-full border-2 border-cyan-200/35 border-t-cyan-100" />
+                        <span>Đang kiểm tra provider đang bật...</span>
+                      </>
+                    ) : (
+                      <span>Kiểm tra tất cả provider đang bật</span>
+                    )}
+                  </button>
                   <button 
                     onClick={handleSaveSettings}
                     disabled={isSavingSettings}
@@ -656,8 +907,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   </div>
                   <div className="mt-3 rounded-xl border border-blue-500/25 bg-blue-500/[0.08] p-4">
                     <p className="text-xs leading-relaxed text-blue-200/90">
-                      <span className="mr-1 font-semibold text-blue-100">Fallback hệ thống:</span>
-                      Các API Key này sẽ được dùng làm fallback hệ thống. Nếu người dùng không tự cấu hình API Key cá nhân, ứng dụng sẽ sử dụng các key này để thực hiện yêu cầu.
+                      <span className="mr-1 font-semibold text-blue-100">Bảo mật secrets:</span>
+                      API key không đi qua giao diện admin và không lưu trong Firestore. Hệ thống chỉ dùng secrets/env phía server khi generate hoặc test provider.
                     </p>
                   </div>
                 </div>

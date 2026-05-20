@@ -38,12 +38,21 @@ interface GenerateRequestBody {
   prompt: string;
   aspectRatio?: string;
   imageSize?: string;
-  provider?: "gemini" | "openai" | "seedance";
+  provider?: "gemini" | "openai" | "seedance" | "seedream";
   geminiModel?: string;
+  openaiModel?: string;
   seedanceModel?: string;
   seedanceBaseUrl?: string;
+  seedreamModel?: string;
+  seedreamBaseUrl?: string;
   mainImage?: { data: string; mimeType: string } | null;
   referenceImages?: Array<{ data: string; mimeType: string }>;
+}
+
+interface ProviderTestRequestBody {
+  provider?: "gemini" | "openai" | "seedance" | "seedream";
+  seedanceBaseUrl?: string;
+  seedreamBaseUrl?: string;
 }
 
 async function startServer() {
@@ -119,14 +128,20 @@ async function startServer() {
       const body = req.body as GenerateRequestBody;
       const settingsDoc = await db.collection("settings").doc("global").get();
       const settings = settingsDoc.exists ? settingsDoc.data() || {} : {};
-      const provider = body.provider || settings.defaultProvider || "gemini";
+      const enabledProviders = Array.isArray(settings.enabledProviders) ? settings.enabledProviders : [];
+      const fallbackProvider =
+        enabledProviders.find(
+          (item: string) =>
+            item === "gemini" || item === "openai" || item === "seedance" || item === "seedream"
+        ) || "gemini";
+      const provider = body.provider || fallbackProvider;
       const prompt = (body.prompt || "").trim();
       if (!prompt) {
         return res.status(400).json({ error: "Prompt is required." });
       }
 
       if (provider === "openai") {
-        const apiKey = process.env.OPENAI_API_KEY || settings.openaiApiKey;
+        const apiKey = process.env.OPENAI_API_KEY;
         if (!apiKey) {
           return res.status(400).json({ error: "OpenAI API Key chưa được cấu hình." });
         }
@@ -138,7 +153,7 @@ async function startServer() {
             "Authorization": `Bearer ${apiKey}`
           },
           body: JSON.stringify({
-            model: "dall-e-3",
+            model: body.openaiModel || settings.openaiModel || "dall-e-3",
             prompt,
             n: 1,
             size: body.aspectRatio === "1:1" ? "1024x1024" : body.aspectRatio === "16:9" ? "1792x1024" : "1024x1792",
@@ -163,7 +178,7 @@ async function startServer() {
       }
 
       if (provider === "seedance") {
-        const apiKey = process.env.SEEDANCE_API_KEY || settings.seedanceApiKey;
+        const apiKey = process.env.SEEDANCE_API_KEY;
         const baseUrl = body.seedanceBaseUrl || settings.seedanceBaseUrl || "https://api.seedance.com/v1";
         const model = body.seedanceModel || settings.seedanceModel || "seed-1.5-pro";
         if (!apiKey) {
@@ -200,7 +215,45 @@ async function startServer() {
         });
       }
 
-      const geminiApiKey = process.env.GEMINI_API_KEY || settings.systemApiKey;
+      if (provider === "seedream") {
+        const apiKey = process.env.SEEDREAM_API_KEY;
+        const baseUrl = body.seedreamBaseUrl || settings.seedreamBaseUrl || "https://ark.cn-beijing.volces.com/api/v3";
+        const model = body.seedreamModel || settings.seedreamModel || "seedream-4.0";
+        if (!apiKey) {
+          return res.status(400).json({ error: "Seedream API Key chưa được cấu hình." });
+        }
+
+        const response = await fetch(`${baseUrl.replace(/\/+$/, "")}/images/generations`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${apiKey}`
+          },
+          body: JSON.stringify({
+            model,
+            prompt,
+            n: 1,
+            size: body.aspectRatio === "1:1" ? "1024x1024" : body.aspectRatio === "16:9" ? "1792x1024" : "1024x1792",
+            response_format: "b64_json"
+          })
+        });
+
+        if (!response.ok) {
+          const err = await response.json().catch(async () => ({ error: { message: await response.text() } }));
+          return res.status(response.status).json({ error: err.error?.message || "Lỗi từ Seedream API" });
+        }
+
+        const data: any = await response.json();
+        return res.json({
+          imageBase64: data.data?.[0]?.b64_json || "",
+          text: data.data?.[0]?.revised_prompt || "",
+          promptTokens: 0,
+          completionTokens: 0,
+          totalTokens: 0
+        });
+      }
+
+      const geminiApiKey = process.env.GEMINI_API_KEY;
       const geminiModel = body.geminiModel || settings.geminiModel || "gemini-3.1-flash-image-preview";
       if (!geminiApiKey) {
         return res.status(400).json({ error: "Gemini API key missing. Please contact admin." });
@@ -271,6 +324,199 @@ async function startServer() {
     } catch (error: any) {
       console.error("Generate API error:", error);
       return res.status(500).json({ error: error?.message || "Generation failed." });
+    }
+  });
+
+  app.post("/api/provider-test", authenticate, async (req: any, res: any) => {
+    try {
+      const body = (req.body || {}) as ProviderTestRequestBody;
+      const settingsDoc = await db.collection("settings").doc("global").get();
+      const settings = settingsDoc.exists ? settingsDoc.data() || {} : {};
+      const enabledProviders = Array.isArray(settings.enabledProviders) ? settings.enabledProviders : [];
+      const fallbackProvider =
+        enabledProviders.find(
+          (item: string) =>
+            item === "gemini" || item === "openai" || item === "seedance" || item === "seedream"
+        ) || "gemini";
+      const provider = body.provider || fallbackProvider;
+
+      if (provider === "openai") {
+        const apiKey = String(process.env.OPENAI_API_KEY || "").trim();
+        if (!apiKey) {
+          return res.status(400).json({
+            ok: false,
+            provider,
+            error: "OpenAI API Key chưa được cấu hình.",
+          });
+        }
+
+        const response = await fetch("https://api.openai.com/v1/models", {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+          },
+        });
+        if (!response.ok) {
+          const errText = await response.text();
+          return res.status(response.status).json({
+            ok: false,
+            provider,
+            error: `OpenAI test failed (HTTP ${response.status})`,
+            detail: errText.slice(0, 240),
+          });
+        }
+
+        return res.json({
+          ok: true,
+          provider,
+          message: "Kết nối OpenAI thành công.",
+        });
+      }
+
+      if (provider === "seedance") {
+        const apiKey = String(process.env.SEEDANCE_API_KEY || "").trim();
+        const baseUrlRaw =
+          (body.seedanceBaseUrl || "").trim() ||
+          String(settings.seedanceBaseUrl || "https://api.seedance.com/v1").trim();
+        const baseUrl = baseUrlRaw.replace(/\/+$/, "");
+        if (!apiKey) {
+          return res.status(400).json({
+            ok: false,
+            provider,
+            error: "Seedance API Key chưa được cấu hình.",
+          });
+        }
+        let parsedBaseUrl: URL;
+        try {
+          parsedBaseUrl = new URL(baseUrl);
+        } catch {
+          return res.status(400).json({
+            ok: false,
+            provider,
+            error: "Seedance base URL không hợp lệ.",
+          });
+        }
+        if (parsedBaseUrl.protocol !== "https:") {
+          return res.status(400).json({
+            ok: false,
+            provider,
+            error: "Seedance base URL phải dùng https://",
+          });
+        }
+
+        const response = await fetch(`${baseUrl}/models`, {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+          },
+        });
+        if (!response.ok) {
+          const errText = await response.text();
+          return res.status(response.status).json({
+            ok: false,
+            provider,
+            error: `Seedance test failed (HTTP ${response.status})`,
+            detail: errText.slice(0, 240),
+          });
+        }
+
+        return res.json({
+          ok: true,
+          provider,
+          message: "Kết nối Seedance thành công.",
+        });
+      }
+
+      if (provider === "seedream") {
+        const apiKey = String(process.env.SEEDREAM_API_KEY || "").trim();
+        const baseUrlRaw =
+          (body.seedreamBaseUrl || "").trim() ||
+          String(settings.seedreamBaseUrl || "https://ark.cn-beijing.volces.com/api/v3").trim();
+        const baseUrl = baseUrlRaw.replace(/\/+$/, "");
+        if (!apiKey) {
+          return res.status(400).json({
+            ok: false,
+            provider,
+            error: "Seedream API Key chưa được cấu hình.",
+          });
+        }
+        let parsedBaseUrl: URL;
+        try {
+          parsedBaseUrl = new URL(baseUrl);
+        } catch {
+          return res.status(400).json({
+            ok: false,
+            provider,
+            error: "Seedream base URL không hợp lệ.",
+          });
+        }
+        if (parsedBaseUrl.protocol !== "https:") {
+          return res.status(400).json({
+            ok: false,
+            provider,
+            error: "Seedream base URL phải dùng https://",
+          });
+        }
+
+        const response = await fetch(`${baseUrl}/models`, {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+          },
+        });
+        if (!response.ok) {
+          const errText = await response.text();
+          return res.status(response.status).json({
+            ok: false,
+            provider,
+            error: `Seedream test failed (HTTP ${response.status})`,
+            detail: errText.slice(0, 240),
+          });
+        }
+
+        return res.json({
+          ok: true,
+          provider,
+          message: "Kết nối Seedream thành công.",
+        });
+      }
+
+      const geminiApiKey = String(process.env.GEMINI_API_KEY || "").trim();
+      if (!geminiApiKey) {
+        return res.status(400).json({
+          ok: false,
+          provider: "gemini",
+          error: "Gemini API Key chưa được cấu hình.",
+        });
+      }
+
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(geminiApiKey)}`,
+        {
+          method: "GET",
+        }
+      );
+      if (!response.ok) {
+        const errText = await response.text();
+        return res.status(response.status).json({
+          ok: false,
+          provider: "gemini",
+          error: `Gemini test failed (HTTP ${response.status})`,
+          detail: errText.slice(0, 240),
+        });
+      }
+
+      return res.json({
+        ok: true,
+        provider: "gemini",
+        message: "Kết nối Gemini thành công.",
+      });
+    } catch (error: any) {
+      console.error("Provider test error:", error);
+      return res.status(500).json({
+        ok: false,
+        error: error?.message || "Provider test failed.",
+      });
     }
   });
 
