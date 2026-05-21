@@ -11,7 +11,7 @@ import {
   ShieldCheck,
   Sparkles,
 } from 'lucide-react';
-import { PROVIDER_MODEL_OPTIONS } from '../../constants/aiModels';
+import type { ProviderModelOption, ProviderKey } from '../../constants/aiModels';
 import type { UserProfile } from '../../hooks/useAuthAndProfile';
 import { GeminiModelComparisonModal } from './GeminiModelComparisonModal';
 import { ga4SelectContent } from '../../utils/gtagEvent';
@@ -38,8 +38,10 @@ export interface AppHeaderProps {
   /** Preload dashboard chunk trên hover/focus để mở mượt lần đầu. */
   onPrefetchAdminDashboard: () => void;
   getEffectiveModel: () => string;
-  getProviderKey: () => string;
-  onModelPreferenceChange: (model: string) => void;
+  getProviderKey: () => ProviderKey;
+  selectedModelKey: string;
+  availableModelOptions: ProviderModelOption[];
+  onModelPreferenceChange: (modelKey: string) => void;
   onLogout: () => void | Promise<void>;
   /** Logo: làm mới vùng làm việc (prompt, ảnh, style, kết quả) — không đăng xuất, không xóa analytics. */
   onLogoWorkspaceRefresh: () => void;
@@ -58,6 +60,8 @@ function AppHeaderComponent({
   onPrefetchAdminDashboard,
   getEffectiveModel,
   getProviderKey,
+  selectedModelKey,
+  availableModelOptions,
   onModelPreferenceChange,
   onLogout,
   onLogoWorkspaceRefresh,
@@ -184,14 +188,14 @@ function AppHeaderComponent({
           <span className="text-[10px] font-medium uppercase tracking-wide text-[var(--lp-muted)]">Model</span>
           <div className="flex items-center gap-1">
             <select
-              value={getEffectiveModel()}
+              value={selectedModelKey}
               onChange={(e) => onModelPreferenceChange(e.target.value)}
               className="max-w-[140px] cursor-pointer rounded-lg border border-[var(--lp-border)] bg-[var(--lp-ink)] px-2 py-1 text-xs text-[var(--lp-text)] outline-none transition focus:border-[var(--lp-border-strong)] focus:ring-2 focus:ring-[var(--lp-accent-dim)] md:max-w-[200px]"
               aria-label="Chọn model tạo ảnh"
             >
-              {(PROVIDER_MODEL_OPTIONS[getProviderKey()] || PROVIDER_MODEL_OPTIONS.gemini).map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
+              {availableModelOptions.map((option) => (
+                <option key={option.key} value={option.key}>
+                  {option.provider.toUpperCase()} · {option.label}
                 </option>
               ))}
             </select>

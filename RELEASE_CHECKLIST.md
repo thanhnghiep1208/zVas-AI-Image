@@ -9,6 +9,7 @@
 - Ensure local checks pass:
   - `npm run lint`
   - `npm run build`
+  - `npm test` (analytics aggregation + rate limit)
 - Repo đã có `firebase.json` + `.firebaserc` + `firestore.indexes.json` — chạy lệnh Firebase từ **thư mục gốc** dự án (`zvas-ai-image`).
 
 ---
@@ -26,6 +27,8 @@ firebase deploy --only firestore:rules --project zvas-ai-image
 Hoặc không cài global: `npx firebase-tools@latest deploy --only firestore:rules --project zvas-ai-image`
 
 Rules được gắn với database id trong `firebase.json` (trùng `firestoreDatabaseId` trong `firebase-applet-config.json`).
+
+Sau refactor 05/2026: deploy rules nếu có thay đổi `rate_limit_windows` (client deny all).
 
 ---
 
@@ -119,6 +122,10 @@ gcloud run deploy ai-image-zvas \
 
 Chỉ cần `--clear-base-image` **một lần** khi chuyển sang Dockerfile; deploy sau vẫn có thể giữ flag (an toàn) hoặc bỏ nếu không còn cảnh báo.
 
+**Dockerfile:** phải copy `server/` (không chỉ `server.ts`). Thiếu → Cloud Run báo container không listen PORT 8080. Xem `docs/06-live-deployment.md` §9.
+
+Production rate limit: mặc định Firestore backend (`RATE_LIMIT_BACKEND=firestore` khi `NODE_ENV=production`). Tùy chọn: `--set-env-vars=RATE_LIMIT_BACKEND=firestore`.
+
 Confirm URL:
 
 ```bash
@@ -137,9 +144,10 @@ gcloud run services describe ai-image-zvas \
   - default model
   - switched model on header
 - Open Admin Analytics:
-  - token metrics update
-  - model usage card update
+  - Chọn tháng → bấm **Yêu cầu dữ liệu** → KPI / token / model / trends
+  - (Tuỳ chọn) Generate >10 lần/phút → 429 rate limit trên prod
 - Confirm non-admin user can access tool (approved status).
+- GA4 `ERR_BLOCKED_BY_CLIENT` trong console = ad blocker, không fail release.
 
 ---
 

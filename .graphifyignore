@@ -1,0 +1,45 @@
+# Graphify corpus ignore — giảm nhiễu và tránh quét lại chính output graph
+# Cú pháp tương tự .gitignore
+
+# Dependencies & build
+node_modules/
+dist/
+dist-ssr/
+
+# Output / cache của graphify (tránh “ăn” lại graph.json, cache AST, v.v.)
+graphify-out/
+
+# Git metadata
+.git/
+
+# Logs & coverage
+logs/
+*.log
+coverage/
+.turbo/
+*.tsbuildinfo
+
+# Bí mật & cấu hình local (đồng bộ với .gitignore)
+.env
+.env.*
+!.env.example
+!.env*.example
+*-firebase-adminsdk-*.json
+*serviceAccount*.json
+service-account*.json
+credentials.json
+google-services.json
+GoogleService-Info.plist
+*.pem
+*.p12
+*.pfx
+
+# Firebase CLI
+.firebase/
+
+# Dữ liệu prompt lịch sử (JSON lớn, ít giá trị cho kiến trúc)
+migrated_prompt_history/
+
+# OS / editor
+.DS_Store
+.idea/

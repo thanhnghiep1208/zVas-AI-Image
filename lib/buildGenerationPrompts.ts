@@ -90,16 +90,29 @@ export function buildFinalPrompts(params: BuildFinalPromptsParams): string[] {
   });
 }
 
-export function buildEffectiveSettings(globalSettings: any, activeModel: string) {
+export function buildEffectiveSettings(
+  globalSettings: any,
+  activeProvider: 'gemini' | 'openai' | 'seedance' | 'seedream',
+  activeModel: string
+) {
   return {
     ...globalSettings,
+    activeProvider,
     geminiModel:
-      (globalSettings?.defaultProvider || 'gemini') === 'gemini'
+      activeProvider === 'gemini'
         ? activeModel
         : globalSettings?.geminiModel,
+    openaiModel:
+      activeProvider === 'openai'
+        ? activeModel
+        : globalSettings?.openaiModel || 'dall-e-3',
     seedanceModel:
-      globalSettings?.defaultProvider === 'seedance'
+      activeProvider === 'seedance'
         ? activeModel
         : globalSettings?.seedanceModel,
+    seedreamModel:
+      activeProvider === 'seedream'
+        ? activeModel
+        : globalSettings?.seedreamModel,
   };
 }

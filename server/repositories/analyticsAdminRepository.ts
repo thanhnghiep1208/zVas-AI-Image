@@ -1,0 +1,69 @@
+import type { Firestore } from 'firebase-admin/firestore';
+import type { AnalyticsEventRecord } from '../../repositories/analyticsRepository';
+import { ANALYTICS_MONTHLY_ROLLUPS_COLLECTION } from '../../repositories/analyticsRepository';
+
+const ANALYTICS_EVENTS_PAGE_SIZE = 500;
+
+export async function fetchAnalyticsEventsByDateRangeAdmin(
+  db: Firestore,
+  startDate: Date,
+  endDate: Date
+): Promise<AnalyticsEventRecord[]> {
+  const out: AnalyticsEventRecord[] = [];
+  let lastId: string | undefined;
+
+  while (true) {
+    let q = db
+      .collection('analytics_events')
+      .where('timestamp', '>=', startDate)
+      .where('timestamp', '<', endDate)
+      .orderBy('timestamp', 'asc')
+      .limit(ANALYTICS_EVENTS_PAGE_SIZE);
+
+    if (lastId) {
+      const lastSnap = await db.collection('analytics_events').doc(lastId).get();
+      if (lastSnap.exists) {
+        q = q.startAfter(lastSnap);
+      }
+    }
+
+    const snapshot = await q.get();
+    if (snapshot.empty) break;
+
+    snapshot.docs.forEach((eventDoc) => {
+      out.push(eventDoc.data() as AnalyticsEventRecord);
+    });
+
+    lastId = snapshot.docs[snapshot.docs.length - 1].id;
+    if (snapshot.size < ANALYTICS_EVENTS_PAGE_SIZE) break;
+  }
+
+  return out;
+}
+
+export async function saveAnalyticsMonthlyRollupAdmin(
+  db: Firestore,
+  monthKey: string,
+  payload: Record<string, unknown>
+): Promise<void> {
+  await db.collection(ANALYTICS_MONTHLY_ROLLUPS_COLLECTION).doc(monthKey).set(payload, { merge: true });
+}
+
+export async function getMonthlyCostsAdmin(
+  db: Firestore,
+  monthKey: string
+): Promise<{
+  storage_cost: number;
+  server_cost: number;
+  bandwidth_cost: number;
+  other_cost: number;
+} | null> {
+  const snap = await db.collection('monthly_costs').doc(monthKey).get();
+  if (!snap.exists) return null;
+  return snap.data() as {
+    storage_cost: number;
+    server_cost: number;
+    bandwidth_cost: number;
+    other_cost: number;
+  };
+}

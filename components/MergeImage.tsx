@@ -3,7 +3,8 @@ import React, { useState, useCallback, useEffect, useRef, memo } from 'react';
 import { Upload, X, Sparkles, Image as ImageIcon, Loader2, Download, Maximize2 } from 'lucide-react';
 import type { ImageFile, GeneratedImage, ImageSize } from '../types';
 import { generateImageVariations } from '../services/geminiService';
-import { describeApiOrNetworkError, isQuotaOrUsageLimitUserMessage } from '../utils/userFacingError';
+import { describeApiOrNetworkError } from '../utils/userFacingError';
+import { GenerationErrorAlert } from './GenerationErrorAlert';
 import { AspectRatioSelector } from './AspectRatioSelector';
 import { ImageSizeSelector } from './ImageSizeSelector';
 
@@ -196,21 +197,7 @@ function MergeImageComponent({ onDownload, onFullscreen }: MergeImageProps) {
               )}
             </button>
             {error && (
-              <div
-                className={`mt-4 rounded-xl border p-3 text-sm font-medium ${
-                  isQuotaOrUsageLimitUserMessage(error)
-                    ? 'border-amber-500/30 bg-amber-500/[0.08] text-amber-200/95'
-                    : 'border-red-500/25 bg-red-500/[0.08] text-red-300'
-                }`}
-              >
-                {isQuotaOrUsageLimitUserMessage(error) ? (
-                  <>
-                    <span className="text-amber-100">Tạm thời bị giới hạn:</span> {error}
-                  </>
-                ) : (
-                  error
-                )}
-              </div>
+              <GenerationErrorAlert error={error} className="mt-4 font-medium" />
             )}
           </div>
 

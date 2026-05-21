@@ -135,5 +135,10 @@ service cloud.firestore {
     match /rateLimits/{userId} {
       allow read, write: if isOwner(userId) || isAdmin();
     }
+
+    // Distributed rate limit counters — chỉ server (Admin SDK) ghi/đọc.
+    match /rate_limit_windows/{docId} {
+      allow read, write: if false;
+    }
   }
 }

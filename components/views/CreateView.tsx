@@ -9,7 +9,7 @@ import { PromptOptions } from '../PromptOptions';
 import { AspectRatioSelector } from '../AspectRatioSelector';
 import { ImageSizeSelector } from '../ImageSizeSelector';
 import { HistoryDisplay } from '../HistoryDisplay';
-import { isQuotaOrUsageLimitUserMessage } from '../../utils/userFacingError';
+import { GenerationErrorAlert } from '../GenerationErrorAlert';
 
 type PromptOptionsState = {
   styleSimplified: boolean;
@@ -206,23 +206,7 @@ function CreateViewComponent({
             'Tạo ảnh'
           )}
         </button>
-        {error && (
-          <div
-            className={`mt-4 rounded-xl border p-3 text-sm ${
-              isQuotaOrUsageLimitUserMessage(error)
-                ? 'border-amber-500/30 bg-amber-500/[0.08]'
-                : 'border-red-500/25 bg-red-500/[0.08]'
-            }`}
-          >
-            {isQuotaOrUsageLimitUserMessage(error) ? (
-              <p className="text-amber-200/95">
-                <span className="font-semibold text-amber-100">Tạm thời bị giới hạn:</span> {error}
-              </p>
-            ) : (
-              <p className="text-red-300">{error}</p>
-            )}
-          </div>
-        )}
+        <GenerationErrorAlert error={error} className="mt-4" />
       </div>
     </aside>
 

@@ -12,8 +12,12 @@
 
 | Đường dẫn                               | Vai trò                                         |
 | --------------------------------------- | ----------------------------------------------- |
-| `App.tsx`                               | Orchestrator: auth gate, view switch, overlays; **GA4** (prod): `login`, `select_content`, `select_item`, `file_download` |
-| `components/`                           | UI components                                   |
+| `App.tsx`                               | Auth gate, view switch, overlays; lazy `AppAuthenticatedShell`; **GA4** (prod) |
+| `components/AppAuthenticatedShell.tsx`  | Shell sau đăng nhập: create/merge/multiple, lazy admin, download |
+| `components/admin/`                     | Admin: Users, Settings, lazy Analytics tab (`AdminDashboard.tsx`, tabs, `UserHistoryModal`) |
+| `components/analytics/`                 | Analytics dashboard: widgets, trends, cache, `UserHistoryCountsPanel` |
+| `components/AdminDashboard.tsx`         | Re-export → `./admin/AdminDashboard` |
+| `components/AnalyticsDashboard.tsx`     | Re-export → `./analytics/AnalyticsDashboard` |
 | `components/views/CreateView.tsx`       | Màn create chính (banner chào, upload, kết quả) |
 | `components/MergeImage.tsx`             | Chế độ trộn nhiều ảnh                           |
 | `components/MultipleImage.tsx`          | Chế độ hàng loạt / nhiều biến thể               |
@@ -22,9 +26,15 @@
 | `components/ResultsDisplay.tsx`         | Lưới ảnh gốc + kết quả, trạng thái rỗng/loading |
 | `components/layout/`                    | Header/Footer/Auth loading + `GeminiModelComparisonModal` (popup so sánh model); header **GA4** `select_content` khi mở popup |
 | `hooks/`                                | Business logic tách khỏi UI                     |
+| `hooks/useAdminUsers.ts`                | Admin: users, pending, approve/reject           |
+| `hooks/useAdminSettings.ts`             | Admin: `settings/global`, test provider         |
+| `hooks/useAnalyticsDashboardData.ts`    | Analytics: bundle tháng, cache TTL, `requestVersion` |
 | `lib/buildGenerationPrompts.ts`         | Prompt pipeline                                 |
 | `constants/`                            | Model/prompt maps (`aiModels.ts`: Gemini + `normalizeGeminiModelId`)           |
-| `services/`                             | API client + analytics service (`trackEvent` → Firestore) |
+| `services/analyticsTypes.ts`            | Types analytics dùng chung                      |
+| `services/analyticsAggregation.ts`      | Pure aggregation (không I/O Firestore)          |
+| `services/analyticsService.ts`          | `trackEvent`, `loadMonthlyDashboardBundle`, rollup |
+| `services/`                             | API client + analytics I/O                      |
 | `utils/`                                | Helper ảnh/runtime env + **`gtagEvent.ts`** (GA4, chỉ `import.meta.env.PROD`) |
 
 
@@ -47,7 +57,21 @@
 
 - File `firebase-applet-config.json` có trong `.gitignore`; trong repo chỉ giữ `firebase-applet-config.example.json` làm mẫu.
 - Sau khi clone: sao chép example → `firebase-applet-config.json` rồi điền `projectId`, `apiKey`, `firestoreDatabaseId`, v.v. File này được `import` trong `firebase.ts` (bundle Vite) và đọc trong `server.ts` (Firebase Admin: `projectId` + database).
+- **Persistence (Firebase 12+):** `firebase.ts` dùng `initializeFirestore` + `persistentLocalCache({ tabManager: persistentMultipleTabManager() })` thay cho `enableMultiTabIndexedDbPersistence` (đã deprecated). Lỗi init cache → fallback `getFirestore()`.
 - **Docker / CI:** trước `docker build` cần đặt `firebase-applet-config.json` trong ngữ cảnh build (secret CI hoặc bước generate từ biến môi trường của bạn) — không lấy từ Git.
+
+## Build Vite (chunk splitting)
+
+`vite.config.ts` tách vendor để giảm cảnh báo chunk >500 kB và tải song song:
+
+- `firebase-firestore-vendor`, `firebase-auth-vendor`, `firebase-app-vendor`, `firebase-misc-vendor`
+- `recharts-vendor` (lazy cùng Admin/Analytics), `react-vendor`
+- `chunkSizeWarningLimit: 600` — SDK Firebase có thể ~560 kB tổng; chia file không giảm tổng dung lượng.
+
+## GA4 và console trình duyệt
+
+- `ERR_BLOCKED_BY_CLIENT` trên `googletagmanager.com`: ad blocker — **không** lỗi app; `gtagEvent.ts` no-op khi không có `window.gtag`.
+- Firestore persistence deprecation: đã migrate sang `localCache` API (xem `firebase.ts`).
 
 ## Sơ đồ Mermaid
 
@@ -112,11 +136,13 @@ flowchart TD
 
 ## Firestore — giảm đọc (Admin / Analytics)
 
-- `**AdminDashboard`:** danh sách `users` bằng `**getDocs`** khi mở / sau thao tác; modal lịch sử user: `**getDocs`** (50 mục), không `onSnapshot`. `**React.lazy`** + `**Suspense`** cho `AnalyticsDashboard` (chunk tách khi mở tab Analytics).
-- `**App.tsx`:** `**React.lazy`** + `**Suspense`** cho `AdminDashboard` — giảm JS ban đầu cho user không mở admin.
-- `**AnalyticsDashboard`:** không auto-fetch khi mở trang/đổi tháng. Chỉ đọc Firestore khi user bấm nút **Yêu cầu dữ liệu**; sau đó cache `**sessionStorage`** TTL 15 phút theo `monthKey`.
-- `**DeferredTrendsSection`:** mount theo `requestVersion` (sau khi bấm **Yêu cầu dữ liệu**) để tránh query ngầm trước khi user yêu cầu.
-- `**useTrendData`:** thêm cache events dùng chung theo `range + ngày` (in-memory + pending promise dedupe) để đổi metric không lặp lại read cùng tập `analytics_events`.
-- `**UserHistoryCountsPanel`:** `**getDocs(users)`** + đếm `history` theo tháng: ưu tiên doc `**stats_by_user_month/{YYYY-MM}`**; nếu thiếu thì **không auto quét history**, chỉ quét khi user bấm **Cập nhật số ảnh**.
-- `**analytics_events`:** repository đọc theo trang (`**limit` + `startAfter`**, `ANALYTICS_EVENTS_PAGE_SIZE`) và hạn chế quét lặp bằng cache tầng hook.
+- **`components/admin/AdminDashboard`:** logic users/settings trong `useAdminUsers` / `useAdminSettings`; `getDocs` khi mở / sau thao tác; modal lịch sử: `getDocs` (50 mục). `React.lazy` + `Suspense` cho tab Analytics.
+- **`App.tsx` / `AppAuthenticatedShell`:** lazy `AdminDashboard` — giảm JS ban đầu.
+- **`components/analytics/AnalyticsDashboard`:** data qua `useAnalyticsDashboardData` — không auto-fetch khi đổi tháng; chỉ đọc khi bấm **Yêu cầu dữ liệu**; cache `sessionStorage` TTL 15 phút theo `monthKey`.
+- **`TrendsSection`:** mount theo `requestVersion` (sau **Yêu cầu dữ liệu**).
+- **`useTrendData`:** cache events theo `range + ngày`; aggregation qua `aggregateTrendPoints` (`analyticsAggregation.ts`).
+- **`UserHistoryCountsPanel`:** `aggregateHistoryCountsByUid`; ưu tiên `stats_by_user_month/{YYYY-MM}`; quét history chỉ khi bấm **Cập nhật số ảnh**.
+- **Rollup tháng:** `loadMonthlyDashboardBundle` ưu tiên `analytics_monthly_rollups/{YYYY-MM}` (`version: 1`), fallback pagination `analytics_events` (`ANALYTICS_EVENTS_PAGE_SIZE = 500`).
+
+Chi tiết module map: `docs/07-refactor-2026-05.md`
 

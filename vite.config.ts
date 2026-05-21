@@ -25,14 +25,34 @@ export default defineConfig(({ mode }) => {
         exclude: ['@google/genai', 'firebase', 'gaxios', 'node-fetch', 'formdata-polyfill', 'whatwg-fetch', 'isomorphic-fetch', 'cross-fetch', 'unfetch', 'isomorphic-unfetch', 'isomorphic-form-data', 'form-data']
       },
       build: {
+        // Firebase + Firestore SDK ~560 kB minified — split sub-chunks to avoid single >500 kB warning.
+        chunkSizeWarningLimit: 600,
         rollupOptions: {
           output: {
             manualChunks(id) {
               if (/node_modules\/(react\/|react-dom\/|scheduler\/)/.test(id)) {
                 return 'react-vendor';
               }
-              if (id.includes('node_modules/firebase/')) {
-                return 'firebase-vendor';
+              if (
+                id.includes('node_modules/@firebase/firestore') ||
+                id.includes('node_modules/firebase/firestore')
+              ) {
+                return 'firebase-firestore-vendor';
+              }
+              if (
+                id.includes('node_modules/@firebase/auth') ||
+                id.includes('node_modules/firebase/auth')
+              ) {
+                return 'firebase-auth-vendor';
+              }
+              if (
+                id.includes('node_modules/@firebase/app') ||
+                id.includes('node_modules/firebase/app')
+              ) {
+                return 'firebase-app-vendor';
+              }
+              if (id.includes('node_modules/@firebase/') || id.includes('node_modules/firebase/')) {
+                return 'firebase-misc-vendor';
               }
               if (id.includes('node_modules/lucide-react/')) {
                 return 'lucide-vendor';

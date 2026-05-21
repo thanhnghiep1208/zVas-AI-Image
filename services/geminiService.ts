@@ -64,10 +64,13 @@ export const generateImageVariations = async (
           prompt,
           aspectRatio,
           imageSize,
-          provider: globalSettings?.defaultProvider || 'gemini',
+          provider: globalSettings?.activeProvider || 'gemini',
           geminiModel: globalSettings?.geminiModel,
+          openaiModel: globalSettings?.openaiModel,
           seedanceModel: globalSettings?.seedanceModel,
           seedanceBaseUrl: globalSettings?.seedanceBaseUrl,
+          seedreamModel: globalSettings?.seedreamModel,
+          seedreamBaseUrl: globalSettings?.seedreamBaseUrl,
           mainImage,
           referenceImages: refs
         })

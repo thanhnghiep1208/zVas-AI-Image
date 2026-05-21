@@ -60,4 +60,3 @@ Bảng so sánh chi tiết giữa **Gemini 3.1 Flash Image (Nano Banana 2)** và
 - Tạo "Hero Image" cho các chiến dịch lớn.
 - Yêu cầu thiết kế chuyên nghiệp, chất lượng cao nhất (xử lý bóng đổ, phản xạ ánh sáng chân thực khi ghép nền).
 - Ảnh có nhiều chi tiết chữ phức tạp cần độ chính xác tuyệt đối.
-

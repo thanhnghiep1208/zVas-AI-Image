@@ -22,6 +22,19 @@ Các event chính được ghi vào `analytics_events`:
 
 Payload và chuẩn hóa lỗi: `services/analyticsService.ts` (`trackEvent` → repository Firestore).
 
+### Lớp aggregation (pure, dùng chung client + server)
+
+| Module | Vai trò |
+| ------ | ------- |
+| `services/analyticsTypes.ts` | Types: `MonthlyAnalytics`, `MonthlyDashboardBundle`, `TrendPoint`, … |
+| `services/analyticsAggregation.ts` | Hàm thuần: `monthBounds`, `buildMonthlyDashboardBundleFromEvents`, `aggregateTrendPoints`, `aggregateHistoryCountsByUid`, `buildMonthlyRollupDocument` |
+| `services/analyticsService.ts` | I/O Firestore: rollup doc → fallback quét `analytics_events` (pagination) |
+
+- Dashboard bundle: ưu tiên `analytics_monthly_rollups/{YYYY-MM}` (`version: 1`); thiếu doc thì aggregate từ events.
+- Trends (`hooks/useTrendData.ts`) và bảng đếm history (`UserHistoryCountsPanel`) gọi aggregation thay vì logic trùng lặp.
+- Job rebuild rollup (Admin SDK): `server/lib/monthlyRollupBuilder.ts` → `rebuildMonthlyAnalyticsRollup(monthKey)` (không có route HTTP public).
+- Tests: `npm test` — `analyticsAggregation.test.ts`, `rateLimit.test.ts`.
+
 ## Google Analytics 4 (GA4)
 
 Hệ thống có **hai luồng** bổ sung cho nhau:
@@ -67,3 +80,18 @@ Hệ thống có **hai luồng** bổ sung cho nhau:
 
 - Top Users panel.
 - Manual Infrastructure Costs input.
+
+## UI Analytics (module)
+
+| Thành phần | File |
+| ---------- | ---- |
+| Shell + nút **Yêu cầu dữ liệu** | `components/analytics/AnalyticsDashboard.tsx` |
+| KPI / token / model | `components/analytics/AnalyticsWidgets.tsx` |
+| Trends | `components/analytics/TrendsSection.tsx` + `hooks/useTrendData.ts` |
+| Đếm ảnh/user | `components/analytics/UserHistoryCountsPanel.tsx` |
+| Cache session | `components/analytics/analyticsCache.ts` |
+| Data hook | `hooks/useAnalyticsDashboardData.ts` |
+
+Admin nhúng Analytics: `components/admin/AdminDashboard.tsx` (tab lazy).
+
+Chi tiết refactor: `docs/07-refactor-2026-05.md`

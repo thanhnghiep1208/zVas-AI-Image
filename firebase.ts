@@ -2,6 +2,9 @@ import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
 import {
   getFirestore,
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
   doc,
   getDoc,
   getDocs,
@@ -19,33 +22,49 @@ import {
   serverTimestamp,
   getDocFromServer,
   getCountFromServer,
-  enableMultiTabIndexedDbPersistence,
 } from 'firebase/firestore';
 import firebaseConfig from './firebase-applet-config.json';
 
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
-export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
 export const googleProvider = new GoogleAuthProvider();
 
-/**
- * IndexedDB persistence — **multi-tab only** (shared cache across tabs).
- * Không dùng `enableIndexedDbPersistence` (single-tab) để tránh failed-precondition khi mở nhiều tab.
- * Gọi sớm sau `getFirestore`; lỗi chỉ log — app vẫn chạy ở chế độ memory cache.
- */
-void enableMultiTabIndexedDbPersistence(db).catch((err: unknown) => {
+function logFirestoreCacheFallback(err: unknown): void {
   const code =
     typeof err === 'object' && err !== null && 'code' in err ? String((err as { code?: string }).code) : '';
   if (code === 'failed-precondition') {
     console.warn(
-      '[Firestore] Multi-tab persistence: failed-precondition (môi trường hoặc client khác đã chiếm persistence).',
+      '[Firestore] Multi-tab cache: failed-precondition (tab khác hoặc client cũ đã chiếm IndexedDB).',
     );
   } else if (code === 'unimplemented') {
-    console.warn('[Firestore] Multi-tab persistence: không được trình duyệt hỗ trợ (ví dụ chế độ riêng tư).');
+    console.warn('[Firestore] Persistent cache: trình duyệt không hỗ trợ (ví dụ chế độ riêng tư).');
   } else {
-    console.warn('[Firestore] Multi-tab persistence không bật được:', err);
+    console.warn('[Firestore] Persistent cache không bật được, dùng cache mặc định:', err);
   }
-});
+}
+
+/**
+ * IndexedDB persistence — multi-tab (Firebase 12+ `localCache` API).
+ * Fallback `getFirestore` nếu init cache thất bại (private mode, xung đột tab cũ).
+ */
+function createFirestore() {
+  try {
+    return initializeFirestore(
+      app,
+      {
+        localCache: persistentLocalCache({
+          tabManager: persistentMultipleTabManager(),
+        }),
+      },
+      firebaseConfig.firestoreDatabaseId
+    );
+  } catch (err: unknown) {
+    logFirestoreCacheFallback(err);
+    return getFirestore(app, firebaseConfig.firestoreDatabaseId);
+  }
+}
+
+export const db = createFirestore();
 
 export enum OperationType {
   CREATE = 'create',

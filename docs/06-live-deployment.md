@@ -6,6 +6,7 @@
 npm install
 npm run lint
 npm run build
+npm test
 ```
 
 Đảm bảo có:
@@ -21,6 +22,8 @@ npm run build
 `gcloud run deploy --source .` đóng gói theo `**.gcloudignore`** (nếu không có thì mặc định bám `**.gitignore`**). Vì `firebase-applet-config.json` nằm trong `.gitignore`, nếu không có `.gcloudignore` riêng thì file **không được upload** → Docker `COPY firebase-applet-config.json` **lỗi build**.
 
 Repo có `**.gcloudignore`**: giống `.gitignore` nhưng **không** loại trừ `firebase-applet-config.json`, để khi deploy từ máy đã có file thì build thành công.
+
+Image production (`Dockerfile`) phải copy cả thư mục `server/` (API routes, Firebase Admin, rate limit) — không chỉ `server.ts`. Thiếu `server/` → container crash trước khi listen `PORT=8080`.
 
 Deploy từ **clone sạch** (không có file): tạo `firebase-applet-config.json` trước, hoặc dùng Cloud Build + Secret Manager để ghi file trước bước `docker build` (tùy pipeline).
 
@@ -68,6 +71,10 @@ Dùng lần đầu tạo service hoặc môi trường clean:
 ---
 
 ## 4) Secrets strategy
+
+> Lưu ý sau hardening: API key provider **không còn nhập qua Admin UI** và **không lưu ở Firestore**. Bắt buộc cấu hình qua env/secrets của Cloud Run.
+
+**Rate limit (multi-instance):** production mặc định `RATE_LIMIT_BACKEND=firestore` (không cần set nếu `NODE_ENV=production`). Dev local dùng memory. Tùy chọn ép: `--set-env-vars=RATE_LIMIT_BACKEND=firestore`.
 
 ### A. Chỉ 1 key (Gemini-only)
 
@@ -119,6 +126,8 @@ gcloud run deploy ai-image-zvas \
 ## 5) Smoke test
 
 - Mở URL live, hard refresh.
+- Vào Admin → tab Cấu hình: xác nhận không còn ô nhập API key (chỉ còn enable provider/model/base URL).
+- Bấm **Kiểm tra tất cả provider đang bật** để xác nhận server đã đọc secrets/env đúng.
 - Model (khi provider mặc định là Gemini): đổi dropdown Nano Banana 2 / Pro; bấm icon info — popup so sánh từ `docs/so-sanh-model-gemini.md` hiển thị đủ, đóng bằng X / nền / Escape.
 - Login Google.
 - Generate ảnh.
@@ -157,4 +166,39 @@ gcloud run services update-traffic ai-image-zvas --region us-west1 --to-revision
 - Firestore rules/indexes đã deploy đúng project/database.
 - Secrets mới đã có version và IAM đúng.
 - Chọn đúng mode (A/B/C) theo thay đổi của phiên deploy.
+- `npm test` pass (aggregation + rate limit).
+
+## 9) Troubleshooting — Revision không ready (PORT 8080)
+
+**Triệu chứng:** `The user-provided container failed to start and listen on the port defined by PORT=8080`.
+
+**Nguyên nhân thường gặp:**
+
+1. Dockerfile thiếu `COPY server ./server` → `Cannot find module './server/routes'` khi chạy `node server.ts`.
+2. `firebase-applet-config.json` thiếu trong image build context.
+3. Lỗi runtime khác trước `app.listen` — xem log revision:
+
+```bash
+gcloud logging read \
+  'resource.type="cloud_run_revision" AND resource.labels.service_name="ai-image-zvas"' \
+  --project zvas-ai-image \
+  --limit 50 \
+  --format="value(textPayload)"
+```
+
+**Sửa:** đảm bảo Dockerfile production stage có:
+
+```dockerfile
+COPY server.ts firebase-applet-config.json ./
+COPY server ./server
+```
+
+Redeploy Mode A sau khi sửa.
+
+## 10) Console / GA4 (không chặn deploy)
+
+- `ERR_BLOCKED_BY_CLIENT` trên Google Tag Manager: extension chặn analytics — bỏ qua khi smoke test chức năng app.
+- Warning Firestore `enableMultiTabIndexedDbPersistence`: bản build mới dùng `initializeFirestore` + `localCache` (`firebase.ts`).
+
+Tài liệu đầy đủ thay đổi: `docs/07-refactor-2026-05.md`
 
