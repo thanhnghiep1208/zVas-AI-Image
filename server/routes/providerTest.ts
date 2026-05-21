@@ -101,7 +101,7 @@ export function createPostProviderTestHandler(db: Firestore) {
         const apiKey = String(process.env.SEEDREAM_API_KEY || '').trim();
         const baseUrlRaw =
           (body.seedreamBaseUrl || '').trim() ||
-          String(settings.seedreamBaseUrl || 'https://ark.cn-beijing.volces.com/api/v3').trim();
+          String(settings.seedreamBaseUrl || 'https://ark.ap-southeast.bytepluses.com/api/v3').trim();
         if (!apiKey) {
           return res.status(400).json({
             ok: false,

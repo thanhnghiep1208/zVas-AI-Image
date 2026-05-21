@@ -56,6 +56,7 @@ const App: React.FC = () => {
     getProviderKey,
     getEffectiveModel,
     getSelectedModelKey,
+    isProviderKeyConfigured,
   } = useGlobalSettingsAndApiKey(user, selectedModelKey);
 
   const handleModelPreferenceChange = useCallback((newModelKey: string) => {
@@ -94,6 +95,7 @@ const App: React.FC = () => {
       getProviderKey={getProviderKey}
       getEffectiveModel={getEffectiveModel}
       getSelectedModelKey={getSelectedModelKey}
+      isProviderKeyConfigured={isProviderKeyConfigured}
       onModelPreferenceChange={handleModelPreferenceChange}
       onSelectApiKey={handleSelectApiKey}
       onLogout={handleLogout}

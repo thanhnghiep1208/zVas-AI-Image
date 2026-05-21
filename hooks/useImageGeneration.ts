@@ -19,6 +19,7 @@ import { buildFinalPrompts, buildEffectiveSettings } from '../lib/buildGeneratio
 import { createHistoryEntry } from '../repositories/historyRepository';
 import { describeApiOrNetworkError } from '../utils/userFacingError';
 import type { ProviderKey } from '../constants/aiModels';
+import { providerKeyMissingMessage } from '../utils/providerKeyMessages';
 
 export interface UseImageGenerationParams {
   user: User | null;
@@ -42,6 +43,7 @@ export interface UseImageGenerationParams {
   systemApiKey: string | null;
   getProviderKey: () => ProviderKey;
   getEffectiveModel: () => string;
+  isProviderKeyConfigured: (provider: ProviderKey) => boolean;
   currentView: 'create' | 'merge' | 'multiple';
   setHistoryImages: Dispatch<SetStateAction<GeneratedImage[]>>;
   setError: Dispatch<SetStateAction<string | null>>;
@@ -64,6 +66,7 @@ export function useImageGeneration(params: UseImageGenerationParams) {
     systemApiKey,
     getProviderKey,
     getEffectiveModel,
+    isProviderKeyConfigured,
     currentView,
     setHistoryImages,
     setError,
@@ -83,6 +86,12 @@ export function useImageGeneration(params: UseImageGenerationParams) {
     const activePrompts = prompts.filter((p) => p.trim() !== '');
     if (activePrompts.length === 0) {
       setError('Vui lòng cung cấp ít nhất một mô tả.');
+      return;
+    }
+
+    const activeProvider = getProviderKey();
+    if (!isProviderKeyConfigured(activeProvider)) {
+      setError(providerKeyMissingMessage(activeProvider));
       return;
     }
 
@@ -109,7 +118,6 @@ export function useImageGeneration(params: UseImageGenerationParams) {
 
     console.log('DEBUG: handleGenerateClick triggered');
     const startTime = Date.now();
-    const activeProvider = getProviderKey();
     const activeModel = getEffectiveModel();
     const effectiveSettings = buildEffectiveSettings(globalSettings, activeProvider, activeModel);
     const ga4TransactionId = newGa4TransactionId();

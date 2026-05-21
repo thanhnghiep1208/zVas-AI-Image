@@ -51,6 +51,12 @@ server/
 - Env: `RATE_LIMIT_BACKEND=memory|firestore` (nếu Firestore lỗi → fallback memory + log).
 - Collection server-only: `rate_limit_windows/{userId_windowIndex}` (Admin SDK, không expose client write).
 
+### `GET /api/provider-keys`
+
+- Yêu cầu token Firebase hợp lệ.
+- Trả về `{ configured: { gemini, openai, seedance, seedream } }` (boolean — key có trong env server, không lộ giá trị key).
+- Client dùng để chặn nút Generate khi provider đang chọn chưa có key.
+
 ### `POST /api/generate`
 
 - Yêu cầu token Firebase hợp lệ.

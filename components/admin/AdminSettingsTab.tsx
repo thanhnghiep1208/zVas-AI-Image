@@ -147,7 +147,9 @@ export const AdminSettingsTab: React.FC<AdminSettingsTabProps> = ({
           <h3 className="mb-3 text-sm font-semibold text-white">Seedream</h3>
           <div className="space-y-3">
             <p className="text-xs text-gray-400">
-              API key Seedream được lấy từ server environment/secrets.
+              API key Seedream được lấy từ server environment/secrets. Dropdown user: Dola-Seedream-5.0-lite
+              (seedream-5-0-260128), ByteDance-Seedream-4.5 (seedream-4-5-251128). Ô Model bên dưới là mặc định
+              khi chưa chọn trên dropdown.
             </p>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="flex flex-col space-y-1.5">
@@ -156,7 +158,7 @@ export const AdminSettingsTab: React.FC<AdminSettingsTabProps> = ({
                   type="text"
                   value={seedreamModel}
                   onChange={(e) => onSeedreamModelChange(e.target.value)}
-                  placeholder="seedream-4.0"
+                  placeholder="seedream-5-0-260128"
                   className="rounded-lg border border-white/10 bg-white/[0.05] px-3 py-2.5 text-sm text-white outline-none transition focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/20"
                 />
               </div>
@@ -166,7 +168,7 @@ export const AdminSettingsTab: React.FC<AdminSettingsTabProps> = ({
                   type="text"
                   value={seedreamBaseUrl}
                   onChange={(e) => onSeedreamBaseUrlChange(e.target.value)}
-                  placeholder="https://ark.cn-beijing.volces.com/api/v3"
+                  placeholder="https://ark.ap-southeast.bytepluses.com/api/v3"
                   className="rounded-lg border border-white/10 bg-white/[0.05] px-3 py-2.5 text-sm text-white outline-none transition focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/20"
                 />
               </div>

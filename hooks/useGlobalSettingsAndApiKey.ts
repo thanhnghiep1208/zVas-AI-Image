@@ -16,11 +16,22 @@ import { getRuntimeEnvValue, isLikelyPlaceholderKey } from '../utils/runtimeEnv'
 const SETTINGS_POLL_INTERVAL_MS = 3 * 60 * 1000;
 const SETTINGS_FOCUS_MIN_GAP_MS = 60 * 1000;
 
+export type ProviderKeysConfigured = Record<ProviderKey, boolean>;
+
+const DEFAULT_PROVIDER_KEYS: ProviderKeysConfigured = {
+  gemini: false,
+  openai: false,
+  seedance: false,
+  seedream: false,
+};
+
 export interface UseGlobalSettingsAndApiKeyResult {
   globalSettings: any;
   systemApiKey: string | null;
   hasApiKey: boolean;
   isCheckingApiKey: boolean;
+  providerKeysConfigured: ProviderKeysConfigured;
+  isProviderKeyConfigured: (provider: ProviderKey) => boolean;
   enabledProviders: ProviderKey[];
   availableModelOptions: ProviderModelOption[];
   handleSelectApiKey: () => Promise<void>;
@@ -37,6 +48,8 @@ export function useGlobalSettingsAndApiKey(
   const [systemApiKey, setSystemApiKey] = useState<string | null>(null);
   const [hasApiKey, setHasApiKey] = useState(false);
   const [isCheckingApiKey, setIsCheckingApiKey] = useState(true);
+  const [providerKeysConfigured, setProviderKeysConfigured] =
+    useState<ProviderKeysConfigured>(DEFAULT_PROVIDER_KEYS);
 
   useEffect(() => {
     const loadConfigAndCheckKey = async () => {
@@ -81,11 +94,36 @@ export function useGlobalSettingsAndApiKey(
     return resolveModelKey(enabledProviders, selectedModelKey);
   }, [enabledProviders, selectedModelKey]);
 
+  const isProviderKeyConfigured = useCallback(
+    (provider: ProviderKey) => Boolean(providerKeysConfigured[provider]),
+    [providerKeysConfigured]
+  );
+
   useEffect(() => {
     if (!user) {
       setGlobalSettings(null);
+      setProviderKeysConfigured(DEFAULT_PROVIDER_KEYS);
       return undefined;
     }
+
+    const fetchProviderKeys = async () => {
+      try {
+        const idToken = await user.getIdToken();
+        const response = await fetch('/api/provider-keys', {
+          headers: { Authorization: `Bearer ${idToken}` },
+        });
+        if (!response.ok) return;
+        const data: { configured?: Partial<ProviderKeysConfigured> } = await response.json();
+        setProviderKeysConfigured({
+          ...DEFAULT_PROVIDER_KEYS,
+          ...data.configured,
+        });
+      } catch {
+        setProviderKeysConfigured(DEFAULT_PROVIDER_KEYS);
+      }
+    };
+
+    void fetchProviderKeys();
 
     let pollTimer: ReturnType<typeof setInterval> | undefined;
     let lastFetchAt = 0;
@@ -132,6 +170,7 @@ export function useGlobalSettingsAndApiKey(
       if (document.visibilityState !== 'visible') return;
       if (Date.now() - lastFetchAt < SETTINGS_FOCUS_MIN_GAP_MS) return;
       void fetchSettings();
+      void fetchProviderKeys();
     };
     document.addEventListener('visibilitychange', onVisibility);
 
@@ -174,6 +213,8 @@ export function useGlobalSettingsAndApiKey(
     systemApiKey,
     hasApiKey,
     isCheckingApiKey,
+    providerKeysConfigured,
+    isProviderKeyConfigured,
     enabledProviders:
       enabledProviders.length > 0 ? enabledProviders : [...DEFAULT_ENABLED_PROVIDERS],
     availableModelOptions,

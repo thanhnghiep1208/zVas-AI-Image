@@ -109,14 +109,22 @@ export const generateImageVariations = async (
       console.error(`Error generating image for prompt "${prompt}":`, error);
       
       let userMessage = error.message || 'An unknown error occurred.';
-      
-      // Handle specific API errors
+      const provider = String(globalSettings?.activeProvider || 'gemini');
+
+      // Handle specific API errors (Gemini-only messages — do not mislabel Seedream/OpenAI)
       if (userMessage.includes('429') || userMessage.toLowerCase().includes('quota exceeded') || userMessage.includes('RESOURCE_EXHAUSTED')) {
-        userMessage = "Hết hạn mức API (429 Quota Exceeded): Tài khoản Miễn phí của bạn đã hết lượt sử dụng. Vui lòng thử lại sau vài phút (giới hạn phút) hoặc vào ngày mai (giới hạn ngày). Để sử dụng không giới hạn, vui lòng nhấn nút 'Select API Key' và chọn một Key từ Google Cloud dự án có tính phí (Paid project).";
-      } else if (userMessage.includes('403') || userMessage.toLowerCase().includes('forbidden')) {
-        userMessage = "Lỗi API (403 Forbidden): Model này yêu cầu API Key trả phí (Paid) từ Google Cloud dự án có bật thanh toán. Vui lòng đảm bảo bạn đã chọn một Key hợp lệ.";
+        if (provider === 'gemini') {
+          userMessage = "Hết hạn mức API (429 Quota Exceeded): Tài khoản Miễn phí của bạn đã hết lượt sử dụng. Vui lòng thử lại sau vài phút (giới hạn phút) hoặc vào ngày mai (giới hạn ngày). Để sử dụng không giới hạn, vui lòng nhấn nút 'Select API Key' và chọn một Key từ Google Cloud dự án có tính phí (Paid project).";
+        }
+      } else if (
+        provider === 'gemini' &&
+        (userMessage.includes('403') || userMessage.toLowerCase().includes('forbidden'))
+      ) {
+        userMessage = "Lỗi API (403 Forbidden): Model Gemini image yêu cầu API Key trả phí (Paid) từ Google Cloud. Hoặc chọn SEEDREAM · Dola-Seedream-5.0-lite / ByteDance-Seedream-4.5 trên dropdown (cần SEEDREAM_API_KEY).";
       } else if (userMessage.includes('Requested entity was not found')) {
-        userMessage = "Lỗi API: API Key đã chọn có thể không hợp lệ hoặc model không khả dụng cho Key này. Vui lòng thử chọn lại API Key.";
+        if (provider === 'gemini') {
+          userMessage = "Lỗi API: API Key đã chọn có thể không hợp lệ hoặc model không khả dụng cho Key này. Vui lòng thử chọn lại API Key.";
+        }
       }
       
       return {

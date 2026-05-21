@@ -23,3 +23,8 @@ export function openAiSizeFromAspectRatio(aspectRatio?: string): string {
   if (aspectRatio === '16:9') return '1792x1024';
   return '1024x1792';
 }
+
+/** BytePlus Seedream expects labels like "2K", not OpenAI pixel sizes. */
+export function seedreamSizeFromAspectRatio(_aspectRatio?: string): string {
+  return '2K';
+}

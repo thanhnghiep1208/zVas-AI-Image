@@ -74,6 +74,7 @@ export interface AppAuthenticatedShellProps {
   getProviderKey: () => ProviderKey;
   getEffectiveModel: () => string;
   getSelectedModelKey: () => string;
+  isProviderKeyConfigured: (provider: ProviderKey) => boolean;
   onModelPreferenceChange: (modelKey: string) => void;
   onSelectApiKey: () => Promise<void>;
   onLogout: () => void;
@@ -90,6 +91,7 @@ export const AppAuthenticatedShell: React.FC<AppAuthenticatedShellProps> = ({
   getProviderKey,
   getEffectiveModel,
   getSelectedModelKey,
+  isProviderKeyConfigured,
   onModelPreferenceChange,
   onSelectApiKey,
   onLogout,
@@ -104,6 +106,7 @@ export const AppAuthenticatedShell: React.FC<AppAuthenticatedShellProps> = ({
     systemApiKey,
     getProviderKey,
     getEffectiveModel,
+    isProviderKeyConfigured,
   });
 
   const openAdminDashboard = useCallback(() => {

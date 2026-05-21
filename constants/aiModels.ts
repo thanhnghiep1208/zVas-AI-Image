@@ -15,7 +15,10 @@ const baseProviderModelOptions: Record<ProviderKey, Array<{ value: string; label
   ],
   openai: [{ value: 'dall-e-3', label: 'DALL-E 3' }],
   seedance: [{ value: 'seed-1.5-pro', label: 'Seedance 1.5 Pro' }],
-  seedream: [{ value: 'seedream-4.0', label: 'Seedream 4.0' }],
+  seedream: [
+    { value: 'seedream-5-0-260128', label: 'Dola-Seedream-5.0-lite' },
+    { value: 'seedream-4-5-251128', label: 'ByteDance-Seedream-4.5' },
+  ],
 };
 
 export const PROVIDER_MODEL_OPTIONS: Record<ProviderKey, ProviderModelOption[]> = (

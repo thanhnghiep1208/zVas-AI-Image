@@ -1,7 +1,11 @@
 import type { Request, Response } from 'express';
 import { GoogleGenAI } from '@google/genai';
 import type { Firestore } from 'firebase-admin/firestore';
-import { openAiSizeFromAspectRatio, resolveProviderFromSettings } from '../lib/resolveProvider';
+import {
+  openAiSizeFromAspectRatio,
+  resolveProviderFromSettings,
+  seedreamSizeFromAspectRatio,
+} from '../lib/resolveProvider';
 import type { AuthenticatedRequest, GenerateRequestBody } from '../types';
 
 export function createPostGenerateHandler(db: Firestore) {
@@ -93,8 +97,11 @@ export function createPostGenerateHandler(db: Firestore) {
 
       if (provider === 'seedream') {
         const apiKey = process.env.SEEDREAM_API_KEY;
-        const baseUrl = body.seedreamBaseUrl || settings.seedreamBaseUrl || 'https://ark.cn-beijing.volces.com/api/v3';
-        const model = body.seedreamModel || settings.seedreamModel || 'seedream-4.0';
+        const baseUrl =
+          body.seedreamBaseUrl ||
+          settings.seedreamBaseUrl ||
+          'https://ark.ap-southeast.bytepluses.com/api/v3';
+        const model = body.seedreamModel || settings.seedreamModel || 'seedream-5-0-260128';
         if (!apiKey) {
           return res.status(400).json({ error: 'Seedream API Key chưa được cấu hình.' });
         }
@@ -109,7 +116,7 @@ export function createPostGenerateHandler(db: Firestore) {
             model,
             prompt,
             n: 1,
-            size: openAiSizeFromAspectRatio(body.aspectRatio),
+            size: seedreamSizeFromAspectRatio(body.aspectRatio),
             response_format: 'b64_json',
           }),
         });

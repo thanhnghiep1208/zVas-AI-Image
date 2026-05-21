@@ -32,6 +32,7 @@ export interface UseWorkspaceControllerParams {
   systemApiKey: string | null;
   getProviderKey: () => ProviderKey;
   getEffectiveModel: () => string;
+  isProviderKeyConfigured: (provider: ProviderKey) => boolean;
 }
 
 export function useWorkspaceController({
@@ -41,6 +42,7 @@ export function useWorkspaceController({
   systemApiKey,
   getProviderKey,
   getEffectiveModel,
+  isProviderKeyConfigured,
 }: UseWorkspaceControllerParams) {
   const [image, setImage] = useState<ImageFile | null>(null);
   const [referenceImages, setReferenceImages] = useState<ImageFile[]>([]);
@@ -81,6 +83,7 @@ export function useWorkspaceController({
     systemApiKey,
     getProviderKey,
     getEffectiveModel,
+    isProviderKeyConfigured,
     currentView,
     setHistoryImages,
     setError,
@@ -204,7 +207,11 @@ export function useWorkspaceController({
     [image, referenceImages, setGeneratedImages, setError]
   );
 
-  const canGenerate = prompts.some((p) => p.trim() !== '') && !isLoading;
+  const activeProvider = getProviderKey();
+  const canGenerate =
+    prompts.some((p) => p.trim() !== '') &&
+    !isLoading &&
+    isProviderKeyConfigured(activeProvider);
 
   return {
     image,

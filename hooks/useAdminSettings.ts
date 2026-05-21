@@ -16,7 +16,7 @@ export function useAdminSettings() {
   const [seedreamBaseUrl, setSeedreamBaseUrl] = useState('');
   const [geminiModel, setGeminiModel] = useState('gemini-3.1-flash-image-preview');
   const [seedanceModel, setSeedanceModel] = useState('seed-1.5-pro');
-  const [seedreamModel, setSeedreamModel] = useState('seedream-4.0');
+  const [seedreamModel, setSeedreamModel] = useState('seedream-5-0-260128');
   const [enabledProviders, setEnabledProviders] = useState<ProviderKey[]>([
     ...DEFAULT_ENABLED_PROVIDERS,
   ]);
@@ -41,7 +41,7 @@ export function useAdminSettings() {
           seedreamBaseUrl: data.seedreamBaseUrl || '',
           geminiModel: normalizedGeminiModel,
           seedanceModel: data.seedanceModel || 'seed-1.5-pro',
-          seedreamModel: data.seedreamModel || 'seedream-4.0',
+          seedreamModel: data.seedreamModel || 'seedream-5-0-260128',
           enabledProviders: normalizedEnabledProviders,
         };
         setSeedanceBaseUrl(normalized.seedanceBaseUrl);
@@ -146,7 +146,7 @@ export function useAdminSettings() {
         seedreamBaseUrl: trimmedSeedreamBaseUrl,
         geminiModel: normalizedGeminiModel,
         seedanceModel: trimmedSeedanceModel || 'seed-1.5-pro',
-        seedreamModel: trimmedSeedreamModel || 'seedream-4.0',
+        seedreamModel: trimmedSeedreamModel || 'seedream-5-0-260128',
         enabledProviders: normalizedEnabledProviders,
       },
       warnings,
