@@ -11,7 +11,7 @@
 
 ```
 server/
-  firebaseAdmin.ts              # Admin SDK, named Firestore DB
+  firebaseAdmin.ts              # Admin SDK + service-account.json (local)
   types.ts
   middleware/authenticate.ts    # Bearer Firebase ID token
   routes/
@@ -38,8 +38,9 @@ server/
 ## Database/Auth
 
 - Firestore named database (theo `firebase-applet-config.json`).
-- Firebase Auth (Google sign-in) cho client.
-- Firebase Admin SDK verify ID token ở backend.
+- Firebase Auth (**email + password**, email dạng `{username}@zvas.local`) cho client.
+- Firebase Admin SDK: verify ID token; tạo user (`auth.createUser`) qua API admin.
+- Local dev: đặt `service-account.json` ở root hoặc `GOOGLE_APPLICATION_CREDENTIALS` (xem `docs/08-auth-users-setup.md`).
 
 ## API endpoints
 
@@ -57,6 +58,17 @@ server/
 - Trả về `{ configured: { gemini, openai, seedance, seedream } }` (boolean — key có trong env server, không lộ giá trị key).
 - Client dùng để chặn nút Generate khi provider đang chọn chưa có key.
 
+### `POST /api/admin/users`
+
+- Yêu cầu token Firebase + `requireAdmin` (profile `users/{uid}` có `role: admin`).
+- Body: `{ username, password, displayName?, role? }` — `role`: `admin` | `editor` | `advice`.
+- Tạo Auth user (`email` = `{username}@zvas.local`) + document `users/{uid}` (`status: approved`).
+- Lỗi: `409` email đã tồn tại; `503` thiếu service account trên server local.
+
+### `POST /api/admin/users/reset-password`
+
+- Body: `{ uid, newPassword }` — admin đặt lại mật khẩu user.
+
 ### `POST /api/generate`
 
 - Yêu cầu token Firebase hợp lệ.
@@ -73,7 +85,7 @@ Nguồn API key phía server (**duy nhất**):
    - `GEMINI_API_KEY`
    - `OPENAI_API_KEY`
    - `SEEDANCE_API_KEY`
-   - `SEEDREAM_API_KEY`
+   - `SEEDREAM_API_KEY` (BytePlus Seedream; model mặc định trong admin/settings, ví dụ `seedream-5-0-260128`, `seedream-4-5-251128`)
 2. Không còn fallback đọc key từ Firestore `settings/global`.
 
 `settings/global` chỉ giữ cấu hình không nhạy cảm (enabled providers, model, base URL).
@@ -99,4 +111,12 @@ npm test
 - `server/lib/rateLimit/rateLimit.test.ts` — memory + Firestore store (mock).
 - `services/analyticsAggregation.test.ts` — pure aggregation.
 
-Tài liệu tổng hợp: `docs/07-refactor-2026-05.md`
+## Script vận hành user
+
+```bash
+npm run provision-user -- --uid <AUTH_UID> --username <name> --role editor --status approved
+```
+
+Cần `GOOGLE_APPLICATION_CREDENTIALS` hoặc `service-account.json` tại project root.
+
+Tài liệu auth/user: `docs/08-auth-users-setup.md` · tổng hợp refactor: `docs/07-refactor-2026-05.md`

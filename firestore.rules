@@ -22,26 +22,17 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function isDefaultSuperadminEmail() {
-      return request.auth.token.email == "thanhnghiep1208@gmail.com" &&
-        request.auth.token.email_verified == true;
-    }
-
     function isAdmin() {
-      return isAuthenticated() && (
-        isDefaultSuperadminEmail() ||
-        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
-      );
+      return isAuthenticated() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
     /** Admin hoặc role advice — dùng cho đọc analytics / danh sách user / history tổng hợp */
     function canViewAnalyticsDashboard() {
-      return isAuthenticated() && (
-        isDefaultSuperadminEmail() ||
-        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'advice'])
-      );
+      return isAuthenticated() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'advice'];
     }
 
     function isOwner(userId) {
@@ -71,7 +62,7 @@ service cloud.firestore {
 
     function isValidUser(data) {
       return hasRequiredFields(['uid', 'email', 'role', 'status']) &&
-        hasOnlyAllowedFields(['uid', 'email', 'displayName', 'photoURL', 'role', 'status', 'createdAt']) &&
+        hasOnlyAllowedFields(['uid', 'email', 'username', 'displayName', 'photoURL', 'role', 'status', 'createdAt']) &&
         data.uid is string &&
         data.email is string &&
         data.role in ['admin', 'editor', 'advice'] &&
@@ -91,10 +82,7 @@ service cloud.firestore {
     match /users/{userId} {
       allow read: if isOwner(userId) || canViewAnalyticsDashboard();
 
-      allow create: if isOwner(userId) && isValidUser(request.resource.data) && (
-        (request.resource.data.role == 'editor' && request.resource.data.status == 'approved') ||
-        (request.resource.data.email == "thanhnghiep1208@gmail.com" && request.resource.data.role == 'admin' && request.resource.data.status == 'approved')
-      );
+      allow create: if isAdmin() && isValidUser(request.resource.data);
 
       allow update: if isAdmin() || (isOwner(userId) &&
         isValidUser(request.resource.data) &&
@@ -102,6 +90,12 @@ service cloud.firestore {
         request.resource.data.status == resource.data.status);
 
       allow delete: if isAdmin();
+
+      // Phiên đăng nhập theo thiết bị (cùng quyền owner như users/{uid})
+      match /sessions/{sessionId} {
+        allow read, create, update: if isOwner(userId);
+        allow delete: if false;
+      }
     }
 
     match /settings/global {
@@ -110,7 +104,9 @@ service cloud.firestore {
     }
 
     match /history/{historyId} {
-      allow read: if isAuthenticated() && (resource.data.uid == request.auth.uid || canViewAnalyticsDashboard());
+      // read = get + list; client query phải có where uid == request.auth.uid (xem historyRepository)
+      allow read: if isAuthenticated() && resource.data.uid == request.auth.uid;
+      allow read: if canViewAnalyticsDashboard();
       allow create: if isAuthenticated() && isValidHistory(request.resource.data);
       allow delete: if isAuthenticated() && (resource.data.uid == request.auth.uid || isAdmin());
     }
@@ -140,5 +136,6 @@ service cloud.firestore {
     match /rate_limit_windows/{docId} {
       allow read, write: if false;
     }
+
   }
 }

@@ -10,11 +10,20 @@
 
 ## Firestore rules tổng quát
 
-- `/api/generate` và `/api/rate-limit` yêu cầu Firebase ID token hợp lệ.
+- `/api/generate`, `/api/rate-limit`, `/api/admin/*` yêu cầu Firebase ID token hợp lệ (admin routes thêm `requireAdmin`).
 - Rules kiểm soát read/write theo role.
-- Named database cần deploy rules/indexes đúng cấu hình `firebase.json`.
+- Named database cần deploy rules/indexes đúng cấu hình `firebase.json` (id = `firestoreDatabaseId` trong `firebase-applet-config.json`).
+- **`users/{userId}`:** user đọc doc của chính mình (`isOwner`); admin/advice đọc theo `canViewAnalyticsDashboard`.
+- **`users/{userId}/sessions/{sessionId}`:** chỉ owner (`isOwner(userId)`) được read/create/update; dùng cho theo dõi phiên đa thiết bị (xem `docs/08-auth-users-setup.md`).
+- **`history/{historyId}`:** đọc/ghi khi `resource.data.uid == request.auth.uid`; admin/advice đọc toàn bộ cho analytics; client list phải có `where('uid', '==', request.auth.uid)`.
 - `settings/global` chỉ cho phép ghi các field an toàn (enabled providers, model/base URL, `updatedAt`), chặn key nhạy cảm.
 - **`rate_limit_windows/{docId}`:** `allow read, write: if false` — counter rate limit chỉ Cloud Run Admin SDK (`server/lib/rateLimit/firestoreStore.ts`), client không đọc/ghi.
+
+Deploy:
+
+```bash
+firebase deploy --only firestore:rules,firestore:indexes --project zvas-ai-image
+```
 
 ## Phân quyền role
 
@@ -33,6 +42,12 @@
 
 - Không vào admin dashboard.
 - Dùng các chức năng tạo ảnh thông thường.
+- Cần `users/{uid}` với `status: approved` để vào app (xem `docs/08-auth-users-setup.md`).
+
+## Đăng nhập client
+
+- Username không gồm `@` → app thêm suffix `@zvas.local` trước khi gọi Firebase Auth.
+- Sau Auth thành công, bắt buộc có document Firestore `users/{uid}` — không dùng username làm document ID.
 
 ## Checklist bảo mật nhanh
 

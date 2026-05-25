@@ -21,7 +21,7 @@ AI Image ZVAS là ứng dụng web tạo và biến thể hình ảnh bằng AI,
 
 - Frontend: React 19 + TypeScript + Vite 6 + Tailwind CSS 4.
 - Backend: Express 5 (`server.ts`).
-- Database/Auth: Firebase Firestore + Firebase Auth.
+- Database/Auth: Firebase Firestore (named DB) + Firebase Auth (**email/mật khẩu**, username → `user@zvas.local`).
 - Analytics: Firestore `analytics_events` (dashboard nội bộ, Recharts) + **GA4** (`G-W5YSHKJ7ZD`, event qua `utils/gtagEvent.ts`, chỉ bản production build).
 
 ## Cập nhật kiến trúc (05/2026)
@@ -41,4 +41,5 @@ Chi tiết: `docs/07-refactor-2026-05.md`
 - Security/Roles: `docs/05-security-roles.md`
 - Live Deploy: `docs/06-live-deployment.md`
 - Refactor 05/2026: `docs/07-refactor-2026-05.md`
+- Đăng nhập, user Firestore, phiên đa thiết bị: `docs/08-auth-users-setup.md`
 - So sánh model ảnh Gemini (Nano Banana 2 vs Pro, dùng trong popup header): `docs/so-sanh-model-gemini.md`

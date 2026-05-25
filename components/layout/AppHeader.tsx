@@ -7,6 +7,7 @@ import {
   LayoutGrid,
   Layers2,
   LogOut,
+  MonitorSmartphone,
   Settings,
   ShieldCheck,
   Sparkles,
@@ -43,6 +44,8 @@ export interface AppHeaderProps {
   availableModelOptions: ProviderModelOption[];
   onModelPreferenceChange: (modelKey: string) => void;
   onLogout: () => void | Promise<void>;
+  /** Mở trang/modal quản lý phiên đăng nhập đa thiết bị. */
+  onOpenSessions?: () => void;
   /** Logo: làm mới vùng làm việc (prompt, ảnh, style, kết quả) — không đăng xuất, không xóa analytics. */
   onLogoWorkspaceRefresh: () => void;
 }
@@ -64,6 +67,7 @@ function AppHeaderComponent({
   availableModelOptions,
   onModelPreferenceChange,
   onLogout,
+  onOpenSessions,
   onLogoWorkspaceRefresh,
 }: AppHeaderProps) {
   const [modelHelpOpen, setModelHelpOpen] = useState(false);
@@ -229,6 +233,18 @@ function AppHeaderComponent({
             {user.displayName}
           </span>
         </div>
+
+        {onOpenSessions ? (
+          <button
+            type="button"
+            onClick={onOpenSessions}
+            className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl border border-[var(--lp-border)] bg-[var(--lp-accent-dim)] text-[var(--lp-muted)] transition-colors hover:border-[var(--lp-border-strong)] hover:text-[var(--lp-accent)] sm:h-10 sm:w-10"
+            title="Phiên đăng nhập"
+            aria-label="Xem phiên đăng nhập"
+          >
+            <MonitorSmartphone className="h-4 w-4 sm:h-[18px] sm:w-[18px]" />
+          </button>
+        ) : null}
 
         <button
           type="button"

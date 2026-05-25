@@ -23,7 +23,7 @@ npm test
 
 Repo có `**.gcloudignore`**: giống `.gitignore` nhưng **không** loại trừ `firebase-applet-config.json`, để khi deploy từ máy đã có file thì build thành công.
 
-Image production (`Dockerfile`) phải copy cả thư mục `server/` (API routes, Firebase Admin, rate limit) — không chỉ `server.ts`. Thiếu `server/` → container crash trước khi listen `PORT=8080`.
+Image production (`Dockerfile`) phải copy `server/`, `utils/` (dùng bởi `server/routes/adminUsers.ts`), và `firebase-applet-config.json` — không chỉ `server.ts`. Thiếu một trong các path trên → container crash trước khi listen `PORT=8080`.
 
 Deploy từ **clone sạch** (không có file): tạo `firebase-applet-config.json` trước, hoặc dùng Cloud Build + Secret Manager để ghi file trước bước `docker build` (tùy pipeline).
 
@@ -174,8 +174,9 @@ gcloud run services update-traffic ai-image-zvas --region us-west1 --to-revision
 
 **Nguyên nhân thường gặp:**
 
-1. Dockerfile thiếu `COPY server ./server` → `Cannot find module './server/routes'` khi chạy `node server.ts`.
-2. `firebase-applet-config.json` thiếu trong image build context.
+1. Dockerfile thiếu `COPY server ./server` → `Cannot find module './server/routes'` khi chạy `tsx server.ts`.
+2. Dockerfile thiếu `COPY utils ./utils` → `ERR_MODULE_NOT_FOUND: .../utils/authCredentials` (import từ `server/routes/adminUsers.ts`).
+3. `firebase-applet-config.json` thiếu trong image build context.
 3. Lỗi runtime khác trước `app.listen` — xem log revision:
 
 ```bash
@@ -191,6 +192,7 @@ gcloud logging read \
 ```dockerfile
 COPY server.ts firebase-applet-config.json ./
 COPY server ./server
+COPY utils ./utils
 ```
 
 Redeploy Mode A sau khi sửa.

@@ -11,6 +11,7 @@
   - `npm run build`
   - `npm test` (analytics aggregation + rate limit)
 - Repo đã có `firebase.json` + `.firebaserc` + `firestore.indexes.json` — chạy lệnh Firebase từ **thư mục gốc** dự án (`zvas-ai-image`).
+- Local dev tạo user qua Admin API: có `service-account.json` (đúng tên, không khoảng trắng đầu file) — xem `docs/08-auth-users-setup.md`.
 
 ---
 
@@ -29,6 +30,12 @@ Hoặc không cài global: `npx firebase-tools@latest deploy --only firestore:ru
 Rules được gắn với database id trong `firebase.json` (trùng `firestoreDatabaseId` trong `firebase-applet-config.json`).
 
 Sau refactor 05/2026: deploy rules nếu có thay đổi `rate_limit_windows` (client deny all).
+
+Sau tính năng phiên đăng nhập: deploy rules + index subcollection `users/{uid}/sessions` (collection group `sessions`).
+
+```bash
+firebase deploy --only firestore:rules,firestore:indexes --project zvas-ai-image
+```
 
 ---
 

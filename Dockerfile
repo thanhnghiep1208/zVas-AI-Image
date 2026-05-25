@@ -15,6 +15,7 @@ RUN npm ci --omit=dev
 COPY --from=build /app/dist ./dist
 COPY server.ts firebase-applet-config.json ./
 COPY server ./server
+COPY utils ./utils
 EXPOSE 8080
 USER node
 CMD ["npm", "start"]

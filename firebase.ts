@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from 'firebase/auth';
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
 import {
   getFirestore,
   initializeFirestore,
@@ -27,7 +27,6 @@ import firebaseConfig from './firebase-applet-config.json';
 
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
-export const googleProvider = new GoogleAuthProvider();
 
 function logFirestoreCacheFallback(err: unknown): void {
   const code =
@@ -95,6 +94,28 @@ interface FirestoreErrorInfo {
 }
 
 /** Firestore / network conditions where rethrowing would surface as unhandled rejections in void async hooks. */
+export function isFirestorePermissionDenied(error: unknown): boolean {
+  if (typeof error === 'object' && error !== null && 'code' in error) {
+    return String((error as { code?: unknown }).code) === 'permission-denied';
+  }
+  const msg = error instanceof Error ? error.message : String(error);
+  return /permission.denied|insufficient permissions/i.test(msg);
+}
+
+/** Chờ Auth init + ID token trước khi gọi Firestore (tránh permission-denied race). */
+export async function waitForAuthReady(): Promise<void> {
+  await new Promise<void>((resolve) => {
+    const unsubscribe = onAuthStateChanged(auth, () => {
+      unsubscribe();
+      resolve();
+    });
+  });
+  const current = auth.currentUser;
+  if (current) {
+    await current.getIdToken();
+  }
+}
+
 export function isFirestoreOfflineOrTransient(error: unknown): boolean {
   const msg = error instanceof Error ? error.message : String(error);
   if (/client is offline|Failed to get document because the client is offline/i.test(msg)) return true;
@@ -129,4 +150,4 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   console.error('Firestore Error: ', JSON.stringify(errInfo));
 }
 
-export { signInWithPopup, signOut, onAuthStateChanged, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, collection, query, where, orderBy, limit, startAfter, addDoc, onSnapshot, serverTimestamp, getDocFromServer, getCountFromServer };
+export { signInWithEmailAndPassword, signOut, onAuthStateChanged, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, collection, query, where, orderBy, limit, startAfter, addDoc, onSnapshot, serverTimestamp, getDocFromServer, getCountFromServer };

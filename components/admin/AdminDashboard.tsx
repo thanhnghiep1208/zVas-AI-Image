@@ -26,6 +26,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     handleUpdateStatus,
     handleUpdateRole,
     handleDeleteUser,
+    handleCreateUser,
+    handleResetPassword,
     selectedUserHistory,
     setSelectedUserHistory,
     userHistoryImages,
@@ -79,6 +81,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               onUpdateStatus={handleUpdateStatus}
               onUpdateRole={handleUpdateRole}
               onDeleteUser={handleDeleteUser}
+              onCreateUser={handleCreateUser}
+              onResetPassword={handleResetPassword}
               onViewHistory={(uid, email) => setSelectedUserHistory({ uid, email })}
             />
           )}

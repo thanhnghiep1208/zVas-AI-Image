@@ -83,36 +83,6 @@ export function isQuotaOrUsageLimitUserMessage(message: string | null | undefine
   );
 }
 
-/** Lỗi đăng nhập Google (mã Firebase Auth) → thông báo thân thiện. */
-export function describeAuthSignInError(err: unknown): string {
-  const code =
-    err && typeof err === 'object' && 'code' in err ? String((err as { code?: string }).code) : '';
-  const host = typeof window !== 'undefined' ? window.location.hostname : '';
-
-  if (code === 'auth/requests-from-referer-blocked') {
-    return (
-      `Trang web chưa được thêm vào Firebase. Nhờ quản trị thêm tên miền «${host}» vào mục Authorized domains trong Firebase Console.`
-    );
-  }
-  if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') {
-    return 'Cửa sổ đăng nhập đã đóng. Nhấn Đăng nhập để thử lại.';
-  }
-  if (code === 'auth/popup-blocked') {
-    return 'Trình duyệt đã chặn cửa sổ đăng nhập. Cho phép popup cho trang này rồi thử lại.';
-  }
-  if (code === 'auth/network-request-failed') {
-    return 'Không kết nối được Google. Kiểm tra mạng và thử lại.';
-  }
-  if (code === 'auth/too-many-requests') {
-    return 'Đăng nhập thử quá nhiều lần. Đợi vài phút rồi thử lại.';
-  }
-  if (code === 'auth/user-disabled') {
-    return 'Tài khoản đã bị vô hiệu hóa. Liên hệ quản trị.';
-  }
-
-  return 'Đăng nhập không thành công. Thử lại sau ít phút.';
-}
-
 /**
  * Thông báo cho ErrorBoundary: hỗ trợ payload JSON từ log Firestore cũ / lỗi có cấu trúc,
  * không hiển thị operationType/path thô cho người dùng.

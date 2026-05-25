@@ -2,7 +2,7 @@
 
 ## Workflow tạo ảnh
 
-1. User đăng nhập Google.
+1. User đăng nhập (username + mật khẩu → Firebase Auth email `{username}@zvas.local`; cần `users/{uid}` — xem `docs/08-auth-users-setup.md`).
 2. App build prompt cuối qua `buildGenerationPrompts`.
 3. Client gọi `/api/rate-limit`.
 4. Client gọi `/api/generate` với provider/model đang chọn.
@@ -14,7 +14,7 @@
 
 Các event chính được ghi vào `analytics_events`:
 
-- `user_login`
+- `user_login` (sau đăng nhập username/password thành công)
 - `image_generation_started`
 - `image_generation_succeeded`
 - `image_generation_failed`
@@ -52,7 +52,7 @@ Hệ thống có **hai luồng** bổ sung cho nhau:
 
 | Hành vi / tương đươ Firestore | GA4 `event_name` | Ghi chú params |
 | ----------------------------- | ---------------- | -------------- |
-| Đăng nhập (`user_login`) | `login` | `method`: `google` |
+| Đăng nhập (`user_login`) | `login` | `method`: `email` (hoặc giá trị client gửi) |
 | Bắt đầu generate (`image_generation_started`) | `begin_checkout` | `currency`: `USD`, `value`: `0`, `items[]` (model, quantity = số prompt) |
 | Generate thành công (`image_generation_succeeded`) | `purchase` | `transaction_id` (UUID mỗi lần bấm generate), `value` = `estimated_api_cost`, `currency`, `items[]` (`price` = value / số ảnh hợp lệ) |
 | Generate lỗi / ảnh lỗi | `exception` | `description` (rút gọn), `fatal`: `false` |

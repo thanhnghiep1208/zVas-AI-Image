@@ -20,8 +20,11 @@ Cấu hình khóa API phía **server** (không đặt key thật trong `VITE_`*)
 
 - **Mẫu env:** `[.env.example](./.env.example)` — sao chép thành `.env` hoặc `.env.local` (đã gitignore).
 - **Mẫu Firebase client:** `[firebase-applet-config.example.json](./firebase-applet-config.example.json)` — sao chép thành `firebase-applet-config.json` (file này **không** có trong repo, đã `.gitignore`; key web nên giới hạn domain trong Firebase Console).
-- Biến môi trường: `GEMINI_API_KEY`, hoặc `OPENAI_API_KEY`, `SEEDANCE_API_KEY` tùy provider.
-- Hoặc cấu hình trong Firestore `settings/global` qua **Admin Dashboard** sau khi đăng nhập admin.
+- Biến môi trường server (`.env.local`): `GEMINI_API_KEY`, `OPENAI_API_KEY`, `SEEDANCE_API_KEY`, `SEEDREAM_API_KEY` tùy provider đã bật.
+- `settings/global` (Firestore) chỉ lưu model/base URL / provider bật — **không** lưu API key.
+- Đăng nhập: username + mật khẩu (email Auth = `{username}@zvas.local`). Cần document `users/{uid}` — xem [docs/08-auth-users-setup.md](./docs/08-auth-users-setup.md).
+- Nhiều thiết bị/trình duyệt cùng lúc: phiên lưu tại `users/{uid}/sessions/{sessionId}`; quản lý qua nút **Phiên đăng nhập** trên header (chi tiết trong doc 08).
+- Local API admin / tạo user: file `service-account.json` ở thư mục gốc (hoặc `GOOGLE_APPLICATION_CREDENTIALS`). Không commit (đã `.gitignore`).
 
 Chạy dev (Express + Vite HMR):
 
@@ -50,8 +53,8 @@ npm start
 | Biến                                                     | Mô tả                                                                                                                                                                                                                                                                                   |
 | -------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `PORT`                                                   | Cổng HTTP (Cloud Run thường `8080`; mặc định local `3000`)                                                                                                                                                                                                                              |
-| `GEMINI_API_KEY` / `OPENAI_API_KEY` / `SEEDANCE_API_KEY` | Key nhà cung cấp AI (hoặc cấu hình trong Firestore `settings/global`)                                                                                                                                                                                                                   |
-| Firebase Admin                                           | Trên **Google Cloud Run** dùng service account của runtime — không cần file JSON nếu project trùng Firebase. Chạy ngoài GCP: đặt `[GOOGLE_APPLICATION_CREDENTIALS](https://cloud.google.com/docs/authentication/application-default-credentials)` trỏ tới JSON có quyền Firestore/Auth. |
+| `GEMINI_API_KEY` / `OPENAI_API_KEY` / `SEEDANCE_API_KEY` / `SEEDREAM_API_KEY` | Key nhà cung cấp AI (chỉ server env / Secret Manager) |
+| Firebase Admin | Cloud Run: runtime service account. **Local:** `service-account.json` tại root (tự load trong `server/firebaseAdmin.ts`) hoặc `GOOGLE_APPLICATION_CREDENTIALS`. |
 
 
 **Docker (image production):**
@@ -76,6 +79,7 @@ Khi `docker build`, cần có `firebase-applet-config.json` trong **ngữ cảnh
 | `npm run build` | `vite build` → thư mục `dist/`          |
 | `npm start`     | Production: static + Express API        |
 | `npm run lint`  | `tsc --noEmit`                          |
+| `npm run provision-user` | Ghi `users/{uid}` cho UID đã có trên Auth (cần service account) |
 
 
 ---

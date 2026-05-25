@@ -24,8 +24,12 @@
 | `components/ImageUploader.tsx`          | Ảnh chính (kéo thả; prop `showLabel`)           |
 | `components/ReferenceImageUploader.tsx` | Ảnh tham chiếu (nhiều file)                     |
 | `components/ResultsDisplay.tsx`         | Lưới ảnh gốc + kết quả, trạng thái rỗng/loading |
-| `components/layout/`                    | Header/Footer/Auth loading + `GeminiModelComparisonModal` (popup so sánh model); header **GA4** `select_content` khi mở popup |
+| `components/layout/`                    | Header/Footer/Auth loading + `GeminiModelComparisonModal` (popup so sánh model); header **GA4** `select_content` khi mở popup; nút **Phiên đăng nhập** |
+| `components/account/ActiveSessionsModal.tsx` | Danh sách phiên, đăng xuất phiên / phiên khác |
+| `repositories/userSessionRepository.ts` | Firestore `users/{uid}/sessions` |
+| `utils/authSessionId.ts`                | `zvas_auth_session_id` (localStorage), `buildDeviceLabel` |
 | `hooks/`                                | Business logic tách khỏi UI                     |
+| `hooks/useUserSessions.ts`              | Đăng ký phiên, heartbeat, revoke, remote logout |
 | `hooks/useAdminUsers.ts`                | Admin: users, pending, approve/reject           |
 | `hooks/useAdminSettings.ts`             | Admin: `settings/global`, test provider         |
 | `hooks/useAnalyticsDashboardData.ts`    | Analytics: bundle tháng, cache TTL, `requestVersion` |
@@ -40,7 +44,10 @@
 
 ## Custom hooks chính
 
-- `useAuthAndProfile`: profile `users/{uid}` bằng `**getDoc**` + refetch theo chu kỳ / khi quay lại tab (không `onSnapshot`).
+- `useAuthAndProfile`: đăng nhập email/mật khẩu; đọc `users/{uid}` (`getDoc`); `profileGate` (`ready` / `missing` / `error`); `waitForProfileGate` sau login; refetch theo chu kỳ / visibility.
+- `components/landing/LandingPage.tsx` + `LoginModal.tsx`: landing và modal đăng nhập (username → `@zvas.local`).
+- `components/guards/`: `PendingAccessScreen`, `RejectedAccessScreen`, `AccountGateScreen` (thiếu hồ sơ Firestore).
+- `useUserSessions`: sau đăng nhập — ghi `users/{uid}/sessions/{sessionId}`, heartbeat, modal **Phiên đăng nhập**, đăng xuất phiên từ xa (`repositories/userSessionRepository.ts`).
 - `useGlobalSettingsAndApiKey`: `settings/global` bằng `**getDoc**` + refetch theo chu kỳ / visibility (không listener liên tục).
 - `useHistoryImages`: đồng bộ history + IndexedDB.
 - `usePendingUsersNotifier`: admin — `**getCountFromServer**` theo chu kỳ + toast khi số pending tăng.
@@ -110,7 +117,7 @@ flowchart TD
 ## Shell đăng nhập & hệ giao diện
 
 - **Nền:** `App.tsx` bọc nội dung trong lớp tối (`#05080c`) + gradient radial nhẹ (cyan/blue) để đồng bộ với landing/admin.
-- **Header / footer:** `components/layout/AppHeader.tsx`, `AppFooter.tsx` — viền kính (`border-white/[0.08]`), blur; tab chế độ dạng segmented control có icon; các nút icon dùng `cursor-pointer` để rõ hành động bấm.
+- **Header / footer:** `components/layout/AppHeader.tsx`, `AppFooter.tsx` — viền kính (`border-white/[0.08]`), blur; tab chế độ dạng segmented control có icon; các nút icon dùng `cursor-pointer` để rõ hành động bấm; **Phiên đăng nhập** mở `ActiveSessionsModal`.
 - **Chọn model (Gemini):** trên header (`sm` trở lên), dropdown **Model** lấy option từ `constants/aiModels.ts` → `PROVIDER_MODEL_OPTIONS.gemini`: **Nano Banana Pro** (`gemini-3-pro-image-preview`), **Nano Banana 2** (`gemini-3.1-flash-image-preview`). Kế bên có nút **info** (`CircleHelp`); khi provider đang là `gemini`, bấm mở `GeminiModelComparisonModal` — nội dung đọc trực tiếp từ `docs/so-sanh-model-gemini.md` qua import Vite `?raw`, render markdown tối giản (tiêu đề, bảng, list, `**bold**`, `` `code` ``). Modal dùng **`createPortal(..., document.body)`** để tránh bị cắt do `backdrop-filter` trên header / `overflow-hidden` shell; `max-w-[820px]`, vùng nội dung cuộn độc lập.
 - **Chuẩn hóa model id:** `normalizeGeminiModelId` + `ALLOWED_GEMINI_MODEL_IDS` trong `constants/aiModels.ts` — dùng khi load `settings/global` (Admin), preference `localStorage` key `preferred_generation_models` (`App.tsx`), và `getEffectiveModel()` trong `useGlobalSettingsAndApiKey` để id cũ không còn trong danh sách tự map về fallback hợp lệ.
 - **Create / Multiple:** panel phụ (`aside`) dùng nền kính mỏng; CTA chính gradient cyan–blue, bo `rounded-2xl`.

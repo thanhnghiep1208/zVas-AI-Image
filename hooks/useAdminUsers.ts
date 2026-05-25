@@ -163,6 +163,76 @@ export function useAdminUsers() {
     }
   };
 
+  const handleCreateUser = async (
+    username: string,
+    password: string,
+    displayName: string,
+    role: 'admin' | 'editor' | 'advice'
+  ) => {
+    try {
+      const token = await auth.currentUser?.getIdToken();
+      if (!token) {
+        toast.error('Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.');
+        return;
+      }
+
+      const res = await fetch('/api/admin/users', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ username, password, displayName, role }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Không thể tạo tài khoản');
+      }
+
+      toast.success('Đã tạo tài khoản thành công.');
+      await loadUsersFromFirestore();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error('Create user error:', err);
+      toast.error('Chưa tạo được tài khoản', {
+        description: msg,
+      });
+    }
+  };
+
+  const handleResetPassword = async (uid: string, newPassword: string) => {
+    try {
+      const token = await auth.currentUser?.getIdToken();
+      if (!token) {
+        toast.error('Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.');
+        return;
+      }
+
+      const res = await fetch('/api/admin/users/reset-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ uid, newPassword }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Không thể đặt lại mật khẩu');
+      }
+
+      toast.success('Đã đặt lại mật khẩu.');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error('Reset password error:', err);
+      toast.error('Chưa đặt lại được mật khẩu', {
+        description: msg,
+      });
+    }
+  };
+
   return {
     users,
     isLoading,
@@ -170,6 +240,8 @@ export function useAdminUsers() {
     handleUpdateStatus,
     handleUpdateRole,
     handleDeleteUser,
+    handleCreateUser,
+    handleResetPassword,
     selectedUserHistory,
     setSelectedUserHistory,
     userHistoryImages,

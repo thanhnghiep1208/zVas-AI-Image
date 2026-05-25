@@ -12,6 +12,9 @@ import { ga4FileDownload, ga4SelectContent } from '../utils/gtagEvent';
 import { Toaster } from 'sonner';
 import { useGeneratedImageDownload } from '../hooks/useGeneratedImageDownload';
 import { useWorkspaceController } from '../hooks/useWorkspaceController';
+import { useUserSessions } from '../hooks/useUserSessions';
+import { ActiveSessionsModal } from './account/ActiveSessionsModal';
+import { toast } from 'sonner';
 
 const AdminDashboard = lazy(() =>
   import('./AdminDashboard').then((m) => ({ default: m.AdminDashboard }))
@@ -98,6 +101,28 @@ export const AppAuthenticatedShell: React.FC<AppAuthenticatedShellProps> = ({
 }) => {
   const [isAdminDashboardOpen, setIsAdminDashboardOpen] = useState(false);
   const [adminInitialTab, setAdminInitialTab] = useState<'analytics' | 'users' | 'settings'>('users');
+  const [isSessionsOpen, setIsSessionsOpen] = useState(false);
+
+  const handleRemoteSessionRevoke = useCallback(async () => {
+    toast.info('Phiên này đã được đăng xuất từ thiết bị khác.');
+    await onLogout();
+  }, [onLogout]);
+
+  const {
+    sessions,
+    isLoading: sessionsLoading,
+    error: sessionsError,
+    isRevokingId,
+    refresh: refreshSessions,
+    revokeSession,
+    revokeOtherSessions,
+  } = useUserSessions({
+    uid: user.uid,
+    enabled: true,
+    onRemoteRevoke: () => {
+      void handleRemoteSessionRevoke();
+    },
+  });
 
   const workspace = useWorkspaceController({
     user,
@@ -144,6 +169,31 @@ export const AppAuthenticatedShell: React.FC<AppAuthenticatedShellProps> = ({
   const handleCloseAdminDashboard = useCallback(() => {
     setIsAdminDashboardOpen(false);
   }, []);
+
+  const handleOpenSessions = useCallback(() => {
+    ga4SelectContent('account', 'sessions');
+    setIsSessionsOpen(true);
+    void refreshSessions();
+  }, [refreshSessions]);
+
+  const handleRevokeSession = useCallback(
+    async (sessionId: string, isCurrent: boolean) => {
+      const ok = await revokeSession(sessionId, { isCurrent });
+      if (!ok) return;
+      if (isCurrent) {
+        toast.success('Đã đăng xuất phiên này.');
+        await onLogout();
+        return;
+      }
+      toast.success('Đã đăng xuất phiên trên thiết bị kia.');
+    },
+    [revokeSession, onLogout],
+  );
+
+  const handleRevokeOthers = useCallback(async () => {
+    const ok = await revokeOtherSessions();
+    if (ok) toast.success('Đã đăng xuất tất cả phiên khác.');
+  }, [revokeOtherSessions]);
 
   const onDownloadTracked = useCallback(
     (meta: { exportType: 'jpg' | 'png'; removeBackground: boolean }) => {
@@ -233,6 +283,7 @@ export const AppAuthenticatedShell: React.FC<AppAuthenticatedShellProps> = ({
             availableModelOptions={availableModelOptions}
             onModelPreferenceChange={onModelPreferenceChange}
             onLogout={onLogout}
+            onOpenSessions={handleOpenSessions}
             onLogoWorkspaceRefresh={workspace.handleLogoWorkspaceRefresh}
           />
 
@@ -343,6 +394,17 @@ export const AppAuthenticatedShell: React.FC<AppAuthenticatedShellProps> = ({
           />
         </Suspense>
       )}
+      <ActiveSessionsModal
+        open={isSessionsOpen}
+        onClose={() => setIsSessionsOpen(false)}
+        sessions={sessions}
+        isLoading={sessionsLoading}
+        error={sessionsError}
+        isRevokingId={isRevokingId}
+        onRefresh={() => void refreshSessions()}
+        onRevokeSession={handleRevokeSession}
+        onRevokeOthers={() => void handleRevokeOthers()}
+      />
     </>
   );
 };

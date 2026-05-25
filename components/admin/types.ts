@@ -5,6 +5,7 @@ export type AdminTab = 'users' | 'settings' | 'analytics';
 export interface AdminUserProfile {
   uid: string;
   email: string;
+  username?: string;
   displayName: string;
   photoURL: string;
   role: 'admin' | 'editor' | 'advice';

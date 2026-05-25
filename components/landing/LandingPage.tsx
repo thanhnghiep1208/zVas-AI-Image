@@ -13,9 +13,8 @@ import {
 } from 'lucide-react';
 
 export interface LandingPageProps {
-  onLogin: () => void;
-  /** Thông báo đăng nhập / cấu hình Firebase (hiển thị phía trên nội dung). */
-  loginError?: string | null;
+  onLoginClick: () => void;
+  sessionNotice?: string | null;
 }
 
 const TRUST_POINTS = [
@@ -49,12 +48,11 @@ const VALUE_PROPS = [
 ];
 
 const STEPS = [
-  { step: '01', title: 'Đăng nhập Google', desc: 'Xác thực nhanh, không mật khẩu phụ.' },
+  { step: '01', title: 'Đăng nhập tài khoản', desc: 'Dùng tên đăng nhập & mật khẩu do quản trị cấp.' },
   { step: '02', title: 'Tạo trong studio', desc: 'Prompt, ảnh gốc và tùy chọn — gửi generate.' },
   { step: '03', title: 'Đo lường & lặp', desc: 'Lịch sử cá nhân; admin xem analytics & chi phí.' },
 ];
 
-/** Decorative “traffic lights” for faux browser chrome */
 const MockWindowDots: React.FC = () => (
   <div className="flex gap-1.5" aria-hidden>
     <span className="h-2 w-2 rounded-full bg-rose-500/45" />
@@ -80,7 +78,6 @@ const PipelineThumbMock: React.FC<{ label: string; variant: 'a' | 'b' | 'c' }> =
   );
 };
 
-/** Large bento visual: faux split studio */
 const BentoStudioMock: React.FC = () => (
   <div
     className="relative mt-8 overflow-hidden rounded-2xl border border-[var(--lp-border)] bg-black/35 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]"
@@ -172,9 +169,8 @@ const StyleRailMock: React.FC = () => (
   </div>
 );
 
-export const LandingPage: React.FC<LandingPageProps> = ({ onLogin, loginError }) => (
+export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, sessionNotice }) => (
   <div className="landing-premium relative min-h-screen overflow-x-hidden bg-[var(--lp-void)] font-sans text-[var(--lp-text)] antialiased">
-    {/* Ambient + grain */}
     <div
       className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_90%_55%_at_50%_-15%,var(--lp-accent-dim),transparent_58%)]"
       aria-hidden
@@ -193,6 +189,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin, loginError })
     />
 
     <div className="relative mx-auto max-w-[88rem] px-5 pb-20 pt-6 sm:px-8 md:px-12 md:pb-24 md:pt-10">
+      {sessionNotice ? (
+        <div
+          role="alert"
+          className="mb-6 rounded-xl border border-amber-500/35 bg-amber-500/[0.08] px-4 py-3 text-sm text-amber-50/95"
+        >
+          {sessionNotice}
+        </div>
+      ) : null}
       <header className="mb-12 flex flex-wrap items-center justify-between gap-4 border-b border-[var(--lp-border)] pb-8 sm:mb-16">
         <div className="flex items-center gap-3">
           <span className="flex h-10 w-10 items-center justify-center rounded-2xl border border-[var(--lp-border-strong)] bg-[var(--lp-accent-dim)] shadow-[0_0_32px_-6px_var(--lp-accent-glow)]">
@@ -213,7 +217,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin, loginError })
           </span>
           <button
             type="button"
-            onClick={onLogin}
+            onClick={onLoginClick}
             className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/[0.06] px-4 py-2 text-sm font-medium text-white transition hover:border-[var(--lp-border-strong)] hover:bg-white/[0.1] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--lp-accent)]"
           >
             <LogIn className="h-4 w-4" aria-hidden />
@@ -222,17 +226,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin, loginError })
         </div>
       </header>
 
-      {loginError ? (
-        <div
-          role="alert"
-          className="mb-8 rounded-2xl border border-amber-500/35 bg-amber-500/[0.08] px-4 py-3 text-sm leading-relaxed text-amber-50/95"
-        >
-          {loginError}
-        </div>
-      ) : null}
-
       <div className="relative grid grid-cols-1 gap-14 lg:grid-cols-12 lg:gap-6 lg:items-start">
-        {/* Hero — offset column + editorial type */}
         <section className="relative z-[1] lg:col-span-7 lg:pr-4">
           <p className="lp-anim-hero inline-flex items-center gap-2 rounded-full border border-[var(--lp-border-strong)] bg-[var(--lp-accent-dim)] px-3.5 py-1.5 text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--lp-accent)]">
             Studio tạo ảnh AI
@@ -252,23 +246,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin, loginError })
           >
             <button
               type="button"
-              onClick={onLogin}
+              onClick={onLoginClick}
               className="group inline-flex w-full items-center justify-center gap-2.5 rounded-2xl bg-white px-8 py-4 text-base font-semibold text-[var(--lp-void)] shadow-[0_24px_60px_-28px_rgba(255,255,255,0.45)] transition hover:bg-slate-100 sm:w-auto"
-              aria-label="Tiếp tục với Google để đăng nhập"
             >
               <LogIn className="h-5 w-5 shrink-0" aria-hidden />
-              <span>Tiếp tục với Google</span>
+              <span>Đăng nhập</span>
               <ArrowRight
                 className="h-4 w-4 shrink-0 opacity-50 transition group-hover:translate-x-0.5 group-hover:opacity-100"
                 aria-hidden
               />
             </button>
-            <a
-              href="#features"
-              className="inline-flex w-full items-center justify-center rounded-2xl border border-[var(--lp-border)] bg-[var(--lp-surface)] px-8 py-4 text-base font-medium text-[var(--lp-text)] backdrop-blur-md transition hover:border-[var(--lp-border-strong)] hover:bg-[var(--lp-surface-elevated)] sm:w-auto"
-            >
-              Xem khả năng
-            </a>
+            
           </div>
 
           <ul className="mt-14 grid gap-3 sm:grid-cols-3 sm:gap-4">
@@ -289,7 +277,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin, loginError })
           </ul>
         </section>
 
-        {/* Differentiation anchor: “credential” panel overlapping hero on large screens */}
         <aside className="relative z-[2] lg:col-span-5 lg:-mt-4">
           <div
             className="pointer-events-none absolute -inset-[1px] rounded-[1.5rem] bg-gradient-to-br from-[var(--lp-accent)]/25 via-transparent to-sky-500/15 opacity-90 blur-md"
@@ -367,7 +354,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin, loginError })
         </aside>
       </div>
 
-      {/* Bento features */}
       <section id="features" className="mt-28 scroll-mt-28 md:mt-32">
         <div className="mb-12 flex max-w-3xl flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
@@ -420,7 +406,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin, loginError })
         </div>
       </section>
 
-      {/* Steps — timeline */}
       <section className="mt-24 md:mt-28" aria-labelledby="how-heading">
         <h2 id="how-heading" className="font-display text-3xl font-semibold tracking-tight text-white md:text-4xl">
           Cách hoạt động
@@ -445,7 +430,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin, loginError })
         </div>
       </section>
 
-      {/* Bottom CTA — restrained premium slab */}
       <section className="mt-24 md:mt-28">
         <div className="relative overflow-hidden rounded-[1.35rem] border border-[var(--lp-border-strong)] bg-[var(--lp-surface-elevated)] px-6 py-14 text-center shadow-[0_32px_80px_-40px_rgba(0,0,0,0.75)] md:px-16 md:py-16">
           <div
@@ -456,15 +440,15 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLogin, loginError })
             Sẵn sàng cho batch creative tiếp theo?
           </h2>
           <p className="relative mx-auto mt-4 max-w-md text-sm text-[var(--lp-muted)]">
-            Đăng nhập Google để vào studio — giao diện và công cụ hiển thị theo vai trò tài khoản của bạn.
+            Đăng nhập bằng tài khoản được cấp để vào studio — giao diện và công cụ hiển thị theo vai trò của bạn.
           </p>
           <button
             type="button"
-            onClick={onLogin}
+            onClick={onLoginClick}
             className="relative mt-10 inline-flex items-center gap-2 rounded-2xl bg-white px-9 py-4 text-base font-semibold text-[var(--lp-void)] transition hover:bg-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--lp-accent)]"
           >
             <LogIn className="h-5 w-5" aria-hidden />
-            Bắt đầu với Google
+            Đăng nhập
           </button>
         </div>
       </section>
