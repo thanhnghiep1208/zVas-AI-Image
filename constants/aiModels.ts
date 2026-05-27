@@ -10,8 +10,8 @@ export interface ProviderModelOption {
 
 const baseProviderModelOptions: Record<ProviderKey, Array<{ value: string; label: string }>> = {
   gemini: [
-    { value: 'gemini-3-pro-image-preview', label: 'Nano Banana Pro' },
     { value: 'gemini-3.1-flash-image-preview', label: 'Nano Banana 2' },
+    { value: 'gemini-3-pro-image-preview', label: 'Nano Banana Pro' },
   ],
   openai: [{ value: 'dall-e-3', label: 'DALL-E 3' }],
   seedance: [{ value: 'seed-1.5-pro', label: 'Seedance 1.5 Pro' }],

@@ -43,3 +43,4 @@ Chi tiết: `docs/07-refactor-2026-05.md`
 - Refactor 05/2026: `docs/07-refactor-2026-05.md`
 - Đăng nhập, user Firestore, phiên đa thiết bị: `docs/08-auth-users-setup.md`
 - So sánh model ảnh Gemini (Nano Banana 2 vs Pro, dùng trong popup header): `docs/so-sanh-model-gemini.md`
+- **Default model:** Nano Banana 2 (`gemini-3.1-flash-image-preview`) — nằm đầu mảng `gemini` trong `constants/aiModels.ts`, được dùng làm fallback khi user chưa chọn model.
