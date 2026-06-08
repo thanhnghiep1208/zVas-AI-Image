@@ -1,5 +1,6 @@
 import { BACKGROUND_PROMPT_MAP, PROMPT_OPTIONS_MAP } from '../constants/promptModifiers';
 import { findAiStyleBySelection } from './styleLibrary';
+import type { GlobalSettings } from '../types';
 
 export interface PromptPipelineSlice {
   styleSimplified: boolean;
@@ -91,7 +92,7 @@ export function buildFinalPrompts(params: BuildFinalPromptsParams): string[] {
 }
 
 export function buildEffectiveSettings(
-  globalSettings: any,
+  globalSettings: GlobalSettings | null,
   activeProvider: 'gemini' | 'openai' | 'seedance' | 'seedream',
   activeModel: string
 ) {

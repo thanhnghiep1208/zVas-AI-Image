@@ -14,3 +14,14 @@ export interface ImageFile {
   file: File;
   previewUrl: string;
 }
+
+export interface GlobalSettings {
+  enabledProviders?: string[];
+  geminiModel?: string;
+  openaiModel?: string;
+  seedanceModel?: string;
+  seedanceBaseUrl?: string;
+  seedreamModel?: string;
+  seedreamBaseUrl?: string;
+  [key: string]: unknown;
+}

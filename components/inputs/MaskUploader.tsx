@@ -1,8 +1,9 @@
 
 import React, { useRef, useState } from 'react';
-import type { ImageFile } from '../types';
-import { UploadIcon } from './icons/UploadIcon';
-import { TrashIcon } from './icons/TrashIcon';
+import type { ImageFile } from '../../types';
+import { isAcceptedImageFile, ACCEPTED_IMAGE_TYPES } from '../../utils/fileValidation';
+import { UploadIcon } from '../icons/UploadIcon';
+import { TrashIcon } from '../icons/TrashIcon';
 
 interface MaskUploaderProps {
   onMaskSelect: (file: File) => void;
@@ -66,7 +67,7 @@ export const MaskUploader: React.FC<MaskUploaderProps> = ({ onMaskSelect, mask, 
 
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       const file = e.dataTransfer.files[0];
-      if (file && file.type.startsWith('image/')) {
+      if (file && isAcceptedImageFile(file)) {
         onMaskSelect(file);
       }
       e.dataTransfer.clearData();
@@ -98,7 +99,7 @@ export const MaskUploader: React.FC<MaskUploaderProps> = ({ onMaskSelect, mask, 
           ref={fileInputRef}
           onChange={handleFileChange}
           className="hidden"
-          accept="image/png, image/jpeg, image/webp"
+          accept={ACCEPTED_IMAGE_TYPES}
           disabled={isDisabled}
         />
         {mask ? (

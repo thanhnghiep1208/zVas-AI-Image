@@ -1,6 +1,6 @@
-import type { Firestore } from 'firebase-admin/firestore';
-import type { AnalyticsEventRecord } from '../../repositories/analyticsRepository';
-import { ANALYTICS_MONTHLY_ROLLUPS_COLLECTION } from '../../repositories/analyticsRepository';
+import type { Firestore, QueryDocumentSnapshot } from 'firebase-admin/firestore';
+import type { AnalyticsEventRecord } from '../../data/analyticsRepository';
+import { ANALYTICS_MONTHLY_ROLLUPS_COLLECTION } from '../../data/analyticsRepository';
 
 const ANALYTICS_EVENTS_PAGE_SIZE = 500;
 
@@ -10,23 +10,17 @@ export async function fetchAnalyticsEventsByDateRangeAdmin(
   endDate: Date
 ): Promise<AnalyticsEventRecord[]> {
   const out: AnalyticsEventRecord[] = [];
-  let lastId: string | undefined;
+  let lastDoc: QueryDocumentSnapshot | undefined;
+
+  const baseQuery = db
+    .collection('analytics_events')
+    .where('timestamp', '>=', startDate)
+    .where('timestamp', '<', endDate)
+    .orderBy('timestamp', 'asc')
+    .limit(ANALYTICS_EVENTS_PAGE_SIZE);
 
   while (true) {
-    let q = db
-      .collection('analytics_events')
-      .where('timestamp', '>=', startDate)
-      .where('timestamp', '<', endDate)
-      .orderBy('timestamp', 'asc')
-      .limit(ANALYTICS_EVENTS_PAGE_SIZE);
-
-    if (lastId) {
-      const lastSnap = await db.collection('analytics_events').doc(lastId).get();
-      if (lastSnap.exists) {
-        q = q.startAfter(lastSnap);
-      }
-    }
-
+    const q = lastDoc ? baseQuery.startAfter(lastDoc) : baseQuery;
     const snapshot = await q.get();
     if (snapshot.empty) break;
 
@@ -34,7 +28,7 @@ export async function fetchAnalyticsEventsByDateRangeAdmin(
       out.push(eventDoc.data() as AnalyticsEventRecord);
     });
 
-    lastId = snapshot.docs[snapshot.docs.length - 1].id;
+    lastDoc = snapshot.docs[snapshot.docs.length - 1];
     if (snapshot.size < ANALYTICS_EVENTS_PAGE_SIZE) break;
   }
 

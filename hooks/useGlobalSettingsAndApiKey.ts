@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { User } from 'firebase/auth';
+import type { GlobalSettings } from '../types';
 import { db, doc, getDoc, handleFirestoreError, isFirestoreOfflineOrTransient, OperationType } from '../firebase';
 import {
   DEFAULT_ENABLED_PROVIDERS,
@@ -26,7 +27,7 @@ const DEFAULT_PROVIDER_KEYS: ProviderKeysConfigured = {
 };
 
 export interface UseGlobalSettingsAndApiKeyResult {
-  globalSettings: any;
+  globalSettings: GlobalSettings | null;
   systemApiKey: string | null;
   hasApiKey: boolean;
   isCheckingApiKey: boolean;
@@ -44,7 +45,7 @@ export function useGlobalSettingsAndApiKey(
   user: User | null,
   selectedModelKey: string | null
 ): UseGlobalSettingsAndApiKeyResult {
-  const [globalSettings, setGlobalSettings] = useState<any>(null);
+  const [globalSettings, setGlobalSettings] = useState<GlobalSettings | null>(null);
   const [systemApiKey, setSystemApiKey] = useState<string | null>(null);
   const [hasApiKey, setHasApiKey] = useState(false);
   const [isCheckingApiKey, setIsCheckingApiKey] = useState(true);

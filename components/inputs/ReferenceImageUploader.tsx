@@ -1,8 +1,9 @@
 
 import React, { useRef, useState } from 'react';
-import type { ImageFile } from '../types';
-import { UploadIcon } from './icons/UploadIcon';
-import { TrashIcon } from './icons/TrashIcon';
+import type { ImageFile } from '../../types';
+import { isAcceptedImageFile, ACCEPTED_IMAGE_TYPES } from '../../utils/fileValidation';
+import { UploadIcon } from '../icons/UploadIcon';
+import { TrashIcon } from '../icons/TrashIcon';
 
 interface ReferenceImageUploaderProps {
   onImageAdd: (file: File) => void;
@@ -71,7 +72,7 @@ export const ReferenceImageUploader: React.FC<ReferenceImageUploaderProps> = ({
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       const files = Array.from(e.dataTransfer.files);
       for (const file of files) {
-        if (file instanceof File && file.type.startsWith('image/')) {
+        if (file instanceof File && isAcceptedImageFile(file)) {
           onImageAdd(file);
         }
       }
@@ -143,7 +144,7 @@ export const ReferenceImageUploader: React.FC<ReferenceImageUploaderProps> = ({
         ref={fileInputRef}
         onChange={handleFileChange}
         className="hidden"
-        accept="image/png, image/jpeg, image/webp"
+        accept={ACCEPTED_IMAGE_TYPES}
         multiple
       />
     </div>

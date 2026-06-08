@@ -80,11 +80,11 @@ interface FirestoreErrorInfo {
   path: string | null;
   authInfo: {
     userId: string | undefined;
-    email: string | null | undefined;
-    emailVerified: boolean | undefined;
-    isAnonymous: boolean | undefined;
-    tenantId: string | null | undefined;
-    providerInfo: {
+    email?: string | null;
+    emailVerified?: boolean;
+    isAnonymous?: boolean;
+    tenantId?: string | null;
+    providerInfo?: {
       providerId: string;
       displayName: string | null;
       email: string | null;
@@ -129,21 +129,24 @@ export function isFirestoreOfflineOrTransient(error: unknown): boolean {
 
 /** Structured log for Firestore failures. Does not throw — callers often use `void` async and must not create unhandled rejections. */
 export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null): void {
+  const authInfo = import.meta.env.DEV
+    ? {
+        userId: auth.currentUser?.uid,
+        email: auth.currentUser?.email,
+        emailVerified: auth.currentUser?.emailVerified,
+        isAnonymous: auth.currentUser?.isAnonymous,
+        tenantId: auth.currentUser?.tenantId,
+        providerInfo: auth.currentUser?.providerData.map(provider => ({
+          providerId: provider.providerId,
+          displayName: provider.displayName,
+          email: provider.email,
+          photoUrl: provider.photoURL,
+        })) || [],
+      }
+    : { userId: auth.currentUser?.uid };
   const errInfo: FirestoreErrorInfo = {
     error: error instanceof Error ? error.message : String(error),
-    authInfo: {
-      userId: auth.currentUser?.uid,
-      email: auth.currentUser?.email,
-      emailVerified: auth.currentUser?.emailVerified,
-      isAnonymous: auth.currentUser?.isAnonymous,
-      tenantId: auth.currentUser?.tenantId,
-      providerInfo: auth.currentUser?.providerData.map(provider => ({
-        providerId: provider.providerId,
-        displayName: provider.displayName,
-        email: provider.email,
-        photoUrl: provider.photoURL
-      })) || []
-    },
+    authInfo,
     operationType,
     path
   };

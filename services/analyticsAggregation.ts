@@ -1,4 +1,4 @@
-import type { AnalyticsEventRecord } from '../repositories/analyticsRepository';
+import type { AnalyticsEventRecord } from '../data/analyticsRepository';
 import type {
   MonthlyAnalytics,
   MonthlyCosts,
@@ -382,6 +382,11 @@ export function aggregateTrendPoints(
       dayMap.set(day.toISOString().slice(0, 10), 0);
     }
 
+    const activeUserDayMap = new Map<string, Set<string>>();
+    if (metric === 'activeUsers') {
+      for (const key of dayMap.keys()) activeUserDayMap.set(key, new Set());
+    }
+
     events.forEach((event) => {
       const eventDate = eventTimestamp(event);
       if (!eventDate) return;
@@ -389,11 +394,18 @@ export function aggregateTrendPoints(
       if (!dayMap.has(key)) return;
       if (metric === 'generations' && event.event_name === 'image_generation_started') {
         dayMap.set(key, (dayMap.get(key) ?? 0) + (event.image_count ?? 1));
-      }
-      if (metric === 'cost' && event.event_name === 'image_generation_succeeded') {
+      } else if (metric === 'cost' && event.event_name === 'image_generation_succeeded') {
         dayMap.set(key, (dayMap.get(key) ?? 0) + (event.estimated_api_cost ?? 0));
+      } else if (metric === 'activeUsers' && event.user_id) {
+        activeUserDayMap.get(key)?.add(event.user_id);
       }
     });
+
+    if (metric === 'activeUsers') {
+      for (const [key, users] of activeUserDayMap.entries()) {
+        dayMap.set(key, users.size);
+      }
+    }
 
     return Array.from(dayMap.entries()).map(([key, value]) => {
       const day = new Date(`${key}T00:00:00`);

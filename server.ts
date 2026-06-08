@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
@@ -14,9 +15,22 @@ async function startServer() {
   const app = express();
   const PORT = Number(process.env.PORT) || 3000;
 
-  app.use(cors());
-  app.use(express.json({ limit: '50mb' }));
-  app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+  app.use(helmet({ contentSecurityPolicy: false }));
+
+  const allowedOrigins = process.env.ALLOWED_ORIGINS
+    ? process.env.ALLOWED_ORIGINS.split(',').map((o) => o.trim())
+    : ['http://localhost:3000', 'http://localhost:24679'];
+  app.use(
+    cors({
+      origin: (origin, cb) => {
+        if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+        cb(new Error('Not allowed by CORS'));
+      },
+      credentials: true,
+    })
+  );
+  app.use(express.json({ limit: '10mb' }));
+  app.use(express.urlencoded({ extended: true, limit: '10mb' }));
   app.use((err: unknown, _req: express.Request, res: express.Response, next: express.NextFunction) => {
     const entityErr = err as { type?: string };
     if (entityErr?.type === 'entity.too.large') {

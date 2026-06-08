@@ -1,8 +1,9 @@
 
 import React, { useRef, useState } from 'react';
-import type { ImageFile } from '../types';
-import { UploadIcon } from './icons/UploadIcon';
-import { TrashIcon } from './icons/TrashIcon';
+import type { ImageFile } from '../../types';
+import { isAcceptedImageFile, ACCEPTED_IMAGE_TYPES } from '../../utils/fileValidation';
+import { UploadIcon } from '../icons/UploadIcon';
+import { TrashIcon } from '../icons/TrashIcon';
 
 interface ImageUploaderProps {
   onImageSelect: (file: File) => void;
@@ -66,7 +67,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
 
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       const file = e.dataTransfer.files[0];
-      if (file && file.type.startsWith('image/')) {
+      if (file && isAcceptedImageFile(file)) {
         onImageSelect(file);
       }
       e.dataTransfer.clearData();
@@ -100,7 +101,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
           ref={fileInputRef}
           onChange={handleFileChange}
           className="hidden"
-          accept="image/png, image/jpeg, image/webp"
+          accept={ACCEPTED_IMAGE_TYPES}
         />
         {image ? (
           <>

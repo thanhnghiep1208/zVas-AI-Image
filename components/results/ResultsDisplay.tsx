@@ -1,9 +1,9 @@
 
 import React from 'react';
-import type { ImageFile, GeneratedImage } from '../types';
-import { DownloadIcon } from './icons/DownloadIcon';
-import { ExpandIcon } from './icons/ExpandIcon';
-import { SparklesIcon } from './icons/SparklesIcon';
+import type { ImageFile, GeneratedImage } from '../../types';
+import { DownloadIcon } from '../icons/DownloadIcon';
+import { ExpandIcon } from '../icons/ExpandIcon';
+import { SparklesIcon } from '../icons/SparklesIcon';
 
 interface ResultsDisplayProps {
   originalImage: ImageFile | null;
@@ -27,7 +27,7 @@ interface ImageCardProps {
   isOriginal?: boolean;
 }
 
-const ImageCard: React.FC<ImageCardProps> = ({
+const ImageCard: React.FC<ImageCardProps> = React.memo(({
   title,
   imageUrl,
   caption,
@@ -120,7 +120,7 @@ const ImageCard: React.FC<ImageCardProps> = ({
       )}
     </div>
   );
-};
+});
 
 export const ResultsDisplay: React.FC<ResultsDisplayProps> = ({
   originalImage,

@@ -6,6 +6,9 @@
 - `NODE_ENV=production`: serve static từ `dist/` + API routes.
 - Dev mode: nạp Vite middleware động.
 - Startup lỗi → `process.exit(1)` (Cloud Run không treo revision “healthy” giả).
+- **Helmet:** `helmet({ contentSecurityPolicy: false })` gắn security headers mặc định (X-Frame-Options, HSTS, X-Content-Type-Options…).
+- **CORS:** giới hạn theo env `ALLOWED_ORIGINS` (comma-separated); mặc định `localhost:3000` và `localhost:24679` — deploy production phải set đúng domain.
+- **Payload limit:** `express.json({ limit: '10mb' })` — đủ cho base64 ảnh (~5–8 MB).
 
 ## Cấu trúc `server/`
 

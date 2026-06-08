@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 import type { User } from 'firebase/auth';
-import type { ImageFile, GeneratedImage, ImageSize } from '../types';
+import type { ImageFile, GeneratedImage, ImageSize, GlobalSettings } from '../types';
 import { generateImageVariations } from '../services/geminiService';
 import { trackEvent } from '../services/analyticsService';
 import {
@@ -16,7 +16,7 @@ import {
 } from '../firebase';
 import * as idb from 'idb-keyval';
 import { buildFinalPrompts, buildEffectiveSettings } from '../lib/buildGenerationPrompts';
-import { createHistoryEntry } from '../repositories/historyRepository';
+import { createHistoryEntry } from '../data/historyRepository';
 import { describeApiOrNetworkError } from '../utils/userFacingError';
 import type { ProviderKey } from '../constants/aiModels';
 import { providerKeyMissingMessage } from '../utils/providerKeyMessages';
@@ -39,7 +39,7 @@ export interface UseImageGenerationParams {
     forceRemoveBackground: boolean;
     backgroundRemovalStrength: 'soft' | 'strong';
   };
-  globalSettings: any;
+  globalSettings: GlobalSettings | null;
   systemApiKey: string | null;
   getProviderKey: () => ProviderKey;
   getEffectiveModel: () => string;

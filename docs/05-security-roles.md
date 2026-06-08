@@ -54,3 +54,6 @@ firebase deploy --only firestore:rules,firestore:indexes --project zvas-ai-image
 - Đã giới hạn Secret Manager IAM cho runtime service account.
 - Đã giới hạn API key web theo domain trong Firebase/GCP.
 - Đã deploy rules/indexes đúng project + database (gồm rule `rate_limit_windows` sau refactor 05/2026).
+- CORS giới hạn origin — set env `ALLOWED_ORIGINS` đúng domain trước khi deploy (xem `docs/09-optimize-2026-06.md`).
+- Helmet middleware active — không lộ X-Powered-By, có HSTS/X-Frame-Options.
+- Error log `handleFirestoreError` chỉ ghi email/provider trong môi trường dev.

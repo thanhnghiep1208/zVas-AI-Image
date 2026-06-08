@@ -1,7 +1,7 @@
 import React, { useState, useCallback, lazy, Suspense } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 import type { User } from 'firebase/auth';
-import type { GeneratedImage } from '../types';
+import type { GeneratedImage, GlobalSettings } from '../types';
 import type { UserProfile } from '../hooks/useAuthAndProfile';
 import type { ProviderModelOption, ProviderKey } from '../constants/aiModels';
 import { AppHeaderWithPending } from './layout/AppHeaderWithPending';
@@ -25,53 +25,53 @@ const CreateView = lazy(() =>
   import('./views/CreateView').then((m) => ({ default: m.CreateView }))
 );
 const MultipleImage = lazy(() =>
-  import('./MultipleImage').then((m) => ({ default: m.MultipleImage }))
+  import('./views/MultipleImage').then((m) => ({ default: m.MultipleImage }))
 );
 const MergeImage = lazy(() =>
-  import('./MergeImage').then((m) => ({ default: m.MergeImage }))
+  import('./views/MergeImage').then((m) => ({ default: m.MergeImage }))
 );
 const StyleGuideViewer = lazy(() =>
-  import('./StyleGuideViewer').then((m) => ({ default: m.StyleGuideViewer }))
+  import('./viewers/StyleGuideViewer').then((m) => ({ default: m.StyleGuideViewer }))
 );
 const FullscreenViewer = lazy(() =>
-  import('./FullscreenViewer').then((m) => ({ default: m.FullscreenViewer }))
+  import('./viewers/FullscreenViewer').then((m) => ({ default: m.FullscreenViewer }))
 );
 
-const WorkspaceViewFallback = () => (
-  <div className="flex min-h-[280px] flex-1 flex-col items-center justify-center gap-3 text-[var(--lp-muted)]">
-    <div
-      className="h-10 w-10 animate-spin rounded-full border-2 border-[var(--lp-accent-dim)] border-t-[var(--lp-accent)]"
-      aria-hidden
-    />
-    <p className="text-sm">Đang tải giao diện…</p>
-  </div>
-);
+interface LoadingFallbackProps {
+  label?: string;
+  overlay?: boolean;
+  opaque?: boolean;
+  size?: 'sm' | 'md';
+}
 
-const ModalLoadingOverlay = () => (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--lp-void)]/75 backdrop-blur-[2px]">
-    <div
-      className="h-10 w-10 animate-spin rounded-full border-2 border-[var(--lp-accent-dim)] border-t-[var(--lp-accent)]"
-      aria-hidden
-    />
-  </div>
-);
+const LoadingFallback = ({ label, overlay, opaque, size = 'md' }: LoadingFallbackProps) => {
+  const spinSize = size === 'sm' ? 'h-10 w-10' : 'h-11 w-11';
+  if (overlay) {
+    return (
+      <div className={`fixed inset-0 z-50 flex flex-col items-center justify-center gap-3 ${opaque ? 'bg-[var(--lp-void)]/95 backdrop-blur-md' : 'bg-[var(--lp-void)]/75 backdrop-blur-[2px]'}`}>
+        <div className={`${spinSize} animate-spin rounded-full border-2 border-[var(--lp-accent-dim)] border-t-[var(--lp-accent)]`} aria-hidden />
+        {label && <p className="text-sm text-[var(--lp-muted)]">{label}</p>}
+      </div>
+    );
+  }
+  return (
+    <div className="flex min-h-[280px] flex-1 flex-col items-center justify-center gap-3 text-[var(--lp-muted)]">
+      <div className={`${spinSize} animate-spin rounded-full border-2 border-[var(--lp-accent-dim)] border-t-[var(--lp-accent)]`} aria-hidden />
+      {label && <p className="text-sm">{label}</p>}
+    </div>
+  );
+};
 
-const AdminDashboardFallback = () => (
-  <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-3 bg-[var(--lp-void)]/95 backdrop-blur-md">
-    <div
-      className="h-11 w-11 animate-spin rounded-full border-2 border-[var(--lp-accent-dim)] border-t-[var(--lp-accent)]"
-      aria-hidden
-    />
-    <p className="text-sm text-[var(--lp-muted)]">Đang tải bảng điều khiển…</p>
-  </div>
-);
+const WorkspaceViewFallback = () => <LoadingFallback label="Đang tải giao diện…" />;
+const ModalLoadingOverlay = () => <LoadingFallback overlay />;
+const AdminDashboardFallback = () => <LoadingFallback label="Đang tải bảng điều khiển…" overlay opaque />;
 
 export interface AppAuthenticatedShellProps {
   user: User;
   userProfile: UserProfile | null;
   error: string | null;
   setError: Dispatch<SetStateAction<string | null>>;
-  globalSettings: unknown;
+  globalSettings: GlobalSettings | null;
   systemApiKey: string | null;
   availableModelOptions: ProviderModelOption[];
   getProviderKey: () => ProviderKey;

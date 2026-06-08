@@ -35,6 +35,7 @@
 | `hooks/useAnalyticsDashboardData.ts`    | Analytics: bundle tháng, cache TTL, `requestVersion` |
 | `lib/buildGenerationPrompts.ts`         | Prompt pipeline                                 |
 | `constants/`                            | Model/prompt maps (`aiModels.ts`: Gemini + `normalizeGeminiModelId`)           |
+| `types.ts`                              | Core types: `GeneratedImage`, `ImageFile`, **`GlobalSettings`** |
 | `services/analyticsTypes.ts`            | Types analytics dùng chung                      |
 | `services/analyticsAggregation.ts`      | Pure aggregation (không I/O Firestore)          |
 | `services/analyticsService.ts`          | `trackEvent`, `loadMonthlyDashboardBundle`, rollup |
@@ -48,9 +49,9 @@
 - `components/landing/LandingPage.tsx` + `LoginModal.tsx`: landing và modal đăng nhập (username → `@zvas.local`).
 - `components/guards/`: `PendingAccessScreen`, `RejectedAccessScreen`, `AccountGateScreen` (thiếu hồ sơ Firestore).
 - `useUserSessions`: sau đăng nhập — ghi `users/{uid}/sessions/{sessionId}`, heartbeat, modal **Phiên đăng nhập**, đăng xuất phiên từ xa (`repositories/userSessionRepository.ts`).
-- `useGlobalSettingsAndApiKey`: `settings/global` bằng `**getDoc**` + refetch theo chu kỳ / visibility (không listener liên tục).
+- `useGlobalSettingsAndApiKey`: `settings/global` bằng `**getDoc**` + refetch theo chu kỳ / visibility (không listener liên tục). Trả về `GlobalSettings | null` (typed, không còn `any`).
 - `useHistoryImages`: đồng bộ history + IndexedDB.
-- `usePendingUsersNotifier`: admin — `**getCountFromServer**` theo chu kỳ + toast khi số pending tăng.
+- `usePendingUsersNotifier`: admin — **`onSnapshot`** Firestore realtime (thay polling 45s); cập nhật tức thì khi có user pending mới.
 - `useImageGeneration`: pipeline generate + persist + optimistic update; export thêm `resetGenerationWorkspace()` (tắt loading, xóa ảnh vừa tạo trên UI). Gọi `trackEvent` + **GA4** (`begin_checkout`, `purchase`, `exception`) khi bản production (`utils/gtagEvent.ts`).
 - `useGeneratedImageDownload`: tải PNG/JPG + xử lý nền.
 
@@ -139,7 +140,9 @@ flowchart TD
 
 - `**ImageUploader`:** prop tùy chọn `showLabel` (mặc định `true`). Ở **Multiple** truyền `showLabel={false}` vì section cha đã có tiêu đề “Hình ảnh gốc”.
 - `**ReferenceImageUploader`:** cùng ngôn ngữ giao diện (kính, dashed “Thêm ảnh”, drag highlight); prop `showLabel` tương tự nếu cần tái sử dụng.
-- `**ResultsDisplay`:** empty/loading bằng tiếng Việt; thẻ ảnh bo lớn, nút “Dùng làm ảnh gốc”, “Tách nền”; lỗi generate hiển thị dạng thân thiện.
+- `**ResultsDisplay`:** empty/loading bằng tiếng Việt; thẻ ảnh bo lớn, nút “Dùng làm ảnh gốc”, “Tách nền”; lỗi generate hiển thị dạng thân thiện. `ImageCard` wrap `React.memo`.
+- `**utils/fileValidation.ts`:** `isAcceptedImageFile` + `ACCEPTED_IMAGE_TYPES` dùng chung cho 3 uploaders.
+- `**PromptManager`:** `React.memo` + `useCallback` trên tất cả handlers — tránh re-render cascade khi parent re-render.
 
 ## Firestore — giảm đọc (Admin / Analytics)
 

@@ -1,9 +1,9 @@
 
-import React from 'react';
-import { PlusIcon } from './icons/PlusIcon';
-import { TrashIcon } from './icons/TrashIcon';
+import React, { useCallback } from 'react';
+import { PlusIcon } from '../icons/PlusIcon';
+import { TrashIcon } from '../icons/TrashIcon';
 import { Dices } from 'lucide-react';
-import { generateRandomPrompt } from '../utils/promptGenerator';
+import { generateRandomPrompt } from '../../utils/promptGenerator';
 
 interface PromptManagerProps {
   prompts: string[];
@@ -11,30 +11,29 @@ interface PromptManagerProps {
   hasImage: boolean;
 }
 
-export const PromptManager: React.FC<PromptManagerProps> = ({ prompts, setPrompts, hasImage }) => {
-  const addPrompt = () => {
-    setPrompts([...prompts, '']);
-  };
+export const PromptManager: React.FC<PromptManagerProps> = React.memo(({ prompts, setPrompts, hasImage }) => {
+  const addPrompt = useCallback(() => {
+    setPrompts((prev) => [...prev, '']);
+  }, [setPrompts]);
 
-  const handleRandomPrompt = () => {
+  const handleRandomPrompt = useCallback(() => {
     const randomText = generateRandomPrompt();
-    // If the first prompt is empty, fill it. Otherwise add a new one.
-    if (prompts.length === 1 && prompts[0].trim() === '') {
-      setPrompts([randomText]);
-    } else {
-      setPrompts([...prompts, randomText]);
-    }
-  };
+    setPrompts((prev) =>
+      prev.length === 1 && prev[0].trim() === '' ? [randomText] : [...prev, randomText]
+    );
+  }, [setPrompts]);
 
-  const removePrompt = (index: number) => {
-    setPrompts(prompts.filter((_, i) => i !== index));
-  };
+  const removePrompt = useCallback((index: number) => {
+    setPrompts((prev) => prev.filter((_, i) => i !== index));
+  }, [setPrompts]);
 
-  const updatePrompt = (index: number, value: string) => {
-    const newPrompts = [...prompts];
-    newPrompts[index] = value;
-    setPrompts(newPrompts);
-  };
+  const updatePrompt = useCallback((index: number, value: string) => {
+    setPrompts((prev) => {
+      const next = [...prev];
+      next[index] = value;
+      return next;
+    });
+  }, [setPrompts]);
 
   const placeholderText = hasImage 
     ? "VD: Biến hậu cảnh thành..."
@@ -84,4 +83,4 @@ export const PromptManager: React.FC<PromptManagerProps> = ({ prompts, setPrompt
       </button>
     </div>
   );
-};
+});

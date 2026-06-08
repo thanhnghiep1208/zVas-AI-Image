@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 import type { User } from 'firebase/auth';
-import type { ImageFile, GeneratedImage, ImageSize } from '../types';
+import type { ImageFile, GeneratedImage, ImageSize, GlobalSettings } from '../types';
 import type { AppView } from '../components/layout/AppHeader';
 import type { ProviderKey } from '../constants/aiModels';
 import { dataURLtoFile } from '../utils/imageDataUrl';
@@ -28,7 +28,7 @@ const defaultPromptOptions = (): WorkspacePromptOptions => ({
 export interface UseWorkspaceControllerParams {
   user: User | null;
   setError: Dispatch<SetStateAction<string | null>>;
-  globalSettings: unknown;
+  globalSettings: GlobalSettings | null;
   systemApiKey: string | null;
   getProviderKey: () => ProviderKey;
   getEffectiveModel: () => string;
