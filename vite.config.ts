@@ -71,18 +71,18 @@ export default defineConfig(({ mode }) => {
       resolve: {
         alias: [
           { find: '@', replacement: path.resolve(__dirname, '.') },
-          { find: 'p-retry', replacement: path.resolve(__dirname, './src/p-retry-shim.ts') },
-          { find: 'formdata-polyfill/esm.min.js', replacement: path.resolve(__dirname, './src/formdata-shim.js') },
-          { find: 'formdata-polyfill/FormData.js', replacement: path.resolve(__dirname, './src/formdata-shim.js') },
-          { find: /formdata-polyfill/, replacement: path.resolve(__dirname, './src/formdata-shim.js') },
-          { find: /isomorphic-form-data/, replacement: path.resolve(__dirname, './src/formdata-shim.js') },
-          { find: /form-data/, replacement: path.resolve(__dirname, './src/formdata-shim.js') },
-          { find: /node-fetch/, replacement: path.resolve(__dirname, './src/node-fetch-shim.js') },
-          { find: /whatwg-fetch/, replacement: path.resolve(__dirname, './src/whatwg-fetch-shim.js') },
-          { find: /isomorphic-fetch/, replacement: path.resolve(__dirname, './src/whatwg-fetch-shim.js') },
-          { find: /cross-fetch/, replacement: path.resolve(__dirname, './src/whatwg-fetch-shim.js') },
-          { find: /unfetch/, replacement: path.resolve(__dirname, './src/whatwg-fetch-shim.js') },
-          { find: /isomorphic-unfetch/, replacement: path.resolve(__dirname, './src/whatwg-fetch-shim.js') },
+          { find: 'p-retry', replacement: path.resolve(__dirname, './shims/p-retry-shim.ts') },
+          { find: 'formdata-polyfill/esm.min.js', replacement: path.resolve(__dirname, './shims/formdata-shim.js') },
+          { find: 'formdata-polyfill/FormData.js', replacement: path.resolve(__dirname, './shims/formdata-shim.js') },
+          { find: /formdata-polyfill/, replacement: path.resolve(__dirname, './shims/formdata-shim.js') },
+          { find: /isomorphic-form-data/, replacement: path.resolve(__dirname, './shims/formdata-shim.js') },
+          { find: /form-data/, replacement: path.resolve(__dirname, './shims/formdata-shim.js') },
+          { find: /node-fetch/, replacement: path.resolve(__dirname, './shims/node-fetch-shim.js') },
+          { find: /whatwg-fetch/, replacement: path.resolve(__dirname, './shims/whatwg-fetch-shim.js') },
+          { find: /isomorphic-fetch/, replacement: path.resolve(__dirname, './shims/whatwg-fetch-shim.js') },
+          { find: /cross-fetch/, replacement: path.resolve(__dirname, './shims/whatwg-fetch-shim.js') },
+          { find: /unfetch/, replacement: path.resolve(__dirname, './shims/whatwg-fetch-shim.js') },
+          { find: /isomorphic-unfetch/, replacement: path.resolve(__dirname, './shims/whatwg-fetch-shim.js') },
         ]
       }
     };

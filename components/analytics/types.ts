@@ -1,5 +1,3 @@
-export type TrendMetric = 'generations' | 'activeUsers' | 'cost';
-
 export interface AnalyticsDashboardProps {
   onErrorClick?: (errorType: string) => void;
   latencyStats?: { avg: number; p95: number; sparkline: number[] };

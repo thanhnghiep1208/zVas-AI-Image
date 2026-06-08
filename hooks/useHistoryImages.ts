@@ -11,7 +11,7 @@ import {
   waitForAuthReady,
 } from '../firebase';
 import { toast } from 'sonner';
-import { clearHistoryByUser, listRecentHistoryByUser } from '../repositories/historyRepository';
+import { clearHistoryByUser, listRecentHistoryByUser } from '../data/historyRepository';
 
 export function useHistoryImages(user: User | null) {
   const [historyImages, setHistoryImages] = useState<GeneratedImage[]>([]);

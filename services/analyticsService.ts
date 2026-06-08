@@ -5,7 +5,7 @@ import {
   getAnalyticsMonthlyRollupRaw,
   getMonthlyCostsRecord,
   saveMonthlyCostsRecord,
-} from '../repositories/analyticsRepository';
+} from '../data/analyticsRepository';
 import {
   applyMonthlyCostsToAnalytics,
   buildMonthlyAnalyticsFromEvents,

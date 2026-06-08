@@ -1,12 +1,12 @@
 
 import React, { useState, useEffect, memo } from 'react';
-import { ImageUploader } from './ImageUploader';
-import { ImageFile, GeneratedImage } from '../types';
-import { TrashIcon } from './icons/TrashIcon';
-import { PlusIcon } from './icons/PlusIcon';
-import { ResultsDisplay } from './ResultsDisplay';
-import { HistoryDisplay } from './HistoryDisplay';
-import { GenerationErrorAlert } from './GenerationErrorAlert';
+import { ImageUploader } from '../inputs/ImageUploader';
+import { ImageFile, GeneratedImage } from '../../types';
+import { TrashIcon } from '../icons/TrashIcon';
+import { PlusIcon } from '../icons/PlusIcon';
+import { ResultsDisplay } from '../results/ResultsDisplay';
+import { HistoryDisplay } from '../results/HistoryDisplay';
+import { GenerationErrorAlert } from '../feedback/GenerationErrorAlert';
 
 interface MultipleImageProps {
   image: ImageFile | null;

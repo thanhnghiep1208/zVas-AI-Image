@@ -8,7 +8,7 @@ import {
   percentTrend,
 } from './analyticsAggregation';
 import { ANALYTICS_ROLLUP_VERSION } from './analyticsTypes';
-import type { AnalyticsEventRecord } from '../repositories/analyticsRepository';
+import type { AnalyticsEventRecord } from '../data/analyticsRepository';
 
 describe('analyticsAggregation', () => {
   it('monthBoundsFromKey parses YYYY-MM', () => {

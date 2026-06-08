@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { PaletteIcon } from './icons/PaletteIcon';
+import { PaletteIcon } from '../icons/PaletteIcon';
 
 interface PromptOptionsProps {
   options: {

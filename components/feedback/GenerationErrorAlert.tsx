@@ -1,5 +1,5 @@
 import React from 'react';
-import { isQuotaOrUsageLimitUserMessage } from '../utils/userFacingError';
+import { isQuotaOrUsageLimitUserMessage } from '../../utils/userFacingError';
 
 export interface GenerationErrorAlertProps {
   error: string | null | undefined;

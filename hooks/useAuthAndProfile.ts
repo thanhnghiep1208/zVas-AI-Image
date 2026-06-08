@@ -14,7 +14,7 @@ import {
   OperationType,
   waitForAuthReady,
 } from '../firebase';
-import { revokeUserSession } from '../repositories/userSessionRepository';
+import { revokeUserSession } from '../data/userSessionRepository';
 import { clearLocalSessionId, getOrCreateLocalSessionId } from '../utils/authSessionId';
 
 const PROFILE_POLL_INTERVAL_MS = 90_000;

@@ -1,7 +1,7 @@
 import React, { useEffect, useState, memo } from 'react';
-import type { GeneratedImage } from '../types';
-import { DownloadIcon } from './icons/DownloadIcon';
-import { SparklesIcon } from './icons/SparklesIcon';
+import type { GeneratedImage } from '../../types';
+import { DownloadIcon } from '../icons/DownloadIcon';
+import { SparklesIcon } from '../icons/SparklesIcon';
 
 interface FullscreenViewerProps {
   image: GeneratedImage;

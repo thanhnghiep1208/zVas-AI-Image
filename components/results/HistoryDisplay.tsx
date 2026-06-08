@@ -1,7 +1,7 @@
 import React, { memo } from 'react';
-import type { GeneratedImage } from '../types';
-import { SparklesIcon } from './icons/SparklesIcon';
-import { DownloadIcon } from './icons/DownloadIcon';
+import type { GeneratedImage } from '../../types';
+import { SparklesIcon } from '../icons/SparklesIcon';
+import { DownloadIcon } from '../icons/DownloadIcon';
 
 interface HistoryDisplayProps {
   images: GeneratedImage[];

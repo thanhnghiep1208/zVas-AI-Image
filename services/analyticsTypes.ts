@@ -1,4 +1,4 @@
-import type { AnalyticsEventRecord } from '../repositories/analyticsRepository';
+import type { AnalyticsEventRecord } from '../data/analyticsRepository';
 
 export type { AnalyticsEventRecord };
 

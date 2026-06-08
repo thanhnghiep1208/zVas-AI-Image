@@ -10,7 +10,7 @@ import {
 import { describeApiOrNetworkError } from '../utils/userFacingError';
 import { readCacheEntry, writeCache, clearCache } from '../components/analytics/analyticsCache';
 import { ANALYTICS_AUTO_REFRESH_MS } from '../components/analytics/constants';
-import type { TrendMetric } from '../components/analytics/types';
+import type { TrendMetric } from '../services/analyticsTypes';
 
 const EMPTY_TOKEN_STATS: MonthlyTokenStats = {
   avgTotal: 0,

@@ -100,6 +100,10 @@ export const LoginModal: React.FC<LoginModalProps> = ({
               {isLoggingIn ? 'Đang đăng nhập…' : 'Đăng nhập'}
             </button>
           </form>
+          <p className="mt-4 text-center text-xs text-gray-400">
+            Để được cấp tài khoản vui lòng liên hệ: <br />
+            Nghiepnt@vng.com.vn — Zalo: 0933312887
+          </p>
         </div>
       </div>
     </div>

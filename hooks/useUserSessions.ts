@@ -7,7 +7,7 @@ import {
   touchUserSession,
   toSessionDate,
   type UserSessionRecord,
-} from '../repositories/userSessionRepository';
+} from '../data/userSessionRepository';
 import { getOrCreateLocalSessionId, clearLocalSessionId } from '../utils/authSessionId';
 import { isFirestorePermissionDenied, waitForAuthReady } from '../firebase';
 

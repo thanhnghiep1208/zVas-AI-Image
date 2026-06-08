@@ -11,7 +11,7 @@ import {
 import { useTrendData } from '../../hooks/useTrendData';
 import { TREND_METRIC_CONFIG } from './constants';
 import { TrendSkeleton } from './AnalyticsWidgets';
-import type { TrendMetric } from './types';
+import type { TrendMetric } from '../../services/analyticsTypes';
 
 const TrendsChart = ({
   activeMetric,

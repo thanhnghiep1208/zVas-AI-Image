@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { getAnalyticsEventsByDateRange } from '../repositories/analyticsRepository';
-import type { AnalyticsEventRecord } from '../repositories/analyticsRepository';
+import { getAnalyticsEventsByDateRange } from '../data/analyticsRepository';
+import type { AnalyticsEventRecord } from '../data/analyticsRepository';
 import { aggregateTrendPoints } from '../services/analyticsAggregation';
 import type { TrendMetric, TrendPoint, TrendRange } from '../services/analyticsTypes';
 import { describeApiOrNetworkError } from '../utils/userFacingError';

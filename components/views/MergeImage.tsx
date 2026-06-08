@@ -1,12 +1,12 @@
 
 import React, { useState, useCallback, useEffect, useRef, memo } from 'react';
 import { Upload, X, Sparkles, Image as ImageIcon, Loader2, Download, Maximize2 } from 'lucide-react';
-import type { ImageFile, GeneratedImage, ImageSize } from '../types';
-import { generateImageVariations } from '../services/geminiService';
-import { describeApiOrNetworkError } from '../utils/userFacingError';
-import { GenerationErrorAlert } from './GenerationErrorAlert';
-import { AspectRatioSelector } from './AspectRatioSelector';
-import { ImageSizeSelector } from './ImageSizeSelector';
+import type { ImageFile, GeneratedImage, ImageSize } from '../../types';
+import { generateImageVariations } from '../../services/geminiService';
+import { describeApiOrNetworkError } from '../../utils/userFacingError';
+import { GenerationErrorAlert } from '../feedback/GenerationErrorAlert';
+import { AspectRatioSelector } from '../AspectRatioSelector';
+import { ImageSizeSelector } from '../ImageSizeSelector';
 
 interface MergeImageProps {
   onDownload: (image: GeneratedImage) => void;

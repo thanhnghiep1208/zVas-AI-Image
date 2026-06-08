@@ -1,4 +1,4 @@
-import type { TrendMetric } from './types';
+import type { TrendMetric } from '../../services/analyticsTypes';
 
 export const ANALYTICS_CACHE_TTL_MS = 15 * 60 * 1000;
 export const ANALYTICS_AUTO_REFRESH_MS = 6 * 60 * 60 * 1000;

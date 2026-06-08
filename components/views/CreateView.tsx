@@ -1,15 +1,15 @@
 import React, { useState, useCallback, memo } from 'react';
 import { Sparkles, X } from 'lucide-react';
 import type { ImageFile, GeneratedImage, ImageSize } from '../../types';
-import { ImageUploader } from '../ImageUploader';
-import { ReferenceImageUploader } from '../ReferenceImageUploader';
-import { PromptManager } from '../PromptManager';
-import { ResultsDisplay } from '../ResultsDisplay';
-import { PromptOptions } from '../PromptOptions';
+import { ImageUploader } from '../inputs/ImageUploader';
+import { ReferenceImageUploader } from '../inputs/ReferenceImageUploader';
+import { PromptManager } from '../prompts/PromptManager';
+import { ResultsDisplay } from '../results/ResultsDisplay';
+import { PromptOptions } from '../prompts/PromptOptions';
 import { AspectRatioSelector } from '../AspectRatioSelector';
 import { ImageSizeSelector } from '../ImageSizeSelector';
-import { HistoryDisplay } from '../HistoryDisplay';
-import { GenerationErrorAlert } from '../GenerationErrorAlert';
+import { HistoryDisplay } from '../results/HistoryDisplay';
+import { GenerationErrorAlert } from '../feedback/GenerationErrorAlert';
 
 type PromptOptionsState = {
   styleSimplified: boolean;
