@@ -17,15 +17,15 @@ async function startServer() {
 
   app.use(helmet({ contentSecurityPolicy: false }));
 
-  const allowedOrigins = process.env.ALLOWED_ORIGINS
-    ? process.env.ALLOWED_ORIGINS.split(',').map((o) => o.trim())
-    : ['http://localhost:3000', 'http://localhost:24679'];
+  const allowedOriginsEnv = process.env.ALLOWED_ORIGINS;
   app.use(
     cors({
-      origin: (origin, cb) => {
-        if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
-        cb(new Error('Not allowed by CORS'));
-      },
+      origin: allowedOriginsEnv
+        ? (origin, cb) => {
+            const list = allowedOriginsEnv.split(',').map((o) => o.trim());
+            cb(null, !origin || list.includes(origin));
+          }
+        : true,
       credentials: true,
     })
   );
