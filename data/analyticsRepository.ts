@@ -13,6 +13,7 @@ import {
   setDoc,
   startAfter,
   where,
+  writeBatch,
 } from '../firebase';
 
 /** Giới hạn mỗi lần getDocs — tránh một response quá lớn khi analytics_events dày. */
@@ -54,6 +55,23 @@ export async function addAnalyticsEvent(
     timestamp: serverTimestamp(),
     ...payload
   });
+}
+
+export async function addAnalyticsEventBatch(
+  events: Array<{ name: string; payload: Record<string, unknown> }>
+): Promise<void> {
+  if (events.length === 0) return;
+  const eventsRef = collection(db, 'analytics_events');
+  const batch = writeBatch(db);
+  for (const ev of events) {
+    const ref = doc(eventsRef);
+    batch.set(ref, {
+      event_name: ev.name,
+      timestamp: serverTimestamp(),
+      ...ev.payload,
+    });
+  }
+  await batch.commit();
 }
 
 export async function getAnalyticsEventsByDateRange(

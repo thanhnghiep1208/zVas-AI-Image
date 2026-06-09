@@ -3,7 +3,7 @@ import type { Dispatch, SetStateAction } from 'react';
 import type { User } from 'firebase/auth';
 import type { ImageFile, GeneratedImage, ImageSize, GlobalSettings } from '../types';
 import { generateImageVariations } from '../services/geminiService';
-import { trackEvent } from '../services/analyticsService';
+import { trackEvent, trackEvents } from '../services/analyticsService';
 import {
   ga4BeginCheckout,
   ga4Exception,
@@ -179,17 +179,6 @@ export function useImageGeneration(params: UseImageGenerationParams) {
             0
           );
 
-          trackEvent('image_generation_succeeded', {
-            user_id: user.uid,
-            model_name: activeModel,
-            generation_type: currentView,
-            image_count: validResults.length,
-            duration_ms: durationMs,
-            estimated_api_cost: estimatedCost,
-            prompt_tokens: promptTokens,
-            completion_tokens: completionTokens,
-            total_tokens: totalTokens,
-          });
           const qty = Math.max(1, validResults.length);
           ga4Purchase({
             transaction_id: ga4TransactionId,
@@ -203,8 +192,40 @@ export function useImageGeneration(params: UseImageGenerationParams) {
               },
             ],
           });
+
+          const batchEvents: Array<{ name: Parameters<typeof trackEvents>[0][0]['name']; payload: Parameters<typeof trackEvents>[0][0]['payload'] }> = [
+            {
+              name: 'image_generation_succeeded',
+              payload: {
+                user_id: user.uid,
+                model_name: activeModel,
+                generation_type: currentView,
+                image_count: validResults.length,
+                duration_ms: durationMs,
+                estimated_api_cost: estimatedCost,
+                prompt_tokens: promptTokens,
+                completion_tokens: completionTokens,
+                total_tokens: totalTokens,
+              },
+            },
+          ];
+          if (failedResults.length > 0) {
+            ga4Exception(String(failedResults[0]?.text || 'image_generation_failed'), false);
+            batchEvents.push({
+              name: 'image_generation_failed',
+              payload: {
+                user_id: user.uid,
+                model_name: activeModel,
+                generation_type: currentView,
+                image_count: failedResults.length,
+                duration_ms: durationMs,
+                error_code: failedResults[0]?.text || 'unknown_error',
+              },
+            });
+          }
+          void trackEvents(batchEvents);
         }
-        if (failedResults.length > 0) {
+        if (failedResults.length > 0 && validResults.length === 0) {
           trackEvent('image_generation_failed', {
             user_id: user.uid,
             model_name: activeModel,

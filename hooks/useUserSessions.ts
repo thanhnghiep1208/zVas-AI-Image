@@ -11,7 +11,7 @@ import {
 import { getOrCreateLocalSessionId, clearLocalSessionId } from '../utils/authSessionId';
 import { isFirestorePermissionDenied, waitForAuthReady } from '../firebase';
 
-const HEARTBEAT_MS = 60_000;
+const HEARTBEAT_MS = 5 * 60_000;
 const STALE_MS = 7 * 24 * 60 * 60 * 1000;
 
 export interface UserSessionView extends UserSessionRecord {
@@ -129,6 +129,7 @@ export function useUserSessions({ uid, enabled, onRemoteRevoke }: UseUserSession
     void start();
 
     heartbeatTimer = setInterval(() => {
+      if (document.visibilityState !== 'visible') return;
       const id = getOrCreateLocalSessionId();
       void touchUserSession(uid, id).catch((e) => {
         if (!isFirestorePermissionDenied(e)) console.warn('session heartbeat', e);

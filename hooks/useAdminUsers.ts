@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   auth,
   collection,
@@ -11,9 +11,13 @@ import {
   OperationType,
   orderBy,
   query,
+  startAfter,
   updateDoc,
   where,
 } from '../firebase';
+import type { QueryDocumentSnapshot } from 'firebase/firestore';
+
+const USERS_PAGE_SIZE = 100;
 import { toast } from 'sonner';
 import { describeApiOrNetworkError } from '../utils/userFacingError';
 import type { AdminUserProfile } from '../components/admin/types';
@@ -21,6 +25,8 @@ import type { AdminUserProfile } from '../components/admin/types';
 export function useAdminUsers() {
   const [users, setUsers] = useState<AdminUserProfile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasMore, setHasMore] = useState(false);
+  const lastDocRef = useRef<QueryDocumentSnapshot | null>(null);
   const [selectedUserHistory, setSelectedUserHistory] = useState<{
     uid: string;
     email: string;
@@ -30,15 +36,18 @@ export function useAdminUsers() {
   >([]);
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
 
-  const loadUsersFromFirestore = useCallback(async () => {
+  const loadUsersFromFirestore = useCallback(async (reset = true) => {
     setIsLoading(true);
     try {
-      const snapshot = await getDocs(collection(db, 'users'));
-      const usersData: AdminUserProfile[] = [];
-      snapshot.forEach((d) => {
-        usersData.push(d.data() as AdminUserProfile);
-      });
-      setUsers(usersData);
+      const base = [orderBy('createdAt', 'desc'), limit(USERS_PAGE_SIZE)] as const;
+      const q = (!reset && lastDocRef.current)
+        ? query(collection(db, 'users'), ...base, startAfter(lastDocRef.current))
+        : query(collection(db, 'users'), ...base);
+      const snapshot = await getDocs(q);
+      const usersData = snapshot.docs.map((d) => d.data() as AdminUserProfile);
+      lastDocRef.current = snapshot.docs[snapshot.docs.length - 1] ?? null;
+      setHasMore(snapshot.docs.length === USERS_PAGE_SIZE);
+      setUsers((prev) => reset ? usersData : [...prev, ...usersData]);
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : String(error);
       if (msg.includes('Quota exceeded')) {
@@ -233,10 +242,14 @@ export function useAdminUsers() {
     }
   };
 
+  const loadMoreUsers = useCallback(() => loadUsersFromFirestore(false), [loadUsersFromFirestore]);
+
   return {
     users,
     isLoading,
+    hasMore,
     loadUsersFromFirestore,
+    loadMoreUsers,
     handleUpdateStatus,
     handleUpdateRole,
     handleDeleteUser,

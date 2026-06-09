@@ -22,6 +22,7 @@ import {
   serverTimestamp,
   getDocFromServer,
   getCountFromServer,
+  writeBatch,
 } from 'firebase/firestore';
 import firebaseConfig from './firebase-applet-config.json';
 
@@ -153,4 +154,4 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   console.error('Firestore Error: ', JSON.stringify(errInfo));
 }
 
-export { signInWithEmailAndPassword, signOut, onAuthStateChanged, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, collection, query, where, orderBy, limit, startAfter, addDoc, onSnapshot, serverTimestamp, getDocFromServer, getCountFromServer };
+export { signInWithEmailAndPassword, signOut, onAuthStateChanged, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, collection, query, where, orderBy, limit, startAfter, addDoc, onSnapshot, serverTimestamp, getDocFromServer, getCountFromServer, writeBatch };

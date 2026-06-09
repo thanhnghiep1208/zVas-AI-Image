@@ -1,5 +1,6 @@
 import {
   addAnalyticsEvent,
+  addAnalyticsEventBatch,
   getAnalyticsEventsByDateRange,
   getAnalyticsEventsByDateRangeAndName,
   getAnalyticsMonthlyRollupRaw,
@@ -83,6 +84,26 @@ export const trackEvent = async (eventName: AnalyticsEventName, payload: Analyti
     await addAnalyticsEvent(eventName, sanitizedPayload as unknown as Record<string, unknown>);
   } catch (error) {
     console.error('Failed to track analytics event:', error);
+  }
+};
+
+export const trackEvents = async (
+  events: Array<{ name: AnalyticsEventName; payload: AnalyticsEventPayload }>
+) => {
+  if (events.length === 0) return;
+  if (events.length === 1) {
+    await trackEvent(events[0].name, events[0].payload);
+    return;
+  }
+  try {
+    await addAnalyticsEventBatch(
+      events.map((e) => ({
+        name: e.name,
+        payload: sanitizePayload(e.name, e.payload) as unknown as Record<string, unknown>,
+      }))
+    );
+  } catch (error) {
+    console.error('Failed to track analytics events batch:', error);
   }
 };
 

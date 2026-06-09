@@ -33,6 +33,7 @@ export async function tryConsumeRateLimitFirestore(userId: string): Promise<bool
         windowMs: RATE_LIMIT_WINDOW_MS,
         windowIndex: Math.floor(now / RATE_LIMIT_WINDOW_MS),
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        expireAt: new Date(now + 2 * RATE_LIMIT_WINDOW_MS),
       },
       { merge: true }
     );
