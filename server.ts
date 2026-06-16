@@ -24,7 +24,9 @@ async function startServer() {
               defaultSrc: ["'self'"],
               // 'unsafe-inline' required for Vite module preload injections; tighten with hashes if needed
               scriptSrc: ["'self'", "'unsafe-inline'", 'https://www.googletagmanager.com'],
+              scriptSrcElem: ["'self'", "'unsafe-inline'", 'https://www.googletagmanager.com'],
               styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+              styleSrcElem: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
               imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
               connectSrc: [
                 "'self'",
