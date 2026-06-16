@@ -7,6 +7,7 @@ import {
   seedreamSizeFromAspectRatio,
 } from '../lib/resolveProvider';
 import type { AuthenticatedRequest, GenerateRequestBody } from '../types';
+import { validatePrompt } from '../lib/validateUserInput';
 
 export function createPostGenerateHandler(db: Firestore) {
   return async function postGenerate(req: Request, res: Response) {
@@ -15,10 +16,11 @@ export function createPostGenerateHandler(db: Firestore) {
       const settingsDoc = await db.collection('settings').doc('global').get();
       const settings = settingsDoc.exists ? settingsDoc.data() || {} : {};
       const provider = resolveProviderFromSettings(body.provider, settings.enabledProviders);
-      const prompt = (body.prompt || '').trim();
-      if (!prompt) {
-        return res.status(400).json({ error: 'Prompt is required.' });
+      const promptValidation = validatePrompt(body.prompt || '');
+      if (!promptValidation.valid) {
+        return res.status(400).json({ error: promptValidation.error });
       }
+      const prompt = (body.prompt || '').trim();
 
       if (provider === 'openai') {
         const apiKey = process.env.OPENAI_API_KEY;

@@ -15,7 +15,13 @@ export async function tryConsumeRateLimit(userId: string): Promise<boolean> {
     try {
       return await tryConsumeRateLimitFirestore(userId);
     } catch (error) {
-      console.error('Firestore rate limit failed, falling back to memory:', error);
+      // WARNING: memory fallback does not share state across Cloud Run instances —
+      // rate limits may be bypassed under load or during Firestore outages.
+      console.error(
+        '[WARN] Firestore rate limit unavailable — falling back to in-memory store. ' +
+          'This is NOT safe in multi-instance deployments.',
+        error
+      );
       return tryConsumeRateLimitMemory(userId);
     }
   }

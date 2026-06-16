@@ -1,4 +1,4 @@
-import admin from 'firebase-admin';
+import { FieldValue } from 'firebase-admin/firestore';
 import { db } from '../../firebaseAdmin';
 import {
   RATE_LIMIT_FIRESTORE_COLLECTION,
@@ -32,7 +32,7 @@ export async function tryConsumeRateLimitFirestore(userId: string): Promise<bool
         count: count + 1,
         windowMs: RATE_LIMIT_WINDOW_MS,
         windowIndex: Math.floor(now / RATE_LIMIT_WINDOW_MS),
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
         expireAt: new Date(now + 2 * RATE_LIMIT_WINDOW_MS),
       },
       { merge: true }

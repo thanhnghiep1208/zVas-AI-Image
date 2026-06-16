@@ -165,8 +165,9 @@ gcloud run services update-traffic ai-image-zvas --region us-west1 --to-revision
 - `firebase-applet-config.json` tồn tại trong working tree (không commit).
 - Firestore rules/indexes đã deploy đúng project/database.
 - Secrets mới đã có version và IAM đúng.
+- **`ALLOWED_ORIGINS` đã set đúng domain production** — thiếu → server log `[WARN]` và CORS mở hoàn toàn.
 - Chọn đúng mode (A/B/C) theo thay đổi của phiên deploy.
-- `npm test` pass (aggregation + rate limit).
+- `npm test` pass (26 tests: aggregation + rate limit + validateUserInput + generation prompts).
 
 ## 9) Troubleshooting — Revision không ready (PORT 8080)
 

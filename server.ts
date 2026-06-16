@@ -15,9 +15,46 @@ async function startServer() {
   const app = express();
   const PORT = Number(process.env.PORT) || 3000;
 
-  app.use(helmet({ contentSecurityPolicy: false }));
+  const isProd = process.env.NODE_ENV === 'production';
+  app.use(
+    helmet({
+      contentSecurityPolicy: isProd
+        ? {
+            directives: {
+              defaultSrc: ["'self'"],
+              // 'unsafe-inline' required for Vite module preload injections; tighten with hashes if needed
+              scriptSrc: ["'self'", "'unsafe-inline'"],
+              styleSrc: ["'self'", "'unsafe-inline'"],
+              imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
+              connectSrc: [
+                "'self'",
+                'https://*.googleapis.com',
+                'https://*.google.com',
+                'https://www.googletagmanager.com',
+                'https://www.google-analytics.com',
+                'https://analytics.google.com',
+                'https://api.openai.com',
+                'https://*.bytepluses.com',
+                'https://api.seedance.com',
+              ],
+              fontSrc: ["'self'", 'data:'],
+              frameSrc: ["'none'"],
+              objectSrc: ["'none'"],
+              baseUri: ["'self'"],
+              formAction: ["'self'"],
+            },
+          }
+        : false,
+    })
+  );
 
   const allowedOriginsEnv = process.env.ALLOWED_ORIGINS;
+  if (isProd && !allowedOriginsEnv) {
+    console.warn(
+      '[WARN] ALLOWED_ORIGINS is not set — CORS is open to all origins. ' +
+        'Set ALLOWED_ORIGINS=https://your-domain.com in production.'
+    );
+  }
   app.use(
     cors({
       origin: allowedOriginsEnv

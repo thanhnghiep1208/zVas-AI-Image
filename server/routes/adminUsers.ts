@@ -3,6 +3,7 @@ import { db, auth } from '../firebaseAdmin';
 import { authenticate } from '../middleware/authenticate';
 import { requireAdmin } from '../middleware/requireAdmin';
 import { emailForAdminUsername, normalizeAdminUsername } from '../../utils/authCredentials';
+import { validatePassword } from '../lib/validateUserInput';
 const router = Router();
 
 router.post('/api/admin/users', authenticate, requireAdmin, async (req, res) => {
@@ -12,8 +13,9 @@ router.post('/api/admin/users', authenticate, requireAdmin, async (req, res) => 
     if (!username || !password) {
       return res.status(400).json({ error: 'Username and password are required' });
     }
-    if (password.length < 6) {
-      return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    const pwCheck = validatePassword(password);
+    if (!pwCheck.valid) {
+      return res.status(400).json({ error: pwCheck.error });
     }
 
     const normalizedUsername = normalizeAdminUsername(String(username));
@@ -51,7 +53,7 @@ router.post('/api/admin/users', authenticate, requireAdmin, async (req, res) => 
       return res.status(409).json({ error: 'Tên đăng nhập đã tồn tại' });
     }
     if (err.code === 'auth/invalid-password') {
-      return res.status(400).json({ error: 'Mật khẩu không hợp lệ (tối thiểu 6 ký tự).' });
+      return res.status(400).json({ error: 'Mật khẩu không hợp lệ (tối thiểu 12 ký tự).' });
     }
     if (err.code === 'app/invalid-credential' || /credential|ENOENT|service account/i.test(err.message ?? '')) {
       return res.status(503).json({
@@ -70,8 +72,9 @@ router.post('/api/admin/users/reset-password', authenticate, requireAdmin, async
     if (!uid || !newPassword) {
       return res.status(400).json({ error: 'uid and newPassword are required' });
     }
-    if (newPassword.length < 6) {
-      return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    const pwCheck = validatePassword(newPassword);
+    if (!pwCheck.valid) {
+      return res.status(400).json({ error: pwCheck.error });
     }
 
     await auth.updateUser(uid, { password: newPassword });

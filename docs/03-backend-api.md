@@ -6,8 +6,8 @@
 - `NODE_ENV=production`: serve static từ `dist/` + API routes.
 - Dev mode: nạp Vite middleware động.
 - Startup lỗi → `process.exit(1)` (Cloud Run không treo revision “healthy” giả).
-- **Helmet:** `helmet({ contentSecurityPolicy: false })` gắn security headers mặc định (X-Frame-Options, HSTS, X-Content-Type-Options…).
-- **CORS:** giới hạn theo env `ALLOWED_ORIGINS` (comma-separated); mặc định `localhost:3000` và `localhost:24679` — deploy production phải set đúng domain.
+- **Helmet:** Production bật CSP đầy đủ (`connect-src` whitelist Firebase/Google/OpenAI/Seedance, `frame-src 'none'`, `object-src 'none'`). Dev tắt CSP để tránh conflict Vite HMR.
+- **CORS:** giới hạn theo env `ALLOWED_ORIGINS` (comma-separated). Thiếu biến trên production → log `[WARN]` khi startup (không block, nhưng cần set trước khi go-live).
 - **Payload limit:** `express.json({ limit: '10mb' })` — đủ cho base64 ảnh (~5–8 MB).
 
 ## Cấu trúc `server/`
@@ -29,6 +29,7 @@ server/
       memoryStore.ts
       firestoreStore.ts         # rate_limit_windows
       index.ts                  # tryConsumeRateLimit
+    validateUserInput.ts        # validatePassword / validatePrompt (pure, tested)
     monthlyRollupBuilder.ts     # rebuildMonthlyAnalyticsRollup
   repositories/
     analyticsAdminRepository.ts # Admin paginate events + save rollup
@@ -65,17 +66,20 @@ server/
 
 - Yêu cầu token Firebase + `requireAdmin` (profile `users/{uid}` có `role: admin`).
 - Body: `{ username, password, displayName?, role? }` — `role`: `admin` | `editor` | `advice`.
+- **Password tối thiểu 12 ký tự** (validated qua `server/lib/validateUserInput.ts`).
 - Tạo Auth user (`email` = `{username}@zvas.local`) + document `users/{uid}` (`status: approved`).
 - Lỗi: `409` email đã tồn tại; `503` thiếu service account trên server local.
 
 ### `POST /api/admin/users/reset-password`
 
 - Body: `{ uid, newPassword }` — admin đặt lại mật khẩu user.
+- **Password tối thiểu 12 ký tự** (cùng validation như tạo user).
 
 ### `POST /api/generate`
 
 - Yêu cầu token Firebase hợp lệ.
 - Input gồm `prompt`, model/provider, ảnh main/reference (base64).
+- **Prompt tối đa 4000 ký tự** — vượt quá trả `400` (validated qua `server/lib/validateUserInput.ts`).
 - Provider hỗ trợ: `gemini`, `openai`, `seedance`, `seedream`.
 - **Gemini (image):** id model trên client/admin nên khớp bộ cho phép trong `constants/aiModels.ts` — hiện **Nano Banana Pro** `gemini-3-pro-image-preview`, **Nano Banana 2** `gemini-3.1-flash-image-preview` (mô tả so sánh: `docs/so-sanh-model-gemini.md`).
 - Trả về `imageBase64` + metadata token usage.
@@ -112,6 +116,7 @@ npm test
 ```
 
 - `server/lib/rateLimit/rateLimit.test.ts` — memory + Firestore store (mock).
+- `server/lib/validateUserInput.test.ts` — validatePassword (5 cases) + validatePrompt (5 cases).
 - `services/analyticsAggregation.test.ts` — pure aggregation.
 
 ## Script vận hành user

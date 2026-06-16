@@ -1,7 +1,9 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import admin from 'firebase-admin';
+import { initializeApp, cert, getApps, getApp } from 'firebase-admin/app';
+import type { AppOptions, ServiceAccount } from 'firebase-admin/app';
+import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
 
 const serverDir = path.dirname(fileURLToPath(import.meta.url));
@@ -27,20 +29,18 @@ function resolveServiceAccountPath(): string | null {
 }
 
 const serviceAccountPath = resolveServiceAccountPath();
-const initOptions: admin.AppOptions = { projectId: firebaseConfig.projectId };
+const initOptions: AppOptions = { projectId: firebaseConfig.projectId };
 
 if (serviceAccountPath) {
-  const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8')) as admin.ServiceAccount;
-  initOptions.credential = admin.credential.cert(serviceAccount);
+  const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8')) as ServiceAccount;
+  initOptions.credential = cert(serviceAccount);
 } else if (process.env.NODE_ENV !== 'production') {
   console.warn(
     '[firebaseAdmin] No service account file found. Set GOOGLE_APPLICATION_CREDENTIALS or add service-account.json at project root.',
   );
 }
 
-export const firebaseApp = admin.apps.length
-  ? admin.app()
-  : admin.initializeApp(initOptions);
+export const firebaseApp = getApps().length ? getApp() : initializeApp(initOptions);
 
 export const db = getFirestore(firebaseApp, firebaseConfig.firestoreDatabaseId);
-export const auth = admin.auth();
+export const auth = getAuth(firebaseApp);
