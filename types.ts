@@ -5,6 +5,7 @@ export interface GeneratedImage {
   prompt: string;
   imageUrl: string;
   text?: string | null;
+  errorCode?: string;
   promptTokens?: number;
   completionTokens?: number;
   totalTokens?: number;

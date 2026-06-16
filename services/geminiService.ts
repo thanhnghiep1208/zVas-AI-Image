@@ -107,30 +107,42 @@ export const generateImageVariations = async (
 
     } catch (error: any) {
       console.error(`Error generating image for prompt "${prompt}":`, error);
-      
+
       let userMessage = error.message || 'An unknown error occurred.';
       const provider = String(globalSettings?.activeProvider || 'gemini');
 
-      // Handle specific API errors (Gemini-only messages — do not mislabel Seedream/OpenAI)
+      // Extract machine-readable error code BEFORE transforming to user-facing message
+      let errorCode = 'unknown';
       if (userMessage.includes('429') || userMessage.toLowerCase().includes('quota exceeded') || userMessage.includes('RESOURCE_EXHAUSTED')) {
-        if (provider === 'gemini') {
-          userMessage = "Hết hạn mức API (429 Quota Exceeded): Tài khoản Miễn phí của bạn đã hết lượt sử dụng. Vui lòng thử lại sau vài phút (giới hạn phút) hoặc vào ngày mai (giới hạn ngày). Để sử dụng không giới hạn, vui lòng nhấn nút 'Select API Key' và chọn một Key từ Google Cloud dự án có tính phí (Paid project).";
-        }
-      } else if (
-        provider === 'gemini' &&
-        (userMessage.includes('403') || userMessage.toLowerCase().includes('forbidden'))
-      ) {
-        userMessage = "Lỗi API (403 Forbidden): Model Gemini image yêu cầu API Key trả phí (Paid) từ Google Cloud. Hoặc chọn SEEDREAM · Dola-Seedream-5.0-lite / ByteDance-Seedream-4.5 trên dropdown (cần SEEDREAM_API_KEY).";
+        errorCode = 'quota_exceeded';
+      } else if (userMessage.includes('403') || userMessage.toLowerCase().includes('forbidden')) {
+        errorCode = 'forbidden';
       } else if (userMessage.includes('Requested entity was not found')) {
-        if (provider === 'gemini') {
-          userMessage = "Lỗi API: API Key đã chọn có thể không hợp lệ hoặc model không khả dụng cho Key này. Vui lòng thử chọn lại API Key.";
-        }
+        errorCode = 'not_found';
+      } else if (userMessage.toLowerCase().includes('rate limit')) {
+        errorCode = 'rate_limit';
+      } else if (userMessage.toLowerCase().includes('timeout') || userMessage.toLowerCase().includes('timed out')) {
+        errorCode = 'timeout';
+      } else if (userMessage.toLowerCase().includes('failed to fetch') || userMessage.toLowerCase().includes('network')) {
+        errorCode = 'network_error';
+      } else if (userMessage.includes('No image was generated')) {
+        errorCode = 'no_output';
       }
-      
+
+      // Handle specific API errors (Gemini-only messages — do not mislabel Seedream/OpenAI)
+      if (errorCode === 'quota_exceeded' && provider === 'gemini') {
+        userMessage = "Hết hạn mức API (429 Quota Exceeded): Tài khoản Miễn phí của bạn đã hết lượt sử dụng. Vui lòng thử lại sau vài phút (giới hạn phút) hoặc vào ngày mai (giới hạn ngày). Để sử dụng không giới hạn, vui lòng nhấn nút 'Select API Key' và chọn một Key từ Google Cloud dự án có tính phí (Paid project).";
+      } else if (errorCode === 'forbidden' && provider === 'gemini') {
+        userMessage = "Lỗi API (403 Forbidden): Model Gemini image yêu cầu API Key trả phí (Paid) từ Google Cloud. Hoặc chọn SEEDREAM · Dola-Seedream-5.0-lite / ByteDance-Seedream-4.5 trên dropdown (cần SEEDREAM_API_KEY).";
+      } else if (errorCode === 'not_found' && provider === 'gemini') {
+        userMessage = "Lỗi API: API Key đã chọn có thể không hợp lệ hoặc model không khả dụng cho Key này. Vui lòng thử chọn lại API Key.";
+      }
+
       return {
         prompt,
         imageUrl: 'error',
         text: userMessage,
+        errorCode,
         promptTokens: 0,
         completionTokens: 0,
         totalTokens: 0

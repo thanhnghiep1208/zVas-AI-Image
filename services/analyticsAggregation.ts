@@ -23,15 +23,24 @@ const toDateValue = (value: Date | { toDate?: () => Date } | null | undefined): 
 
 const mapErrorType = (errorCode?: string): { errorType: string; severity: 'warning' | 'critical' } => {
   const normalized = (errorCode || '').toLowerCase();
-  if (normalized.includes('timeout')) {
-    return { errorType: 'API Timeout', severity: 'critical' };
-  }
-  if (normalized.includes('filter') || normalized.includes('safety')) {
-    return { errorType: 'Content Filter', severity: 'warning' };
-  }
-  if (normalized.includes('prompt') || normalized.includes('invalid')) {
-    return { errorType: 'Invalid Prompt', severity: 'warning' };
-  }
+  // Clean codes (new)
+  if (normalized === 'quota_exceeded') return { errorType: 'Quota Exceeded (429)', severity: 'critical' };
+  if (normalized === 'forbidden') return { errorType: 'API Key / Permission (403)', severity: 'critical' };
+  if (normalized === 'not_found') return { errorType: 'Model Not Found', severity: 'warning' };
+  if (normalized === 'rate_limit') return { errorType: 'Rate Limit', severity: 'warning' };
+  if (normalized === 'timeout') return { errorType: 'API Timeout', severity: 'critical' };
+  if (normalized === 'network_error') return { errorType: 'Network Error', severity: 'critical' };
+  if (normalized === 'no_output') return { errorType: 'No Output', severity: 'warning' };
+  // Fallback keyword matching for legacy events
+  if (normalized.includes('timeout') || normalized.includes('timed out')) return { errorType: 'API Timeout', severity: 'critical' };
+  if (normalized.includes('429') || normalized.includes('quota') || normalized.includes('resource_exhausted')) return { errorType: 'Quota Exceeded (429)', severity: 'critical' };
+  if (normalized.includes('403') || normalized.includes('forbidden')) return { errorType: 'API Key / Permission (403)', severity: 'critical' };
+  if (normalized.includes('not found') || normalized.includes('entity was not found')) return { errorType: 'Model Not Found', severity: 'warning' };
+  if (normalized.includes('rate limit')) return { errorType: 'Rate Limit', severity: 'warning' };
+  if (normalized.includes('filter') || normalized.includes('safety')) return { errorType: 'Content Filter', severity: 'warning' };
+  if (normalized.includes('failed to fetch') || normalized.includes('network')) return { errorType: 'Network Error', severity: 'critical' };
+  if (normalized.includes('no image was generated')) return { errorType: 'No Output', severity: 'warning' };
+  if (normalized.includes('prompt') || normalized.includes('invalid')) return { errorType: 'Invalid Prompt', severity: 'warning' };
   return { errorType: 'Unknown', severity: 'critical' };
 };
 
