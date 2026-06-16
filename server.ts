@@ -23,8 +23,8 @@ async function startServer() {
             directives: {
               defaultSrc: ["'self'"],
               // 'unsafe-inline' required for Vite module preload injections; tighten with hashes if needed
-              scriptSrc: ["'self'", "'unsafe-inline'"],
-              styleSrc: ["'self'", "'unsafe-inline'"],
+              scriptSrc: ["'self'", "'unsafe-inline'", 'https://www.googletagmanager.com'],
+              styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
               imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
               connectSrc: [
                 "'self'",
@@ -37,7 +37,7 @@ async function startServer() {
                 'https://*.bytepluses.com',
                 'https://api.seedance.com',
               ],
-              fontSrc: ["'self'", 'data:'],
+              fontSrc: ["'self'", 'data:', 'https://fonts.googleapis.com', 'https://fonts.gstatic.com'],
               frameSrc: ["'none'"],
               objectSrc: ["'none'"],
               baseUri: ["'self'"],
