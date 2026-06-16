@@ -70,7 +70,7 @@ export interface MonthlyTokenStats {
 export interface MonthlyTopModelStats {
   modelName: string;
   requestCount: number;
-  modelBreakdown: Array<{ modelName: string; requestCount: number }>;
+  modelBreakdown: Array<{ modelName: string; requestCount: number; successCount: number }>;
 }
 
 export interface MonthlyDashboardBundle {

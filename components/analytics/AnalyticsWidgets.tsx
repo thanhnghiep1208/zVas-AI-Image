@@ -207,7 +207,7 @@ const TokenUsageCard = ({
 export const ModelUsageCard = ({
   modelBreakdown,
 }: {
-  modelBreakdown: Array<{ modelName: string; requestCount: number }>;
+  modelBreakdown: Array<{ modelName: string; requestCount: number; successCount: number }>;
 }) => (
   <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-5 backdrop-blur-sm">
     <h3 className="mb-4 text-lg font-semibold tracking-tight text-white">Model dùng nhiều (tháng)</h3>
@@ -221,9 +221,14 @@ export const ModelUsageCard = ({
             className="flex items-center justify-between border-b border-white/[0.06] py-2 last:border-0"
           >
             <span className="text-sm text-gray-200 truncate pr-3">{item.modelName}</span>
-            <span className="text-sm font-semibold text-cyan-300">
-              {new Intl.NumberFormat('en-US').format(item.requestCount)} requests
-            </span>
+            <div className="flex items-center gap-3 shrink-0">
+              <span className="text-xs text-gray-400">
+                {new Intl.NumberFormat('en-US').format(item.requestCount)} attempts
+              </span>
+              <span className="text-sm font-semibold text-cyan-300">
+                {new Intl.NumberFormat('en-US').format(item.successCount ?? 0)} ok
+              </span>
+            </div>
           </div>
         ))}
       </div>
@@ -381,7 +386,7 @@ export const ExpandableErrorBreakdown = ({
                   </td>
                   <td className="px-3 py-2 text-right text-white">{item.count}</td>
                   <td className="px-3 py-2 text-right text-gray-300">
-                    {item.lastOccurred ? item.lastOccurred.toLocaleString() : 'N/A'}
+                    {item.lastOccurred ? item.lastOccurred.toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A'}
                   </td>
                 </tr>
               ))

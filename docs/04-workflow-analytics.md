@@ -27,13 +27,28 @@ Payload và chuẩn hóa lỗi: `services/analyticsService.ts` (`trackEvent` →
 | Module | Vai trò |
 | ------ | ------- |
 | `services/analyticsTypes.ts` | Types: `MonthlyAnalytics`, `MonthlyDashboardBundle`, `TrendPoint`, … |
-| `services/analyticsAggregation.ts` | Hàm thuần: `monthBounds`, `buildMonthlyDashboardBundleFromEvents`, `aggregateTrendPoints`, `aggregateHistoryCountsByUid`, `buildMonthlyRollupDocument` |
+| `services/analyticsAggregation.ts` | Hàm thuần: `monthBounds`, `buildMonthlyDashboardBundleFromEvents`, `aggregateTrendPoints`, `buildMonthlyTopModelStatsFromEvents`, `buildMonthlyRollupDocument` |
 | `services/analyticsService.ts` | I/O Firestore: rollup doc → fallback quét `analytics_events` (pagination) |
 
 - Dashboard bundle: ưu tiên `analytics_monthly_rollups/{YYYY-MM}` (`version: 1`); thiếu doc thì aggregate từ events.
-- Trends (`hooks/useTrendData.ts`) và bảng đếm history (`UserHistoryCountsPanel`) gọi aggregation thay vì logic trùng lặp.
+- Trends (`hooks/useTrendData.ts`) gọi aggregation thay vì logic trùng lặp.
 - Job rebuild rollup (Admin SDK): `server/lib/monthlyRollupBuilder.ts` → `rebuildMonthlyAnalyticsRollup(monthKey)` (không có route HTTP public).
 - Tests: `npm test` — `analyticsAggregation.test.ts`, `rateLimit.test.ts`.
+
+#### Date bucketing — UTC nhất quán
+
+`aggregateTrendPoints` (và `useTrendData.ts`) dùng **UTC** cho toàn bộ date arithmetic (`setUTCDate`, `setUTCHours`, `getUTCDay`). Tất cả bucket key và event key đều lấy từ `.toISOString().slice(0, 10)` nên khớp nhau ở mọi timezone. Không dùng `setHours` / `setDate` local.
+
+#### Top model stats — attempts + successes
+
+`buildMonthlyTopModelStatsFromEvents` đếm song song hai chỉ số per model:
+
+| Field trong `modelBreakdown` | Nguồn event |
+| ---------------------------- | ----------- |
+| `requestCount` | `image_generation_started` (số lần thử) |
+| `successCount` | `image_generation_succeeded` (số ảnh thành công) |
+
+Ranking (thứ tự sort) theo `requestCount`. UI `ModelUsageCard` hiển thị cả hai cột.
 
 ## Google Analytics 4 (GA4)
 
@@ -70,9 +85,9 @@ Hệ thống có **hai luồng** bổ sung cho nhau:
 
 - KPI theo `Month`.
 - Token usage.
-- Model usage (month).
-- Trends chart.
-- Bảng **Số ảnh đã tạo theo người dùng** lọc theo tháng (`history.createdAt`).
+- Model usage (month) — hiển thị **attempts** và **ok** (thành công) theo từng model.
+- Trends chart (30 ngày / 8 tuần).
+- Bảng **Số ảnh đã tạo theo người dùng** lọc theo tháng.
 - Loading skeleton cho toàn trang khi đang tải.
 - Hiển thị **thời gian cập nhật lần cuối** của bundle tổng quan (KPI + token + model): lấy từ `savedAt` của cache session hoặc thời điểm vừa tải xong từ server (kể cả làm mới nền mỗi 6 giờ).
 
@@ -88,7 +103,7 @@ Hệ thống có **hai luồng** bổ sung cho nhau:
 | Shell + nút **Yêu cầu dữ liệu** | `components/analytics/AnalyticsDashboard.tsx` |
 | KPI / token / model | `components/analytics/AnalyticsWidgets.tsx` |
 | Trends | `components/analytics/TrendsSection.tsx` + `hooks/useTrendData.ts` |
-| Đếm ảnh/user | `components/analytics/UserHistoryCountsPanel.tsx` |
+| Đếm ảnh/user | `components/analytics/UserHistoryCountsPanel.tsx` — nguồn: `analytics_events` (không bị mất khi user xóa history) |
 | Cache session | `components/analytics/analyticsCache.ts` |
 | Data hook | `hooks/useAnalyticsDashboardData.ts` |
 

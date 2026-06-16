@@ -24,23 +24,23 @@ const trendEventsCache = new Map<string, CachedEventsEntry>();
 
 const getWeekStart = (date: Date): Date => {
   const result = new Date(date);
-  const day = result.getDay();
+  const day = result.getUTCDay();
   const diff = day === 0 ? -6 : 1 - day;
-  result.setDate(result.getDate() + diff);
-  result.setHours(0, 0, 0, 0);
+  result.setUTCDate(result.getUTCDate() + diff);
+  result.setUTCHours(0, 0, 0, 0);
   return result;
 };
 
 function trendEventsRangeStart(range: TrendRange, now: Date): Date {
   const startDate = new Date(now);
   if (range === '30d') {
-    startDate.setDate(now.getDate() - 29);
-    startDate.setHours(0, 0, 0, 0);
+    startDate.setUTCDate(now.getUTCDate() - 29);
+    startDate.setUTCHours(0, 0, 0, 0);
     return startDate;
   }
   const currentWeekStart = getWeekStart(now);
   startDate.setTime(currentWeekStart.getTime());
-  startDate.setDate(startDate.getDate() - 7 * 7);
+  startDate.setUTCDate(startDate.getUTCDate() - 7 * 7);
   return startDate;
 }
 

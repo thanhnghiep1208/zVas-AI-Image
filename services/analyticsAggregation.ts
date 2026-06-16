@@ -211,26 +211,37 @@ export function buildMonthlyTokenStatsFromEvents(
 export function buildMonthlyTopModelStatsFromEvents(
   events: AnalyticsEventRecord[]
 ): MonthlyTopModelStats {
-  const modelCounts = new Map<string, number>();
+  const attemptCounts = new Map<string, number>();
+  const successCounts = new Map<string, number>();
 
   events.forEach((data) => {
-    if (data.event_name !== 'image_generation_started') return;
     const modelName = data.model_name || 'unknown';
     const count = data.image_count || 1;
-    modelCounts.set(modelName, (modelCounts.get(modelName) || 0) + count);
+    if (data.event_name === 'image_generation_started') {
+      attemptCounts.set(modelName, (attemptCounts.get(modelName) ?? 0) + count);
+    } else if (data.event_name === 'image_generation_succeeded') {
+      successCounts.set(modelName, (successCounts.get(modelName) ?? 0) + count);
+    }
   });
+
+  const allModels = new Set([...attemptCounts.keys(), ...successCounts.keys()]);
 
   let topModelName = 'N/A';
   let topModelCount = 0;
-  modelCounts.forEach((count, modelName) => {
+  allModels.forEach((modelName) => {
+    const count = attemptCounts.get(modelName) ?? 0;
     if (count > topModelCount) {
       topModelCount = count;
       topModelName = modelName;
     }
   });
 
-  const modelBreakdown = Array.from(modelCounts.entries())
-    .map(([modelName, requestCount]) => ({ modelName, requestCount }))
+  const modelBreakdown = Array.from(allModels)
+    .map((modelName) => ({
+      modelName,
+      requestCount: attemptCounts.get(modelName) ?? 0,
+      successCount: successCounts.get(modelName) ?? 0,
+    }))
     .sort((a, b) => b.requestCount - a.requestCount);
 
   return { modelName: topModelName, requestCount: topModelCount, modelBreakdown };
@@ -346,10 +357,10 @@ export function aggregateHistoryCountsByUid(
 
 const getWeekStart = (date: Date): Date => {
   const result = new Date(date);
-  const day = result.getDay();
+  const day = result.getUTCDay();
   const diff = day === 0 ? -6 : 1 - day;
-  result.setDate(result.getDate() + diff);
-  result.setHours(0, 0, 0, 0);
+  result.setUTCDate(result.getUTCDate() + diff);
+  result.setUTCHours(0, 0, 0, 0);
   return result;
 };
 
@@ -372,13 +383,13 @@ export function aggregateTrendPoints(
   const startDate = new Date(now);
 
   if (range === '30d') {
-    startDate.setDate(now.getDate() - 29);
-    startDate.setHours(0, 0, 0, 0);
+    startDate.setUTCDate(now.getUTCDate() - 29);
+    startDate.setUTCHours(0, 0, 0, 0);
 
     const dayMap = new Map<string, number>();
     for (let i = 0; i < 30; i += 1) {
       const day = new Date(startDate);
-      day.setDate(startDate.getDate() + i);
+      day.setUTCDate(startDate.getUTCDate() + i);
       dayMap.set(day.toISOString().slice(0, 10), 0);
     }
 
@@ -415,7 +426,7 @@ export function aggregateTrendPoints(
 
   const currentWeekStart = getWeekStart(now);
   startDate.setTime(currentWeekStart.getTime());
-  startDate.setDate(startDate.getDate() - 7 * 7);
+  startDate.setUTCDate(startDate.getUTCDate() - 7 * 7);
 
   const weekStarts: Date[] = [];
   const weekMap = new Map<string, Set<string>>();
@@ -425,7 +436,7 @@ export function aggregateTrendPoints(
 
   for (let i = 0; i < 8; i += 1) {
     const weekStart = new Date(firstWeekStart);
-    weekStart.setDate(firstWeekStart.getDate() + i * 7);
+    weekStart.setUTCDate(firstWeekStart.getUTCDate() + i * 7);
     const weekKey = weekStart.toISOString().slice(0, 10);
     weekStarts.push(weekStart);
     weekMap.set(weekKey, new Set<string>());

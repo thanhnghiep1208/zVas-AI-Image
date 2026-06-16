@@ -1,24 +1,18 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import type { QueryDocumentSnapshot } from 'firebase/firestore';
 import {
   db,
   collection,
-  query,
-  where,
   getDocs,
   doc,
   getDoc,
-  orderBy,
-  limit,
-  startAfter,
 } from '../../firebase';
 import { Clock, Image as ImageIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { describeApiOrNetworkError } from '../../utils/userFacingError';
-import { aggregateHistoryCountsByUid, monthBoundsFromKey } from '../../services/analyticsAggregation';
+import { monthBoundsFromKey } from '../../services/analyticsAggregation';
+import { getAnalyticsEventsByDateRangeAndName } from '../../data/analyticsRepository';
 import {
   STATS_BY_USER_MONTH_COLLECTION,
-  HISTORY_AGG_PAGE_SIZE,
 } from './constants';
 import type { AnalyticsUserRow, UserHistoryScanInfo } from './types';
 
@@ -82,33 +76,22 @@ export const UserHistoryCountsPanel: React.FC<{ monthKey: string }> = ({ monthKe
           return;
         }
 
-        const historyRows: Array<{ uid?: string }> = [];
-        let lastDoc: QueryDocumentSnapshot | undefined;
-        let totalDocs = 0;
+        const events = await getAnalyticsEventsByDateRangeAndName(
+          monthRange.startDate,
+          monthRange.endDate,
+          'image_generation_succeeded'
+        );
 
-        while (true) {
-          const base = [
-            collection(db, 'history'),
-            where('createdAt', '>=', monthRange.startDate),
-            where('createdAt', '<', monthRange.endDate),
-            orderBy('createdAt', 'asc'),
-            limit(HISTORY_AGG_PAGE_SIZE),
-          ] as const;
-          const historyQ = lastDoc ? query(...base, startAfter(lastDoc)) : query(...base);
-          const historySnap = await getDocs(historyQ);
-          if (historySnap.empty) break;
+        const counts: Record<string, number> = {};
+        events.forEach((ev) => {
+          const uid = ev.user_id;
+          if (typeof uid === 'string') {
+            counts[uid] = (counts[uid] ?? 0) + (ev.image_count ?? 1);
+          }
+        });
 
-          totalDocs += historySnap.size;
-          historySnap.forEach((docSnap) => {
-            historyRows.push(docSnap.data() as { uid?: string });
-          });
-
-          lastDoc = historySnap.docs[historySnap.docs.length - 1];
-          if (historySnap.size < HISTORY_AGG_PAGE_SIZE) break;
-        }
-
-        setUserCounts(aggregateHistoryCountsByUid(historyRows));
-        setScanInfo({ mode: 'paginated', docCount: totalDocs });
+        setUserCounts(counts);
+        setScanInfo({ mode: 'paginated', docCount: events.length });
       } catch (error: unknown) {
         const msg = error instanceof Error ? error.message : String(error);
         if (msg.includes('Quota exceeded')) {
@@ -144,11 +127,11 @@ export const UserHistoryCountsPanel: React.FC<{ monthKey: string }> = ({ monthKe
 
   const scanHint =
     scanInfo?.mode === 'precomputed'
-      ? 'Nguồn: doc stats_by_user_month/{tháng} (1 lần đọc). Bấm cập nhật để quét lại history trên client.'
+      ? 'Nguồn: doc stats_by_user_month/{tháng} (1 lần đọc). Bấm cập nhật để quét lại analytics_events.'
       : scanInfo?.mode === 'missing_precomputed'
-        ? 'Chưa có doc stats_by_user_month/{tháng}. Bấm "Cập nhật số ảnh" để quét history thủ công.'
+        ? 'Chưa có doc stats_by_user_month/{tháng}. Bấm "Cập nhật số ảnh" để quét analytics_events thủ công.'
         : scanInfo?.mode === 'paginated' && typeof scanInfo.docCount === 'number'
-          ? `Đã quét ${scanInfo.docCount.toLocaleString('vi-VN')} bản ghi history (pagination ${HISTORY_AGG_PAGE_SIZE}/trang).`
+          ? `Đã quét ${scanInfo.docCount.toLocaleString('vi-VN')} events image_generation_succeeded từ analytics_events.`
           : null;
 
   return (
@@ -165,7 +148,7 @@ export const UserHistoryCountsPanel: React.FC<{ monthKey: string }> = ({ monthKe
             Một lần đọc <code className="text-gray-400">users</code>
             {scanInfo?.mode === 'precomputed'
               ? ' + doc tổng hợp theo tháng (Cloud Function / job có thể ghi sẵn).'
-              : ' + history theo tháng (pagination getDocs + orderBy createdAt).'}
+              : ' + analytics_events (image_generation_succeeded) theo tháng.'}
             {scanHint ? <span className="mt-1 block text-gray-500">{scanHint}</span> : null}
           </p>
         </div>
