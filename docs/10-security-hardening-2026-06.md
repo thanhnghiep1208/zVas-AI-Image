@@ -38,18 +38,29 @@ Dev: CSP tắt như cũ (tránh conflict Vite HMR WebSocket).
 
 ---
 
-## 2. CORS Warning khi thiếu ALLOWED_ORIGINS
+## 2. CORS — Fail Closed khi thiếu ALLOWED_ORIGINS
 
-**Trước:** Nếu không set `ALLOWED_ORIGINS`, server im lặng dùng `origin: true` (cho phép mọi origin).
+**Trước:** Nếu không set `ALLOWED_ORIGINS`, server im lặng dùng `origin: true` (cho phép mọi origin). Sau đó nâng lên log `[WARN]` nhưng vẫn allow.
 
-**Sau:** Production log `[WARN]` rõ ràng khi startup:
+**Sau:** Production **chặn toàn bộ cross-origin requests** khi `ALLOWED_ORIGINS` không được set:
+
+```typescript
+// server.ts
+origin: allowedOriginsEnv
+  ? (origin, cb) => { /* whitelist check */ }
+  : isProd
+    ? false   // chặn tất cả cross-origin
+    : true,   // dev: open
+```
+
+Log khi startup (production, không có `ALLOWED_ORIGINS`):
 
 ```
-[WARN] ALLOWED_ORIGINS is not set — CORS is open to all origins.
-       Set ALLOWED_ORIGINS=https://your-domain.com in production.
+[WARN] ALLOWED_ORIGINS is not set — all cross-origin requests are blocked in production.
+       Set ALLOWED_ORIGINS=https://your-domain.com to allow browser clients.
 ```
 
-Behavior runtime không thay đổi (vẫn allow để không break deploy hiện tại). Warning giúp phát hiện qua Cloud Run logs.
+**Hệ quả:** Deploy production **bắt buộc** phải set `ALLOWED_ORIGINS`. Thiếu → browser không thể gọi API (mặc dù cùng origin vẫn hoạt động — chỉ cross-origin bị chặn).
 
 ---
 
@@ -79,16 +90,60 @@ Logic tại `server/lib/validateUserInput.ts` → `validatePassword()`.
 
 ---
 
-## 5. Rate Limit Fallback Warning
+## 5. Rate Limit — Fail Closed khi Firestore lỗi
 
-**Trước:** Khi Firestore rate limit lỗi, fallback memory store âm thầm — không biết đang mất distributed consistency.
+**Trước:** Khi Firestore rate limit lỗi, fallback sang in-memory store âm thầm — không chia sẻ trạng thái giữa các Cloud Run instances → có thể bypass rate limit trong outage.
 
-**Sau:** Log rõ hơn:
+**Sau:** Production **fail closed** — ném lỗi thay vì fallback:
 
+```typescript
+// server/lib/rateLimit/index.ts
+export async function tryConsumeRateLimit(userId: string): Promise<boolean> {
+  if (cachedBackend === 'firestore') {
+    return tryConsumeRateLimitFirestore(userId); // throws nếu Firestore lỗi
+  }
+  return tryConsumeRateLimitMemory(userId);
+}
 ```
-[WARN] Firestore rate limit unavailable — falling back to in-memory store.
-       This is NOT safe in multi-instance deployments.
+
+Route handler bắt lỗi và trả **HTTP 503**:
+
+```typescript
+// server/routes/rateLimit.ts
+try {
+  allowed = await tryConsumeRateLimit(userId);
+} catch (error) {
+  console.error('[ERROR] Rate limit backend unavailable:', error);
+  return res.status(503).json({ error: 'rate_limit_unavailable' });
+}
 ```
+
+**Hệ quả:** Firestore outage → request bị từ chối bằng 503 thay vì được cho qua không giới hạn. Dev local không bị ảnh hưởng (dùng memory store, không bao giờ throw).
+
+---
+
+## 5b. SSRF — Validate Base URL trong `/api/generate`
+
+**Trước:** `body.seedanceBaseUrl` và `body.seedreamBaseUrl` được truyền thẳng vào `fetch()` mà không kiểm tra — client có thể redirect request đến server tùy ý (SSRF).
+
+**Sau:** Base URL được validate trước khi dùng bằng hàm dùng chung `validateHttpsBaseUrl`:
+
+```typescript
+// server/lib/validateBaseUrl.ts  (shared)
+export function validateHttpsBaseUrl(baseUrl, provider)
+  : { ok: true; normalized: string } | { ok: false; error: string }
+
+// server/routes/generate.ts
+const baseCheck = validateHttpsBaseUrl(baseUrlRaw, 'Seedance');
+if (baseCheck.ok === false) {
+  return res.status(400).json({ error: baseCheck.error });
+}
+const baseUrl = baseCheck.normalized; // trailing slash stripped
+```
+
+Kiểm tra: URL phải parse được và protocol phải là `https:`. Cùng logic đã có trong `providerTest.ts` — nay tách ra `server/lib/validateBaseUrl.ts` để share.
+
+**Phạm vi:** Áp dụng cho cả Seedance và Seedream trong `generate.ts`. `providerTest.ts` refactor để import từ shared lib thay vì inline.
 
 ---
 

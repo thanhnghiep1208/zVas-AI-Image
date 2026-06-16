@@ -1,23 +1,8 @@
 import type { Request, Response } from 'express';
 import type { Firestore } from 'firebase-admin/firestore';
 import { resolveProviderFromSettings } from '../lib/resolveProvider';
+import { validateHttpsBaseUrl } from '../lib/validateBaseUrl';
 import type { AuthenticatedRequest, ProviderTestRequestBody } from '../types';
-
-function validateHttpsBaseUrl(
-  baseUrl: string,
-  provider: string
-): { ok: true; normalized: string } | { ok: false; error: string } {
-  let parsedBaseUrl: URL;
-  try {
-    parsedBaseUrl = new URL(baseUrl);
-  } catch {
-    return { ok: false, error: `${provider} base URL không hợp lệ.` };
-  }
-  if (parsedBaseUrl.protocol !== 'https:') {
-    return { ok: false, error: `${provider} base URL phải dùng https://` };
-  }
-  return { ok: true, normalized: baseUrl.replace(/\/+$/, '') };
-}
 
 export function createPostProviderTestHandler(db: Firestore) {
   return async function postProviderTest(req: Request, res: Response) {

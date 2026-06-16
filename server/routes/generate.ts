@@ -8,6 +8,7 @@ import {
 } from '../lib/resolveProvider';
 import type { AuthenticatedRequest, GenerateRequestBody } from '../types';
 import { validatePrompt } from '../lib/validateUserInput';
+import { validateHttpsBaseUrl } from '../lib/validateBaseUrl';
 
 export function createPostGenerateHandler(db: Firestore) {
   return async function postGenerate(req: Request, res: Response) {
@@ -61,11 +62,16 @@ export function createPostGenerateHandler(db: Firestore) {
 
       if (provider === 'seedance') {
         const apiKey = process.env.SEEDANCE_API_KEY;
-        const baseUrl = body.seedanceBaseUrl || settings.seedanceBaseUrl || 'https://api.seedance.com/v1';
+        const baseUrlRaw = (body.seedanceBaseUrl || settings.seedanceBaseUrl || 'https://api.seedance.com/v1').trim();
         const model = body.seedanceModel || settings.seedanceModel || 'seed-1.5-pro';
         if (!apiKey) {
           return res.status(400).json({ error: 'Seedance API Key chưa được cấu hình.' });
         }
+        const baseCheck = validateHttpsBaseUrl(baseUrlRaw, 'Seedance');
+        if (baseCheck.ok === false) {
+          return res.status(400).json({ error: baseCheck.error });
+        }
+        const baseUrl = baseCheck.normalized;
 
         const response = await fetch(`${baseUrl}/images/generations`, {
           method: 'POST',
@@ -99,16 +105,22 @@ export function createPostGenerateHandler(db: Firestore) {
 
       if (provider === 'seedream') {
         const apiKey = process.env.SEEDREAM_API_KEY;
-        const baseUrl =
+        const baseUrlRaw = (
           body.seedreamBaseUrl ||
           settings.seedreamBaseUrl ||
-          'https://ark.ap-southeast.bytepluses.com/api/v3';
+          'https://ark.ap-southeast.bytepluses.com/api/v3'
+        ).trim();
         const model = body.seedreamModel || settings.seedreamModel || 'seedream-5-0-260128';
         if (!apiKey) {
           return res.status(400).json({ error: 'Seedream API Key chưa được cấu hình.' });
         }
+        const baseCheck = validateHttpsBaseUrl(baseUrlRaw, 'Seedream');
+        if (baseCheck.ok === false) {
+          return res.status(400).json({ error: baseCheck.error });
+        }
+        const baseUrl = baseCheck.normalized;
 
-        const response = await fetch(`${baseUrl.replace(/\/+$/, '')}/images/generations`, {
+        const response = await fetch(`${baseUrl}/images/generations`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

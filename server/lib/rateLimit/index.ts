@@ -9,21 +9,14 @@ export function resetRateLimitBackendForTests(): void {
   cachedBackend = resolveRateLimitBackend();
 }
 
-/** Returns false when the user exceeded the per-minute limit. */
+/**
+ * Returns false when the user exceeded the per-minute limit.
+ * Throws if the configured backend (Firestore in production) is unavailable —
+ * callers must handle this as a 503 rather than silently bypassing the limit.
+ */
 export async function tryConsumeRateLimit(userId: string): Promise<boolean> {
   if (cachedBackend === 'firestore') {
-    try {
-      return await tryConsumeRateLimitFirestore(userId);
-    } catch (error) {
-      // WARNING: memory fallback does not share state across Cloud Run instances —
-      // rate limits may be bypassed under load or during Firestore outages.
-      console.error(
-        '[WARN] Firestore rate limit unavailable — falling back to in-memory store. ' +
-          'This is NOT safe in multi-instance deployments.',
-        error
-      );
-      return tryConsumeRateLimitMemory(userId);
-    }
+    return tryConsumeRateLimitFirestore(userId);
   }
   return tryConsumeRateLimitMemory(userId);
 }

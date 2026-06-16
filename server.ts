@@ -53,8 +53,8 @@ async function startServer() {
   const allowedOriginsEnv = process.env.ALLOWED_ORIGINS;
   if (isProd && !allowedOriginsEnv) {
     console.warn(
-      '[WARN] ALLOWED_ORIGINS is not set — CORS is open to all origins. ' +
-        'Set ALLOWED_ORIGINS=https://your-domain.com in production.'
+      '[WARN] ALLOWED_ORIGINS is not set — all cross-origin requests are blocked in production. ' +
+        'Set ALLOWED_ORIGINS=https://your-domain.com to allow browser clients.'
     );
   }
   app.use(
@@ -64,7 +64,9 @@ async function startServer() {
             const list = allowedOriginsEnv.split(',').map((o) => o.trim());
             cb(null, !origin || list.includes(origin));
           }
-        : true,
+        : isProd
+          ? false
+          : true,
       credentials: true,
     })
   );

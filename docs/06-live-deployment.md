@@ -74,7 +74,7 @@ Dùng lần đầu tạo service hoặc môi trường clean:
 
 > Lưu ý sau hardening: API key provider **không còn nhập qua Admin UI** và **không lưu ở Firestore**. Bắt buộc cấu hình qua env/secrets của Cloud Run.
 
-**Rate limit (multi-instance):** production mặc định `RATE_LIMIT_BACKEND=firestore` (không cần set nếu `NODE_ENV=production`). Dev local dùng memory. Tùy chọn ép: `--set-env-vars=RATE_LIMIT_BACKEND=firestore`.
+**Rate limit (multi-instance):** production mặc định `RATE_LIMIT_BACKEND=firestore` (không cần set nếu `NODE_ENV=production`). Dev local dùng memory. Tùy chọn ép: `--set-env-vars=RATE_LIMIT_BACKEND=firestore`. Khi Firestore không khả dụng, server trả **503** thay vì fallback — đảm bảo rate limit không bị bypass.
 
 ### A. Chỉ 1 key (Gemini-only)
 
@@ -165,7 +165,7 @@ gcloud run services update-traffic ai-image-zvas --region us-west1 --to-revision
 - `firebase-applet-config.json` tồn tại trong working tree (không commit).
 - Firestore rules/indexes đã deploy đúng project/database.
 - Secrets mới đã có version và IAM đúng.
-- **`ALLOWED_ORIGINS` đã set đúng domain production** — thiếu → server log `[WARN]` và CORS mở hoàn toàn.
+- **`ALLOWED_ORIGINS` đã set đúng domain production** — thiếu → CORS fail closed (`origin: false`), browser không gọi được API dù app vẫn khởi động.
 - Chọn đúng mode (A/B/C) theo thay đổi của phiên deploy.
 - `npm test` pass (26 tests: aggregation + rate limit + validateUserInput + generation prompts).
 
