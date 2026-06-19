@@ -125,6 +125,7 @@ gcloud run deploy ai-image-zvas \
 
 ## 5) Smoke test
 
+- **Health check:** `curl https://<service-url>/_health` → `{"status":"ok"}` (dùng `/_health`, không `/healthz` — Firebase App Hosting chặn `/healthz` ở infra level).
 - Mở URL live, hard refresh.
 - Vào Admin → tab Cấu hình: xác nhận không còn ô nhập API key (chỉ còn enable provider/model/base URL).
 - Bấm **Kiểm tra tất cả provider đang bật** để xác nhận server đã đọc secrets/env đúng.

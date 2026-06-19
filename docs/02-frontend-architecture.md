@@ -29,7 +29,8 @@
 | `repositories/userSessionRepository.ts` | Firestore `users/{uid}/sessions` |
 | `utils/authSessionId.ts`                | `zvas_auth_session_id` (localStorage), `buildDeviceLabel` |
 | `hooks/`                                | Business logic tách khỏi UI                     |
-| `hooks/useUserSessions.ts`              | Đăng ký phiên, heartbeat, revoke, remote logout |
+| `hooks/usePolling.ts`                   | Shared `setInterval` + `visibilitychange` hook; `enabled`, `minFocusGapMs`, `runImmediately`, `runOnFocus` |
+| `hooks/useUserSessions.ts`              | Đăng ký phiên, heartbeat (via `usePolling`), revoke, remote logout |
 | `hooks/useAdminUsers.ts`                | Admin: users, pending, approve/reject           |
 | `hooks/useAdminSettings.ts`             | Admin: `settings/global`, test provider         |
 | `hooks/useAnalyticsDashboardData.ts`    | Analytics: bundle tháng, cache TTL, `requestVersion` |
@@ -51,7 +52,8 @@
 - `useUserSessions`: sau đăng nhập — ghi `users/{uid}/sessions/{sessionId}`, heartbeat, modal **Phiên đăng nhập**, đăng xuất phiên từ xa (`repositories/userSessionRepository.ts`).
 - `useGlobalSettingsAndApiKey`: `settings/global` bằng `**getDoc**` + refetch theo chu kỳ / visibility (không listener liên tục). Trả về `GlobalSettings | null` (typed, không còn `any`).
 - `useHistoryImages`: đồng bộ history + IndexedDB.
-- `usePendingUsersNotifier`: admin — **`onSnapshot`** Firestore realtime (thay polling 45s); cập nhật tức thì khi có user pending mới.
+- `usePendingUsersNotifier`: admin — polling 5 phút qua `usePolling`; toast khi số user pending tăng.
+- `usePolling`: shared hook — `setInterval` + `visibilitychange` listener; dùng chung bởi `usePendingUsersNotifier`, `useGlobalSettingsAndApiKey`, `useAuthAndProfile`, `useUserSessions` (heartbeat). Chi tiết: `docs/11-reliability-polling-2026-06.md`.
 - `useImageGeneration`: pipeline generate + persist + optimistic update; export thêm `resetGenerationWorkspace()` (tắt loading, xóa ảnh vừa tạo trên UI). Gọi `trackEvent` + **GA4** (`begin_checkout`, `purchase`, `exception`) khi bản production (`utils/gtagEvent.ts`).
 - `useGeneratedImageDownload`: tải PNG/JPG + xử lý nền.
 
