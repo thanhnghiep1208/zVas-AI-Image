@@ -85,7 +85,7 @@ async function startServer() {
     return next(err);
   });
 
-  app.get('/healthz', (_req, res) => {
+  app.get('/_health', (_req, res) => {
     res.json({ status: 'ok' });
   });
 
