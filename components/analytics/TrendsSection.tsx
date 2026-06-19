@@ -51,7 +51,7 @@ const TrendsChart = ({
         <div className="h-72 flex items-center justify-center text-sm text-red-400">{error}</div>
       ) : (
         <div className="h-72">
-          <ResponsiveContainer width="100%" height="100%">
+          <ResponsiveContainer width="100%" height={288}>
             <LineChart data={data} margin={{ top: 10, right: 8, left: -15, bottom: 8 }}>
               <CartesianGrid stroke="#334155" strokeDasharray="3 3" opacity={0.55} />
               <XAxis
