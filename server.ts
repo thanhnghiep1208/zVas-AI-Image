@@ -85,6 +85,10 @@ async function startServer() {
     return next(err);
   });
 
+  app.get('/healthz', (_req, res) => {
+    res.json({ status: 'ok' });
+  });
+
   registerApiRoutes(app);
 
   if (process.env.NODE_ENV !== 'production') {
@@ -108,9 +112,18 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
+  const server = app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running on http://0.0.0.0:${PORT}`);
   });
+
+  // Cloud Run sends SIGTERM and waits up to 10s before SIGKILL.
+  // Stop accepting connections immediately, let in-flight requests finish.
+  const shutdown = () => {
+    server.close(() => process.exit(0));
+    setTimeout(() => process.exit(1), 8000).unref();
+  };
+  process.once('SIGTERM', shutdown);
+  process.once('SIGINT', shutdown);
 }
 
 startServer().catch((err) => {
