@@ -25,25 +25,10 @@ export const generateImageVariations = async (
     throw new Error("You must be logged in to generate images.");
   }
 
-  // Get Firebase ID Token (for rate limiting on server)
   const idToken = await currentUser.getIdToken();
 
   const generateSingleImage = async (prompt: string): Promise<GeneratedImage> => {
     try {
-      // 1. Call server-side rate limit endpoint first
-      const rateLimitResponse = await fetch('/api/rate-limit', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${idToken}`,
-        },
-      });
-
-      if (!rateLimitResponse.ok) {
-        const errorData = await rateLimitResponse.json();
-        throw new Error(errorData.error || "Rate limit exceeded.");
-      }
-
       const mainImage = imageFile
         ? { data: await fileToBase64(imageFile), mimeType: imageFile.type }
         : null;

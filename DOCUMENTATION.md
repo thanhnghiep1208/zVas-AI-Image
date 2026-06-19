@@ -13,7 +13,7 @@ Tài liệu đã được tách theo từng chức năng để dễ đọc và b
 7. [07 - Refactor & cập nhật 05/2026](./docs/07-refactor-2026-05.md)
 8. [08 - Đăng nhập & tài khoản](./docs/08-auth-users-setup.md) — username/password, `users/{uid}`, phiên đa thiết bị, service account local
 9. [09 - Optimize 06/2026](./docs/09-optimize-2026-06.md)
-10. [10 - Security Hardening 06/2026](./docs/10-security-hardening-2026-06.md) — CSP, prompt limit, password 12 chars, deps upgrade
+10. [10 - Security Hardening 06/2026](./docs/10-security-hardening-2026-06.md) — CSP, prompt limit, password 12 chars, SSRF validate, Vite define removal, deps upgrade
 
 ## Gợi ý đọc nhanh
 
@@ -23,7 +23,7 @@ Tài liệu đã được tách theo từng chức năng để dễ đọc và b
 - Cấu hình đăng nhập / tạo user / lỗi “chưa được cấu hình”: xem `docs/08-auth-users-setup.md`.
 - Phiên đăng nhập đa thiết bị (xem, đăng xuất phiên): `docs/08-auth-users-setup.md` § Phiên đăng nhập đa thiết bị.
 - **Thay đổi refactor 05/2026** (admin/analytics split, aggregation, rate limit Firestore, Dockerfile): xem `docs/07-refactor-2026-05.md`.
-- **Security hardening 06/2026** (CSP, prompt limit, password policy, firebase-admin v14, vite v8): xem `docs/10-security-hardening-2026-06.md`.
+- **Security hardening 06/2026** (CSP, prompt limit, password policy, SSRF validate, Vite define removal, firebase-admin v14, vite v8): xem `docs/10-security-hardening-2026-06.md`.
 - UI shell, logo, banner Create, upload/kết quả: `docs/02-frontend-architecture.md`.
 - So sánh model Gemini (popup header): `docs/so-sanh-model-gemini.md`.
 

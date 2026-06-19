@@ -9,10 +9,23 @@ import {
 import type { AuthenticatedRequest, GenerateRequestBody } from '../types';
 import { validatePrompt } from '../lib/validateUserInput';
 import { validateHttpsBaseUrl } from '../lib/validateBaseUrl';
+import { tryConsumeRateLimit } from '../lib/rateLimit/index';
 
 export function createPostGenerateHandler(db: Firestore) {
   return async function postGenerate(req: Request, res: Response) {
     try {
+      const { uid } = (req as AuthenticatedRequest).user;
+      let rateLimitAllowed: boolean;
+      try {
+        rateLimitAllowed = await tryConsumeRateLimit(uid);
+      } catch (err) {
+        console.error('[ERROR] Rate limit backend unavailable:', err);
+        return res.status(503).json({ error: 'rate_limit_unavailable' });
+      }
+      if (!rateLimitAllowed) {
+        return res.status(429).json({ error: 'Rate limit exceeded. Please wait a minute.' });
+      }
+
       const body = (req as AuthenticatedRequest & { body: GenerateRequestBody }).body;
       const settingsDoc = await db.collection('settings').doc('global').get();
       const settings = settingsDoc.exists ? settingsDoc.data() || {} : {};

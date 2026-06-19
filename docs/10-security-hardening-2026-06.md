@@ -90,35 +90,36 @@ Logic tại `server/lib/validateUserInput.ts` → `validatePassword()`.
 
 ---
 
-## 5. Rate Limit — Fail Closed khi Firestore lỗi
+## 5. Rate Limit — Fix TOCTOU race condition + Fail Closed khi Firestore lỗi (2026-06-19)
 
-**Trước:** Khi Firestore rate limit lỗi, fallback sang in-memory store âm thầm — không chia sẻ trạng thái giữa các Cloud Run instances → có thể bypass rate limit trong outage.
+**Vấn đề TOCTOU (Time-Of-Check-Time-Of-Use):** Trước đây, rate limit dùng 2 request tách biệt — client gọi `POST /api/rate-limit` để "đặt chỗ", rồi gọi `POST /api/generate`. Client có thể bypass giới hạn bằng cách gọi rate-limit một lần, sau đó gửi nhiều generate song song trước khi counter cập nhật.
 
-**Sau:** Production **fail closed** — ném lỗi thay vì fallback:
+**Trước:** Route `/api/rate-limit` tách biệt; `server/routes/generate.ts` không kiểm tra limit.
 
-```typescript
-// server/lib/rateLimit/index.ts
-export async function tryConsumeRateLimit(userId: string): Promise<boolean> {
-  if (cachedBackend === 'firestore') {
-    return tryConsumeRateLimitFirestore(userId); // throws nếu Firestore lỗi
-  }
-  return tryConsumeRateLimitMemory(userId);
-}
-```
-
-Route handler bắt lỗi và trả **HTTP 503**:
+**Sau:** `tryConsumeRateLimit()` được gọi trực tiếp bên trong `createPostGenerateHandler`, ngay đầu handler — trước mọi logic generate:
 
 ```typescript
-// server/routes/rateLimit.ts
+// server/routes/generate.ts
+const { uid } = (req as AuthenticatedRequest).user;
+let rateLimitAllowed: boolean;
 try {
-  allowed = await tryConsumeRateLimit(userId);
-} catch (error) {
-  console.error('[ERROR] Rate limit backend unavailable:', error);
+  rateLimitAllowed = await tryConsumeRateLimit(uid);
+} catch (err) {
+  console.error('[ERROR] Rate limit backend unavailable:', err);
   return res.status(503).json({ error: 'rate_limit_unavailable' });
 }
+if (!rateLimitAllowed) {
+  return res.status(429).json({ error: 'Rate limit exceeded. Please wait a minute.' });
+}
 ```
 
-**Hệ quả:** Firestore outage → request bị từ chối bằng 503 thay vì được cho qua không giới hạn. Dev local không bị ảnh hưởng (dùng memory store, không bao giờ throw).
+Check và generate là **một transaction HTTP duy nhất** — không còn cửa sổ race condition.
+
+Route `/api/rate-limit` và file `server/routes/rateLimit.ts` đã bị **xóa**. Client (`services/geminiService.ts`) bỏ pre-flight call, gọi thẳng `/api/generate`.
+
+**Fail closed:** Nếu Firestore rate limit backend throw, generate trả **HTTP 503** (`rate_limit_unavailable`) thay vì cho qua. Dev dùng memory store — không ảnh hưởng.
+
+**Error code analytics:** Message `'Rate limit exceeded...'` chứa "rate limit" → detection pattern `msgLower.includes('rate limit')` trong `geminiService.ts` → `errorCode = 'rate_limit'` ✓
 
 ---
 
@@ -147,7 +148,33 @@ Kiểm tra: URL phải parse được và protocol phải là `https:`. Cùng lo
 
 ---
 
-## 6. Dependency Upgrades (Breaking)
+## 6. Xóa Vite `define` inject API key vào client bundle (2026-06-19)
+
+**Trước:** `vite.config.ts` có block `define` inject hai biến môi trường vào bundle JavaScript client lúc build:
+
+```typescript
+define: {
+  'process.env.API_KEY': JSON.stringify(process.env.API_KEY || ''),
+  'process.env.GEMINI_API_KEY': JSON.stringify(process.env.GEMINI_API_KEY || ''),
+},
+```
+
+**Rủi ro:** Nếu CI/CD build pipeline vô tình có `GEMINI_API_KEY` trong environment (ví dụ shared env vars), giá trị thật sẽ bị hardcode vào `dist/*.js` — expose cho bất kỳ ai xem source.
+
+**Sau:** Block `define` và import `loadEnv` bị xóa hoàn toàn khỏi `vite.config.ts`. Bundle client không còn đọc bất kỳ API key nào từ build environment.
+
+**Tại sao không ảnh hưởng chức năng:**
+
+- Không có file client nào chứa literal `process.env.API_KEY` hay `process.env.GEMINI_API_KEY` — Vite define thực chất không substitute gì trong bundle hiện tại.
+- `utils/runtimeEnv.ts` dùng dynamic access `process.env[key]` (không phải literal) — không bị Vite define match. Có guard `typeof process !== 'undefined'` → không throw trong browser.
+- `hooks/useGlobalSettingsAndApiKey.ts` chỉ dùng kết quả `getRuntimeEnvValue()` để set boolean `hasApiKey` — khi không có key, trả `''` → `hasApiKey` giữ nguyên `false` (đúng hành vi).
+- Mọi API call thực sự đều server-side: `server/routes/generate.ts` đọc `process.env.GEMINI_API_KEY` trong Node.js context, không liên quan Vite.
+
+**Ghi nhận:** Nếu cần test client-side key detection trong dev, dùng `VITE_API_KEY` hoặc `VITE_GEMINI_API_KEY` trong `.env.local` — path này an toàn vì VITE_ prefix chỉ inject khi developer chủ động set, không bao giờ match biến server-side như `GEMINI_API_KEY`.
+
+---
+
+## 7. Dependency Upgrades (Breaking)
 
 ### firebase-admin v13 → v14
 
@@ -179,7 +206,7 @@ Build config (`vite.config.ts`) không cần thay đổi — compatible.
 
 ---
 
-## 7. TDD — validateUserInput
+## 8. TDD — validateUserInput
 
 Tạo `server/lib/validateUserInput.ts` theo quy trình TDD:
 
@@ -189,7 +216,7 @@ Tạo `server/lib/validateUserInput.ts` theo quy trình TDD:
 
 ---
 
-## Trạng thái sau hardening
+## Trạng thái sau hardening (2026-06-19)
 
 | Kiểm tra | Kết quả |
 |----------|---------|
