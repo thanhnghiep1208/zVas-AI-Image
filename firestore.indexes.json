@@ -39,5 +39,14 @@
       ]
     }
   ],
-  "fieldOverrides": []
+  "fieldOverrides": [
+    {
+      "collectionGroup": "rate_limit_windows",
+      "fieldPath": "expireAt",
+      "indexes": [],
+      "ttlPolicy": {
+        "state": "ACTIVE"
+      }
+    }
+  ]
 }
