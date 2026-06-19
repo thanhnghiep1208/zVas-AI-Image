@@ -53,6 +53,7 @@ export interface MonthlyErrorBreakdownItem {
   count: number;
   lastOccurred: Date | null;
   severity: 'warning' | 'critical';
+  sampleMessages?: string[];
 }
 
 export interface MonthlyTokenStats {

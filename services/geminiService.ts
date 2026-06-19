@@ -112,19 +112,30 @@ export const generateImageVariations = async (
       const provider = String(globalSettings?.activeProvider || 'gemini');
 
       // Extract machine-readable error code BEFORE transforming to user-facing message
-      let errorCode = 'unknown';
-      if (userMessage.includes('429') || userMessage.toLowerCase().includes('quota exceeded') || userMessage.includes('RESOURCE_EXHAUSTED')) {
+      const msgLower = userMessage.toLowerCase();
+      let errorCode = 'unknown_error';
+      if (userMessage.includes('429') || msgLower.includes('quota exceeded') || userMessage.includes('RESOURCE_EXHAUSTED')) {
         errorCode = 'quota_exceeded';
-      } else if (userMessage.includes('403') || userMessage.toLowerCase().includes('forbidden')) {
+      } else if (userMessage.includes('403') || msgLower.includes('forbidden')) {
         errorCode = 'forbidden';
+      } else if (userMessage.includes('401') || msgLower.includes('unauthorized')) {
+        errorCode = 'auth_error';
+      } else if (userMessage.includes('500') || msgLower.includes('internal server error')) {
+        errorCode = 'server_error';
+      } else if (userMessage.includes('502') || msgLower.includes('bad gateway')) {
+        errorCode = 'server_error';
+      } else if (userMessage.includes('503') || msgLower.includes('service unavailable')) {
+        errorCode = 'service_unavailable';
       } else if (userMessage.includes('Requested entity was not found')) {
         errorCode = 'not_found';
-      } else if (userMessage.toLowerCase().includes('rate limit')) {
+      } else if (msgLower.includes('rate limit')) {
         errorCode = 'rate_limit';
-      } else if (userMessage.toLowerCase().includes('timeout') || userMessage.toLowerCase().includes('timed out')) {
+      } else if (msgLower.includes('timeout') || msgLower.includes('timed out')) {
         errorCode = 'timeout';
-      } else if (userMessage.toLowerCase().includes('failed to fetch') || userMessage.toLowerCase().includes('network')) {
+      } else if (msgLower.includes('failed to fetch') || msgLower.includes('network')) {
         errorCode = 'network_error';
+      } else if (msgLower.includes('safety') || msgLower.includes('content filter') || msgLower.includes('blocked')) {
+        errorCode = 'content_filter';
       } else if (userMessage.includes('No image was generated')) {
         errorCode = 'no_output';
       }

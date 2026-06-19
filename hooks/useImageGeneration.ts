@@ -282,6 +282,7 @@ export function useImageGeneration(params: UseImageGenerationParams) {
           generation_type: currentView,
           image_count: finalPrompts.length,
           error_code: errorMessage,
+          error_message_short: errorMessage,
         });
         ga4Exception(errorMessage, false);
       }

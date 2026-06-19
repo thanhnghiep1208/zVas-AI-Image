@@ -35,6 +35,7 @@ export interface AnalyticsEventRecord {
   total_tokens?: number;
   status?: string;
   error_code?: string;
+  error_message_short?: string;
   timestamp?: { toDate?: () => Date } | Date | null;
 }
 

@@ -378,11 +378,26 @@ export const ExpandableErrorBreakdown = ({
                   className="cursor-pointer border-t border-white/[0.06] transition-colors hover:bg-white/[0.04]"
                 >
                   <td className="px-3 py-2">
-                    <span
-                      className={item.severity === 'critical' ? 'text-red-400' : 'text-amber-400'}
-                    >
-                      {item.errorType}
-                    </span>
+                    <div className="group relative inline-flex items-center gap-1.5">
+                      <span
+                        className={item.severity === 'critical' ? 'text-red-400' : 'text-amber-400'}
+                      >
+                        {item.errorType}
+                      </span>
+                      {item.sampleMessages && item.sampleMessages.length > 0 && (
+                        <>
+                          <span className="cursor-help text-xs text-gray-600 select-none">ⓘ</span>
+                          <div className="pointer-events-none absolute bottom-full left-0 z-50 mb-1.5 hidden w-72 rounded-lg border border-white/[0.12] bg-gray-900 p-2.5 shadow-xl group-hover:block">
+                            <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-gray-500">Ví dụ message gốc</p>
+                            {item.sampleMessages.map((msg, i) => (
+                              <p key={i} className={`break-words text-[11px] leading-snug text-gray-300${i > 0 ? ' mt-1.5 border-t border-white/[0.06] pt-1.5' : ''}`}>
+                                {msg}
+                              </p>
+                            ))}
+                          </div>
+                        </>
+                      )}
+                    </div>
                   </td>
                   <td className="px-3 py-2 text-right text-white">{item.count}</td>
                   <td className="px-3 py-2 text-right text-gray-300">

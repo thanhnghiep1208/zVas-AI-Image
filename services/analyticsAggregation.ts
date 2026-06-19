@@ -26,18 +26,27 @@ const mapErrorType = (errorCode?: string): { errorType: string; severity: 'warni
   // Clean codes (new)
   if (normalized === 'quota_exceeded') return { errorType: 'Quota Exceeded (429)', severity: 'critical' };
   if (normalized === 'forbidden') return { errorType: 'API Key / Permission (403)', severity: 'critical' };
+  if (normalized === 'auth_error') return { errorType: 'Auth Error (401)', severity: 'critical' };
   if (normalized === 'not_found') return { errorType: 'Model Not Found', severity: 'warning' };
   if (normalized === 'rate_limit') return { errorType: 'Rate Limit', severity: 'warning' };
   if (normalized === 'timeout') return { errorType: 'API Timeout', severity: 'critical' };
   if (normalized === 'network_error') return { errorType: 'Network Error', severity: 'critical' };
   if (normalized === 'no_output') return { errorType: 'No Output', severity: 'warning' };
+  if (normalized === 'server_error') return { errorType: 'Server Error (500/502)', severity: 'critical' };
+  if (normalized === 'service_unavailable') return { errorType: 'Service Unavailable (503)', severity: 'critical' };
+  if (normalized === 'content_filter') return { errorType: 'Content Filter', severity: 'warning' };
+  if (normalized === 'invalid_prompt') return { errorType: 'Invalid Prompt', severity: 'warning' };
+  if (normalized === 'permission_denied') return { errorType: 'Permission Denied', severity: 'critical' };
   // Fallback keyword matching for legacy events
   if (normalized.includes('timeout') || normalized.includes('timed out')) return { errorType: 'API Timeout', severity: 'critical' };
   if (normalized.includes('429') || normalized.includes('quota') || normalized.includes('resource_exhausted')) return { errorType: 'Quota Exceeded (429)', severity: 'critical' };
   if (normalized.includes('403') || normalized.includes('forbidden')) return { errorType: 'API Key / Permission (403)', severity: 'critical' };
+  if (normalized.includes('401') || normalized.includes('unauthorized')) return { errorType: 'Auth Error (401)', severity: 'critical' };
+  if (normalized.includes('500') || normalized.includes('internal server error') || normalized.includes('502') || normalized.includes('bad gateway')) return { errorType: 'Server Error (500/502)', severity: 'critical' };
+  if (normalized.includes('503') || normalized.includes('service unavailable')) return { errorType: 'Service Unavailable (503)', severity: 'critical' };
   if (normalized.includes('not found') || normalized.includes('entity was not found')) return { errorType: 'Model Not Found', severity: 'warning' };
   if (normalized.includes('rate limit')) return { errorType: 'Rate Limit', severity: 'warning' };
-  if (normalized.includes('filter') || normalized.includes('safety')) return { errorType: 'Content Filter', severity: 'warning' };
+  if (normalized.includes('filter') || normalized.includes('safety') || normalized.includes('blocked')) return { errorType: 'Content Filter', severity: 'warning' };
   if (normalized.includes('failed to fetch') || normalized.includes('network')) return { errorType: 'Network Error', severity: 'critical' };
   if (normalized.includes('no image was generated')) return { errorType: 'No Output', severity: 'warning' };
   if (normalized.includes('prompt') || normalized.includes('invalid')) return { errorType: 'Invalid Prompt', severity: 'warning' };
@@ -146,16 +155,23 @@ export function buildMonthlyErrorBreakdownFromEvents(
     const { errorType, severity } = mapErrorType(data.error_code);
     const count = data.image_count || 1;
     const eventDate = toDateValue(data.timestamp);
+    const rawMsg = data.error_message_short?.trim() || '';
 
     const current = grouped.get(errorType);
     if (!current) {
-      grouped.set(errorType, { errorType, count, lastOccurred: eventDate, severity });
+      grouped.set(errorType, {
+        errorType, count, lastOccurred: eventDate, severity,
+        sampleMessages: rawMsg ? [rawMsg] : [],
+      });
       return;
     }
 
     current.count += count;
     if (eventDate && (!current.lastOccurred || eventDate > current.lastOccurred)) {
       current.lastOccurred = eventDate;
+    }
+    if (rawMsg && current.sampleMessages && current.sampleMessages.length < 3 && !current.sampleMessages.includes(rawMsg)) {
+      current.sampleMessages.push(rawMsg);
     }
   });
 
