@@ -12,6 +12,7 @@ import {
   type ProviderModelOption,
 } from '../constants/aiModels';
 import { getRuntimeEnvValue, isLikelyPlaceholderKey } from '../utils/runtimeEnv';
+import { usePolling } from './usePolling';
 
 /** Không dùng onSnapshot — refetch theo chu kỳ + khi quay lại tab. */
 const SETTINGS_POLL_INTERVAL_MS = 3 * 60 * 1000;
@@ -100,86 +101,74 @@ export function useGlobalSettingsAndApiKey(
     [providerKeysConfigured]
   );
 
+  // Reset state when user logs out
   useEffect(() => {
-    if (!user) {
-      setGlobalSettings(null);
-      setProviderKeysConfigured(DEFAULT_PROVIDER_KEYS);
-      return undefined;
-    }
-
-    const fetchProviderKeys = async () => {
-      try {
-        const idToken = await user.getIdToken();
-        const response = await fetch('/api/provider-keys', {
-          headers: { Authorization: `Bearer ${idToken}` },
-        });
-        if (!response.ok) return;
-        const data: { configured?: Partial<ProviderKeysConfigured> } = await response.json();
-        setProviderKeysConfigured({
-          ...DEFAULT_PROVIDER_KEYS,
-          ...data.configured,
-        });
-      } catch {
-        setProviderKeysConfigured(DEFAULT_PROVIDER_KEYS);
-      }
-    };
-
-    void fetchProviderKeys();
-
-    let pollTimer: ReturnType<typeof setInterval> | undefined;
-    let lastFetchAt = 0;
-
-    const fetchSettings = async () => {
-      const settingsRef = doc(db, 'settings', 'global');
-      try {
-        const docSnap = await getDoc(settingsRef);
-        lastFetchAt = Date.now();
-        if (docSnap.exists()) {
-          const settingsData = docSnap.data();
-          setGlobalSettings(settingsData);
-          sessionStorage.setItem('global_settings', JSON.stringify(settingsData));
-        }
-      } catch (error: unknown) {
-        const msg = error instanceof Error ? error.message : String(error);
-        const useCache =
-          msg.includes('Quota exceeded') || isFirestoreOfflineOrTransient(error);
-        if (useCache) {
-          if (isFirestoreOfflineOrTransient(error)) {
-            console.warn('Settings: Firestore unavailable (offline/transient), using cache if any.');
-          } else {
-            console.warn('Settings quota exceeded, using cache.');
-          }
-          const cached = sessionStorage.getItem('global_settings');
-          if (cached) {
-            try {
-              const parsed = JSON.parse(cached);
-              setGlobalSettings(parsed);
-            } catch {
-              /* ignore */
-            }
-          }
-        } else {
-          handleFirestoreError(error, OperationType.GET, 'settings/global');
-        }
-      }
-    };
-
-    void fetchSettings();
-    pollTimer = setInterval(() => void fetchSettings(), SETTINGS_POLL_INTERVAL_MS);
-
-    const onVisibility = () => {
-      if (document.visibilityState !== 'visible') return;
-      if (Date.now() - lastFetchAt < SETTINGS_FOCUS_MIN_GAP_MS) return;
-      void fetchSettings();
-      void fetchProviderKeys();
-    };
-    document.addEventListener('visibilitychange', onVisibility);
-
-    return () => {
-      if (pollTimer) clearInterval(pollTimer);
-      document.removeEventListener('visibilitychange', onVisibility);
-    };
+    if (user) return;
+    setGlobalSettings(null);
+    setProviderKeysConfigured(DEFAULT_PROVIDER_KEYS);
   }, [user]);
+
+  const fetchSettings = useCallback(async () => {
+    const settingsRef = doc(db, 'settings', 'global');
+    try {
+      const docSnap = await getDoc(settingsRef);
+      if (docSnap.exists()) {
+        const settingsData = docSnap.data();
+        setGlobalSettings(settingsData);
+        sessionStorage.setItem('global_settings', JSON.stringify(settingsData));
+      }
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : String(error);
+      const useCache =
+        msg.includes('Quota exceeded') || isFirestoreOfflineOrTransient(error);
+      if (useCache) {
+        if (isFirestoreOfflineOrTransient(error)) {
+          console.warn('Settings: Firestore unavailable (offline/transient), using cache if any.');
+        } else {
+          console.warn('Settings quota exceeded, using cache.');
+        }
+        const cached = sessionStorage.getItem('global_settings');
+        if (cached) {
+          try {
+            const parsed = JSON.parse(cached);
+            setGlobalSettings(parsed);
+          } catch {
+            /* ignore */
+          }
+        }
+      } else {
+        handleFirestoreError(error, OperationType.GET, 'settings/global');
+      }
+    }
+  }, []);
+
+  const fetchProviderKeys = useCallback(async () => {
+    if (!user) return;
+    try {
+      const idToken = await user.getIdToken();
+      const response = await fetch('/api/provider-keys', {
+        headers: { Authorization: `Bearer ${idToken}` },
+      });
+      if (!response.ok) return;
+      const data: { configured?: Partial<ProviderKeysConfigured> } = await response.json();
+      setProviderKeysConfigured({
+        ...DEFAULT_PROVIDER_KEYS,
+        ...data.configured,
+      });
+    } catch {
+      setProviderKeysConfigured(DEFAULT_PROVIDER_KEYS);
+    }
+  }, [user]);
+
+  const refreshAll = useCallback(() => {
+    void fetchSettings();
+    void fetchProviderKeys();
+  }, [fetchSettings, fetchProviderKeys]);
+
+  usePolling(refreshAll, SETTINGS_POLL_INTERVAL_MS, {
+    enabled: !!user,
+    minFocusGapMs: SETTINGS_FOCUS_MIN_GAP_MS,
+  });
 
   const handleSelectApiKey = useCallback(async () => {
     try {

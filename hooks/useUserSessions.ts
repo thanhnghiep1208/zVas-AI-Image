@@ -10,6 +10,7 @@ import {
 } from '../data/userSessionRepository';
 import { getOrCreateLocalSessionId, clearLocalSessionId } from '../utils/authSessionId';
 import { isFirestorePermissionDenied, waitForAuthReady } from '../firebase';
+import { usePolling } from './usePolling';
 
 const HEARTBEAT_MS = 5 * 60_000;
 const STALE_MS = 7 * 24 * 60 * 60 * 1000;
@@ -89,7 +90,6 @@ export function useUserSessions({ uid, enabled, onRemoteRevoke }: UseUserSession
     if (!uid || !enabled) return;
 
     let cancelled = false;
-    let heartbeatTimer: ReturnType<typeof setInterval> | undefined;
     let unsubSnapshot: (() => void) | undefined;
 
     const start = async () => {
@@ -128,14 +128,6 @@ export function useUserSessions({ uid, enabled, onRemoteRevoke }: UseUserSession
 
     void start();
 
-    heartbeatTimer = setInterval(() => {
-      if (document.visibilityState !== 'visible') return;
-      const id = getOrCreateLocalSessionId();
-      void touchUserSession(uid, id).catch((e) => {
-        if (!isFirestorePermissionDenied(e)) console.warn('session heartbeat', e);
-      });
-    }, HEARTBEAT_MS);
-
     const onVisible = () => {
       if (document.visibilityState !== 'visible' || !uid) return;
       void (async () => {
@@ -151,11 +143,24 @@ export function useUserSessions({ uid, enabled, onRemoteRevoke }: UseUserSession
 
     return () => {
       cancelled = true;
-      if (heartbeatTimer) clearInterval(heartbeatTimer);
       document.removeEventListener('visibilitychange', onVisible);
       unsubSnapshot?.();
     };
   }, [uid, enabled, refresh]);
+
+  const heartbeatCallback = useCallback(() => {
+    if (document.visibilityState !== 'visible') return;
+    const id = getOrCreateLocalSessionId();
+    void touchUserSession(uid!, id).catch((e) => {
+      if (!isFirestorePermissionDenied(e)) console.warn('session heartbeat', e);
+    });
+  }, [uid]);
+
+  usePolling(heartbeatCallback, HEARTBEAT_MS, {
+    enabled: !!uid && enabled,
+    runOnFocus: false,
+    runImmediately: false,
+  });
 
   const revokeSession = useCallback(
     async (sessionId: string, options?: { isCurrent?: boolean }) => {

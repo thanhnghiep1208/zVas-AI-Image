@@ -16,6 +16,7 @@ import {
 } from '../firebase';
 import { revokeUserSession } from '../data/userSessionRepository';
 import { clearLocalSessionId, getOrCreateLocalSessionId } from '../utils/authSessionId';
+import { usePolling } from './usePolling';
 
 const PROFILE_POLL_INTERVAL_MS = 90_000;
 const PROFILE_FOCUS_MIN_GAP_MS = 45_000;
@@ -57,95 +58,76 @@ export function useAuthAndProfile({
   const profileGateMessageRef = useRef<string | null>(profileGateMessage);
   profileGateMessageRef.current = profileGateMessage;
 
-  useEffect(() => {
-    let pollTimer: ReturnType<typeof setInterval> | undefined;
-    let lastFetchAt = 0;
-
-    const fetchUserProfile = async (currentUser: User) => {
-      const userRef = doc(db, 'users', currentUser.uid);
-      const path = `users/${currentUser.uid}`;
-      try {
-        await waitForAuthReady();
-        await currentUser.getIdToken();
-        const docSnap = await getDoc(userRef);
-        lastFetchAt = Date.now();
-        if (docSnap.exists()) {
-          setUserProfile(docSnap.data() as UserProfile);
-          setProfileGate('ready');
-          setProfileGateMessage(null);
-        } else {
-          setUserProfile(null);
-          setProfileGate('missing');
-          setProfileGateMessage(
-            'Đăng nhập thành công nhưng chưa có hồ sơ trên hệ thống. Liên hệ quản trị để được tạo tài khoản (Firestore users/{uid}).',
-          );
-        }
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        if (msg.includes('Quota exceeded')) {
-          console.warn('Profile fetch quota exceeded, keeping last known profile.');
-        } else if (isFirestoreOfflineOrTransient(err)) {
-          console.warn('Profile fetch unavailable (offline/transient), keeping last known profile.', msg);
-        } else if (isFirestorePermissionDenied(err)) {
-          setUserProfile(null);
-          setProfileGate('error');
-          setProfileGateMessage(
-            'Không đọc được hồ sơ người dùng (Firestore rules). Liên hệ quản trị hoặc deploy lại firestore.rules.',
-          );
-        } else {
-          setUserProfile(null);
-          setProfileGate('error');
-          setProfileGateMessage('Không tải được hồ sơ người dùng. Thử lại sau ít phút.');
-          handleFirestoreError(err, OperationType.GET, path);
-        }
-      } finally {
-        setIsAuthLoading(false);
+  const fetchUserProfile = useCallback(async () => {
+    const currentUser = auth.currentUser;
+    if (!currentUser) return;
+    const userRef = doc(db, 'users', currentUser.uid);
+    const path = `users/${currentUser.uid}`;
+    try {
+      await waitForAuthReady();
+      await currentUser.getIdToken();
+      const docSnap = await getDoc(userRef);
+      if (docSnap.exists()) {
+        setUserProfile(docSnap.data() as UserProfile);
+        setProfileGate('ready');
+        setProfileGateMessage(null);
+      } else {
+        setUserProfile(null);
+        setProfileGate('missing');
+        setProfileGateMessage(
+          'Đăng nhập thành công nhưng chưa có hồ sơ trên hệ thống. Liên hệ quản trị để được tạo tài khoản (Firestore users/{uid}).',
+        );
       }
-    };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes('Quota exceeded')) {
+        console.warn('Profile fetch quota exceeded, keeping last known profile.');
+      } else if (isFirestoreOfflineOrTransient(err)) {
+        console.warn('Profile fetch unavailable (offline/transient), keeping last known profile.', msg);
+      } else if (isFirestorePermissionDenied(err)) {
+        setUserProfile(null);
+        setProfileGate('error');
+        setProfileGateMessage(
+          'Không đọc được hồ sơ người dùng (Firestore rules). Liên hệ quản trị hoặc deploy lại firestore.rules.',
+        );
+      } else {
+        setUserProfile(null);
+        setProfileGate('error');
+        setProfileGateMessage('Không tải được hồ sơ người dùng. Thử lại sau ít phút.');
+        handleFirestoreError(err, OperationType.GET, path);
+      }
+    } finally {
+      setIsAuthLoading(false);
+    }
+  }, []);
 
+  const onSignedOutRef = useRef(onSignedOut);
+  onSignedOutRef.current = onSignedOut;
+
+  useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
-
-      if (pollTimer) {
-        clearInterval(pollTimer);
-        pollTimer = undefined;
-      }
-
       if (!currentUser) {
         setUserProfile(null);
         setProfileGate('idle');
         setProfileGateMessage(null);
-        onSignedOut();
+        onSignedOutRef.current();
         setIsAuthLoading(false);
         return;
       }
-
       setIsAuthLoading(true);
       setProfileGate('loading');
       setProfileGateMessage(null);
-      void fetchUserProfile(currentUser);
-
-      pollTimer = setInterval(() => {
-        const u = auth.currentUser;
-        if (u) void fetchUserProfile(u);
-      }, PROFILE_POLL_INTERVAL_MS);
+      void fetchUserProfile();
     });
+    return unsubscribeAuth;
+  }, [fetchUserProfile]);
 
-    const onVisibility = () => {
-      if (document.visibilityState !== 'visible') return;
-      const u = auth.currentUser;
-      if (!u) return;
-      if (Date.now() - lastFetchAt < PROFILE_FOCUS_MIN_GAP_MS) return;
-      void fetchUserProfile(u);
-    };
-    document.addEventListener('visibilitychange', onVisibility);
-
-    return () => {
-      unsubscribeAuth();
-      if (pollTimer) clearInterval(pollTimer);
-      document.removeEventListener('visibilitychange', onVisibility);
-    };
-  }, [onSignedOut]);
+  usePolling(fetchUserProfile, PROFILE_POLL_INTERVAL_MS, {
+    enabled: !!user,
+    minFocusGapMs: PROFILE_FOCUS_MIN_GAP_MS,
+    runImmediately: false,
+  });
 
   const handleLogin = useCallback(async (email: string, password: string): Promise<boolean> => {
     if (!email.trim() || !password) {
