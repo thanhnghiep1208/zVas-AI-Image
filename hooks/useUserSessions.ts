@@ -9,7 +9,7 @@ import {
   type UserSessionRecord,
 } from '../data/userSessionRepository';
 import { getOrCreateLocalSessionId, clearLocalSessionId } from '../utils/authSessionId';
-import { isFirestorePermissionDenied, waitForAuthReady } from '../firebase';
+import { isFirestoreOfflineOrTransient, isFirestorePermissionDenied, waitForAuthReady } from '../firebase';
 import { usePolling } from './usePolling';
 
 const HEARTBEAT_MS = 5 * 60_000;
@@ -91,6 +91,32 @@ export function useUserSessions({ uid, enabled, onRemoteRevoke }: UseUserSession
 
     let cancelled = false;
     let unsubSnapshot: (() => void) | undefined;
+    let subscriptionAlive = false;
+    let retryTimer: ReturnType<typeof setTimeout> | undefined;
+
+    const startSubscription = (sessionId: string) => {
+      unsubSnapshot?.();
+      subscriptionAlive = true;
+      unsubSnapshot = subscribeUserSession(
+        uid,
+        sessionId,
+        (revoked) => {
+          if (revoked) onRemoteRevokeRef.current?.();
+        },
+        (err) => {
+          subscriptionAlive = false;
+          if (isFirestorePermissionDenied(err)) {
+            console.warn('session snapshot permission denied', err);
+            setError('Không theo dõi phiên (Firestore rules). Deploy firestore:rules.');
+          } else if (isFirestoreOfflineOrTransient(err) && !cancelled) {
+            // Transient error (network reset, idle timeout) — re-subscribe after backoff
+            retryTimer = setTimeout(() => {
+              if (!cancelled) startSubscription(sessionId);
+            }, 8_000);
+          }
+        },
+      );
+    };
 
     const start = async () => {
       try {
@@ -98,19 +124,7 @@ export function useUserSessions({ uid, enabled, onRemoteRevoke }: UseUserSession
         const sessionId = await registerOrTouchUserSession(uid);
         if (cancelled) return;
         setCurrentSessionId(sessionId);
-        unsubSnapshot = subscribeUserSession(
-          uid,
-          sessionId,
-          (revoked) => {
-            if (revoked) onRemoteRevokeRef.current?.();
-          },
-          (err) => {
-            if (isFirestorePermissionDenied(err)) {
-              console.warn('session snapshot permission denied', err);
-              setError('Không theo dõi phiên (Firestore rules). Deploy firestore:rules.');
-            }
-          },
-        );
+        startSubscription(sessionId);
         await refresh();
       } catch (err) {
         if (err instanceof Error && err.message === 'SESSION_REVOKED') {
@@ -132,7 +146,10 @@ export function useUserSessions({ uid, enabled, onRemoteRevoke }: UseUserSession
       if (document.visibilityState !== 'visible' || !uid) return;
       void (async () => {
         await waitForAuthReady();
-        return registerOrTouchUserSession(uid);
+        const sessionId = await registerOrTouchUserSession(uid);
+        if (!cancelled && !subscriptionAlive) {
+          startSubscription(sessionId);
+        }
       })().catch((e) => {
         if (e instanceof Error && e.message === 'SESSION_REVOKED') {
           onRemoteRevokeRef.current?.();
@@ -143,6 +160,7 @@ export function useUserSessions({ uid, enabled, onRemoteRevoke }: UseUserSession
 
     return () => {
       cancelled = true;
+      clearTimeout(retryTimer);
       document.removeEventListener('visibilitychange', onVisible);
       unsubSnapshot?.();
     };
