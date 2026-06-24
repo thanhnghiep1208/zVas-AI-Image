@@ -55,8 +55,8 @@ export const LatencyCard = ({
           <p className="mt-1 text-2xl font-semibold tabular-nums text-white">{stats.avg.toFixed(1)}s</p>
           <p className="mt-1 text-xs text-gray-500">p95: {stats.p95.toFixed(1)}s</p>
         </div>
-        <div className="w-24 h-12">
-          <ResponsiveContainer width="100%" height="100%">
+        <div className="w-24 h-12 min-w-0">
+          <ResponsiveContainer width="100%" height="100%" minWidth={0}>
             <LineChart data={sparklineData}>
               <Line type="monotone" dataKey="value" stroke="#22d3ee" strokeWidth={2} dot={false} />
             </LineChart>

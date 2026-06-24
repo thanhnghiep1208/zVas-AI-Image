@@ -50,43 +50,41 @@ const TrendsChart = ({
       ) : error ? (
         <div className="h-72 flex items-center justify-center text-sm text-red-400">{error}</div>
       ) : (
-        <div className="h-72">
-          <ResponsiveContainer width="100%" height={288}>
-            <LineChart data={data} margin={{ top: 10, right: 8, left: -15, bottom: 8 }}>
-              <CartesianGrid stroke="#334155" strokeDasharray="3 3" opacity={0.55} />
-              <XAxis
-                dataKey="date"
-                tick={{ fill: '#94a3b8', fontSize: 12 }}
-                axisLine={{ stroke: '#475569' }}
-                tickLine={{ stroke: '#475569' }}
-                interval="preserveStartEnd"
-              />
-              <YAxis
-                tick={{ fill: '#94a3b8', fontSize: 12 }}
-                axisLine={{ stroke: '#475569' }}
-                tickLine={{ stroke: '#475569' }}
-                width={40}
-              />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: '#0f172a',
-                  border: '1px solid #334155',
-                  borderRadius: 8,
-                }}
-                labelStyle={{ color: '#cbd5e1' }}
-                itemStyle={{ color: '#e2e8f0' }}
-              />
-              <Line
-                type="monotone"
-                dataKey="value"
-                stroke={config.color}
-                strokeWidth={2.5}
-                dot={false}
-                activeDot={{ r: 4, fill: config.color }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
+        <ResponsiveContainer width="100%" height={288}>
+          <LineChart data={data} margin={{ top: 10, right: 8, left: -15, bottom: 8 }}>
+            <CartesianGrid stroke="#334155" strokeDasharray="3 3" opacity={0.55} />
+            <XAxis
+              dataKey="date"
+              tick={{ fill: '#94a3b8', fontSize: 12 }}
+              axisLine={{ stroke: '#475569' }}
+              tickLine={{ stroke: '#475569' }}
+              interval="preserveStartEnd"
+            />
+            <YAxis
+              tick={{ fill: '#94a3b8', fontSize: 12 }}
+              axisLine={{ stroke: '#475569' }}
+              tickLine={{ stroke: '#475569' }}
+              width={40}
+            />
+            <Tooltip
+              contentStyle={{
+                backgroundColor: '#0f172a',
+                border: '1px solid #334155',
+                borderRadius: 8,
+              }}
+              labelStyle={{ color: '#cbd5e1' }}
+              itemStyle={{ color: '#e2e8f0' }}
+            />
+            <Line
+              type="monotone"
+              dataKey="value"
+              stroke={config.color}
+              strokeWidth={2.5}
+              dot={false}
+              activeDot={{ r: 4, fill: config.color }}
+            />
+          </LineChart>
+        </ResponsiveContainer>
       )}
     </div>
   );
