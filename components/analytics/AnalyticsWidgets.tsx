@@ -1,15 +1,17 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Activity,
+  AlertTriangle,
   CheckCircle,
   ChevronDown,
   ChevronRight,
   DollarSign,
   Pencil,
+  Trash2,
   Users,
 } from 'lucide-react';
 import { Line, LineChart, ResponsiveContainer } from 'recharts';
-import type { MonthlyErrorBreakdownItem, MonthlyTokenStats } from '../../services/analyticsService';
+import type { MonthlyAnalytics, MonthlyErrorBreakdownItem, MonthlyTokenStats } from '../../services/analyticsService';
 
 export const KpiCard = ({
   title,
@@ -412,3 +414,195 @@ export const ExpandableErrorBreakdown = ({
     )}
   </div>
 );
+
+export const FailedGenerationsBox = ({
+  analytics,
+  errorBreakdown,
+  onClearLog,
+  onErrorClick,
+  monthKey,
+}: {
+  analytics: MonthlyAnalytics;
+  errorBreakdown: MonthlyErrorBreakdownItem[];
+  onClearLog: () => void;
+  onErrorClick?: (errorType: string) => void;
+  monthKey?: string;
+}) => {
+  const [logCleared, setLogCleared] = useState(false);
+
+  const totalFailed = analytics.failed_generations;
+  const failRate =
+    analytics.total_generations > 0
+      ? ((totalFailed / analytics.total_generations) * 100).toFixed(1)
+      : '0.0';
+
+  const handleClear = () => {
+    onClearLog();
+    setLogCleared(true);
+  };
+
+  const hasErrors = totalFailed > 0;
+  const borderColor = hasErrors ? 'border-red-500/20' : 'border-white/[0.08]';
+  const bgColor = hasErrors ? 'bg-red-500/[0.03]' : 'bg-white/[0.03]';
+
+  return (
+    <div className={`rounded-2xl border ${borderColor} ${bgColor} p-5 backdrop-blur-sm`}>
+      {/* Header */}
+      <div className="mb-4 flex items-start justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <span
+            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border ${
+              hasErrors
+                ? 'border-red-500/25 bg-red-500/10'
+                : 'border-emerald-500/25 bg-emerald-500/10'
+            }`}
+          >
+            <AlertTriangle
+              className={`h-4 w-4 ${hasErrors ? 'text-red-400' : 'text-emerald-400'}`}
+            />
+          </span>
+          <div>
+            <h3 className="text-base font-semibold tracking-tight text-white">
+              Lượt tạo thất bại
+            </h3>
+            <p className="mt-0.5 text-xs text-gray-500">
+              {monthKey ? `Tháng ${monthKey} · ` : ''}Tỉ lệ lỗi:{' '}
+              <span className={hasErrors ? 'text-red-400' : 'text-emerald-400'}>{failRate}%</span>
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <div className="text-right">
+            <p
+              className={`text-2xl font-bold tabular-nums ${hasErrors ? 'text-red-400' : 'text-emerald-400'}`}
+            >
+              {new Intl.NumberFormat('en-US').format(totalFailed)}
+            </p>
+            <p className="text-[10px] text-gray-600">lượt thất bại</p>
+          </div>
+          {!logCleared && hasErrors && (
+            <button
+              type="button"
+              onClick={handleClear}
+              className="flex items-center gap-1.5 rounded-lg border border-white/[0.08] bg-white/[0.04] px-2.5 py-1.5 text-xs text-gray-400 transition hover:border-red-500/30 hover:bg-red-500/10 hover:text-red-300"
+            >
+              <Trash2 className="h-3 w-3" />
+              Xóa log
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Failure rate bar */}
+      <div className="mb-4 h-1.5 w-full overflow-hidden rounded-full bg-white/[0.06]">
+        <div
+          className={`h-full rounded-full transition-all duration-700 ${hasErrors ? 'bg-red-500/60' : 'bg-emerald-500/60'}`}
+          style={{ width: `${Math.min(parseFloat(failRate), 100)}%` }}
+        />
+      </div>
+
+      {/* Content */}
+      {logCleared ? (
+        <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] py-7 text-center">
+          <p className="text-sm text-gray-400">Log đã được xóa khỏi hiển thị.</p>
+          <p className="mt-1 text-xs text-gray-600">
+            Nhấn <span className="text-gray-400">Tải dữ liệu mới</span> để khôi phục.
+          </p>
+        </div>
+      ) : !hasErrors ? (
+        <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] py-7 text-center">
+          <p className="text-sm text-emerald-400">Không có lỗi nào trong tháng này.</p>
+        </div>
+      ) : errorBreakdown.length === 0 ? (
+        <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] py-7 text-center">
+          <p className="text-sm text-gray-500">Không có chi tiết lỗi cho tháng này.</p>
+        </div>
+      ) : (
+        <div className="overflow-hidden rounded-xl border border-white/[0.08] bg-white/[0.02]">
+          <table className="w-full text-sm">
+            <thead className="bg-white/[0.04]">
+              <tr>
+                <th className="px-3 py-2.5 text-left text-xs font-medium text-gray-500">
+                  Loại lỗi
+                </th>
+                <th className="px-3 py-2.5 text-right text-xs font-medium text-gray-500">
+                  Số lần
+                </th>
+                <th className="px-3 py-2.5 text-right text-xs font-medium text-gray-500">
+                  % tổng lỗi
+                </th>
+                <th className="px-3 py-2.5 text-right text-xs font-medium text-gray-500">
+                  Lần cuối
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {errorBreakdown.map((item) => {
+                const pct =
+                  totalFailed > 0
+                    ? `${((item.count / totalFailed) * 100).toFixed(1)}%`
+                    : '—';
+                return (
+                  <tr
+                    key={item.errorType}
+                    onClick={() => onErrorClick?.(item.errorType)}
+                    className="cursor-pointer border-t border-white/[0.06] transition-colors hover:bg-white/[0.04]"
+                  >
+                    <td className="px-3 py-2.5">
+                      <div className="group relative flex flex-wrap items-center gap-2">
+                        <span
+                          className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 ${
+                            item.severity === 'critical'
+                              ? 'bg-red-500/15 text-red-300 ring-red-500/25'
+                              : 'bg-amber-500/15 text-amber-300 ring-amber-500/25'
+                          }`}
+                        >
+                          <span className="h-1.5 w-1.5 rounded-full bg-current" />
+                          {item.severity === 'critical' ? 'Critical' : 'Warning'}
+                        </span>
+                        <span className="text-gray-200">{item.errorType}</span>
+                        {item.sampleMessages && item.sampleMessages.length > 0 && (
+                          <>
+                            <span className="cursor-help select-none text-xs text-gray-600">ⓘ</span>
+                            <div className="pointer-events-none absolute bottom-full left-0 z-50 mb-2 hidden w-80 rounded-xl border border-white/[0.12] bg-gray-900 p-3 shadow-2xl group-hover:block">
+                              <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-gray-500">
+                                Sample error messages
+                              </p>
+                              {item.sampleMessages.map((msg, i) => (
+                                <p
+                                  key={i}
+                                  className={`break-words text-[11px] leading-snug text-gray-300${i > 0 ? ' mt-1.5 border-t border-white/[0.06] pt-1.5' : ''}`}
+                                >
+                                  {msg}
+                                </p>
+                              ))}
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-3 py-2.5 text-right font-medium tabular-nums text-white">
+                      {new Intl.NumberFormat('en-US').format(item.count)}
+                    </td>
+                    <td className="px-3 py-2.5 text-right tabular-nums text-gray-400">{pct}</td>
+                    <td className="px-3 py-2.5 text-right text-xs text-gray-400">
+                      {item.lastOccurred
+                        ? item.lastOccurred.toLocaleString('vi-VN', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })
+                        : 'N/A'}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+};

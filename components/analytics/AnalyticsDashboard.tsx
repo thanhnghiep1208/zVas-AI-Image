@@ -17,7 +17,7 @@ import {
   TokenUsageSection,
   ModelUsageCard,
   MetricRow,
-  ExpandableErrorBreakdown,
+  FailedGenerationsBox,
   AnalyticsPageSkeleton,
 } from './AnalyticsWidgets';
 import { DeferredTrendsSection } from './TrendsSection';
@@ -174,13 +174,6 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
                   label="Successful Generations"
                   value={data.formatNumber(data.analytics.successful_generations)}
                 />
-                <ExpandableErrorBreakdown
-                  totalFailedGenerations={data.analytics.failed_generations}
-                  isOpen={data.isErrorBreakdownOpen}
-                  items={data.errorBreakdown}
-                  onToggle={() => data.setIsErrorBreakdownOpen((prev) => !prev)}
-                  onErrorClick={onErrorClick}
-                />
                 <MetricRow
                   label="Cost / 1K tokens"
                   value={`$${(data.tokenStats?.costPer1k ?? 0).toFixed(4)}`}
@@ -196,6 +189,14 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
                 />
               </div>
             </div>
+
+            <FailedGenerationsBox
+              analytics={data.analytics}
+              errorBreakdown={data.errorBreakdown}
+              onClearLog={data.clearErrorBreakdown}
+              onErrorClick={onErrorClick}
+              monthKey={data.loadedMonthKey ?? data.monthKey}
+            />
           </div>
         </>
       ) : (

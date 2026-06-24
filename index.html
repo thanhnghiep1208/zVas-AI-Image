@@ -98,9 +98,6 @@
         // Protect window.fetch from being overwritten by polyfills
         try {
           var originalFetch = win.fetch;
-          console.log("DEBUG: Initial window.fetch type:", typeof originalFetch);
-          var initialDesc = Object.getOwnPropertyDescriptor(win, 'fetch') || Object.getOwnPropertyDescriptor(Object.getPrototypeOf(win), 'fetch');
-          console.log("DEBUG: Initial window.fetch descriptor:", initialDesc);
 
           if (!originalFetch) {
              console.warn("Native fetch not found, skipping protection");

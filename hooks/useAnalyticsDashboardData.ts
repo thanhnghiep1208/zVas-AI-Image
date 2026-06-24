@@ -142,6 +142,10 @@ export function useAnalyticsDashboardData() {
   const formatCurrency = (val: number) => `$${val.toFixed(2)}`;
   const formatNumber = (val: number) => new Intl.NumberFormat('en-US').format(val);
 
+  const clearErrorBreakdown = useCallback(() => {
+    setErrorBreakdown([]);
+  }, []);
+
   const handleSaveBudget = () => {
     const parsed = Number(budgetInput);
     const safeLimit = Number.isFinite(parsed) && parsed > 0 ? parsed : 10;
@@ -172,6 +176,7 @@ export function useAnalyticsDashboardData() {
     loadedMonthKey,
     dashboardBundleFetchedAt,
     handleRequestData,
+    clearErrorBreakdown,
     formatCurrency,
     formatNumber,
     handleSaveBudget,
