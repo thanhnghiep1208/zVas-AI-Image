@@ -1,4 +1,4 @@
-import React, { useState, useCallback, memo } from 'react';
+import React, { useState, useCallback, memo, useEffect, useRef } from 'react';
 import { Sparkles, X } from 'lucide-react';
 import type { ImageFile, GeneratedImage, ImageSize } from '../../types';
 import { ImageUploader } from '../inputs/ImageUploader';
@@ -106,6 +106,18 @@ function CreateViewComponent({
   onClearHistory,
 }: CreateViewProps) {
   const [welcomeDismissed, setWelcomeDismissed] = useState(readWelcomeDismissedFromStorage);
+  const [mobileTab, setMobileTab] = useState<'input' | 'output'>('input');
+  const prevLoadingRef = useRef(false);
+
+  // Auto-switch to output tab when generation completes on mobile
+  useEffect(() => {
+    if (prevLoadingRef.current && !isLoading && generatedImages.length > 0) {
+      if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+        setMobileTab('output');
+      }
+    }
+    prevLoadingRef.current = isLoading;
+  }, [isLoading, generatedImages.length]);
 
   const dismissWelcomeBanner = useCallback(() => {
     try {
@@ -118,7 +130,26 @@ function CreateViewComponent({
 
   return (
   <>
-    <aside className="flex w-full flex-shrink-0 flex-col border-b border-white/[0.08] bg-white/[0.03] backdrop-blur-sm lg:h-full lg:w-[480px] lg:border-b-0 lg:border-r">
+    {/* Mobile tab switcher — sticky so it stays visible while scrolling through inputs */}
+    <div className="sticky top-0 z-10 flex flex-shrink-0 border-b border-[var(--lp-border)] bg-[var(--lp-surface)] backdrop-blur-md lg:hidden">
+      {(['input', 'output'] as const).map((tab) => (
+        <button
+          key={tab}
+          type="button"
+          onClick={() => setMobileTab(tab)}
+          className={`relative flex flex-1 cursor-pointer items-center justify-center py-2.5 text-sm font-medium transition-colors ${
+            mobileTab === tab ? 'text-[var(--lp-text)]' : 'text-[var(--lp-muted)] hover:text-[var(--lp-text)]'
+          }`}
+        >
+          {tab === 'input' ? 'Nhập liệu' : 'Kết quả'}
+          {mobileTab === tab && (
+            <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[var(--lp-accent)]" aria-hidden />
+          )}
+        </button>
+      ))}
+    </div>
+
+    <aside className={`w-full flex-shrink-0 flex-col border-b border-white/[0.08] bg-white/[0.03] backdrop-blur-sm lg:h-full lg:w-[480px] lg:border-b-0 lg:border-r ${mobileTab === 'output' ? 'hidden lg:flex' : 'flex'}`}>
       <div className="custom-scrollbar flex-shrink-0 space-y-4 p-4 lg:flex-1 lg:overflow-y-auto">
         {!welcomeDismissed && (
           <div className="flex items-start gap-3 rounded-2xl border border-cyan-500/15 bg-cyan-500/[0.06] px-3 py-2.5 sm:px-4">
@@ -210,7 +241,7 @@ function CreateViewComponent({
       </div>
     </aside>
 
-    <main className="flex min-h-[400px] flex-shrink-0 flex-col p-3 sm:p-4 lg:min-h-0 lg:flex-1 lg:overflow-hidden">
+    <main className={`flex-shrink-0 flex-col p-3 sm:p-4 lg:min-h-0 lg:flex-1 lg:overflow-hidden ${mobileTab === 'input' ? 'hidden lg:flex' : 'flex flex-1 min-h-0'}`}>
       <div className="mb-3 flex flex-shrink-0 flex-col gap-0.5 px-0.5 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h2 className="text-base font-semibold tracking-tight text-white sm:text-lg">Kết quả</h2>
