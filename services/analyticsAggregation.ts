@@ -37,6 +37,7 @@ const mapErrorType = (errorCode?: string): { errorType: string; severity: 'warni
   if (normalized === 'content_filter') return { errorType: 'Content Filter', severity: 'warning' };
   if (normalized === 'invalid_prompt') return { errorType: 'Invalid Prompt', severity: 'warning' };
   if (normalized === 'permission_denied') return { errorType: 'Permission Denied', severity: 'critical' };
+  if (normalized === 'unknown_error') return { errorType: 'Unknown Error', severity: 'warning' };
   // Fallback keyword matching for legacy events
   if (normalized.includes('timeout') || normalized.includes('timed out')) return { errorType: 'API Timeout', severity: 'critical' };
   if (normalized.includes('429') || normalized.includes('quota') || normalized.includes('resource_exhausted')) return { errorType: 'Quota Exceeded (429)', severity: 'critical' };
@@ -314,6 +315,7 @@ export function normalizeErrorBreakdownFromRollup(items: unknown): MonthlyErrorB
       count: Number(r.count ?? 0),
       lastOccurred: last,
       severity: r.severity === 'warning' || r.severity === 'critical' ? r.severity : 'critical',
+      sampleMessages: Array.isArray(r.sampleMessages) ? r.sampleMessages.map(String) : [],
     };
   });
 }

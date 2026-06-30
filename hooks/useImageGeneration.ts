@@ -220,6 +220,7 @@ export function useImageGeneration(params: UseImageGenerationParams) {
                 image_count: failedResults.length,
                 duration_ms: durationMs,
                 error_code: failedResults[0]?.errorCode || 'unknown',
+                error_message_short: String(failedResults[0]?.text || '').slice(0, 280),
               },
             });
           }
@@ -233,6 +234,7 @@ export function useImageGeneration(params: UseImageGenerationParams) {
             image_count: failedResults.length,
             duration_ms: durationMs,
             error_code: failedResults[0]?.errorCode || 'unknown',
+            error_message_short: String(failedResults[0]?.text || '').slice(0, 280),
           });
           ga4Exception(String(failedResults[0]?.text || 'image_generation_failed'), false);
         }
