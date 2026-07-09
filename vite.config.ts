@@ -2,8 +2,21 @@ import path from 'path';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
+import { sentryVitePlugin } from '@sentry/vite-plugin';
+import dotenv from 'dotenv';
+
+// Vite không tự nạp .env.local/.env vào process.env cho chính file config này
+// (chỉ dùng để build import.meta.env phía client) — phải nạp thủ công để đọc
+// SENTRY_ORG/SENTRY_PROJECT/SENTRY_AUTH_TOKEN ở dưới.
+dotenv.config({ path: path.resolve(__dirname, '.env.local') });
+dotenv.config({ path: path.resolve(__dirname, '.env') });
 
 export default defineConfig(() => {
+    // Chỉ upload source maps khi có đủ config (CI/build release) — build local không cần.
+    const canUploadSourceMaps = Boolean(
+      process.env.SENTRY_AUTH_TOKEN && process.env.SENTRY_ORG && process.env.SENTRY_PROJECT
+    );
+
     return {
       server: {
         port: 3000,
@@ -14,12 +27,27 @@ export default defineConfig(() => {
           host: 'localhost',
         },
       },
-      plugins: [react(), tailwindcss()],
+      plugins: [
+        react(),
+        tailwindcss(),
+        // Phải là plugin cuối cùng để thấy được output final của các plugin khác.
+        canUploadSourceMaps &&
+          sentryVitePlugin({
+            org: process.env.SENTRY_ORG,
+            project: process.env.SENTRY_PROJECT,
+            authToken: process.env.SENTRY_AUTH_TOKEN,
+            sourcemaps: {
+              filesToDeleteAfterUpload: ['./dist/**/*.map'],
+            },
+          }),
+      ],
       optimizeDeps: {
         include: ['p-retry'],
         exclude: ['@google/genai', 'firebase', 'gaxios', 'node-fetch', 'formdata-polyfill', 'whatwg-fetch', 'isomorphic-fetch', 'cross-fetch', 'unfetch', 'isomorphic-unfetch', 'isomorphic-form-data', 'form-data']
       },
       build: {
+        // Chỉ sinh source maps khi thực sự upload lên Sentry — tránh .map bị serve công khai ở build local.
+        sourcemap: canUploadSourceMaps ? 'hidden' : false,
         // Firebase + Firestore SDK ~560 kB minified — split sub-chunks to avoid single >500 kB warning.
         chunkSizeWarningLimit: 600,
         rollupOptions: {
@@ -57,6 +85,9 @@ export default defineConfig(() => {
               }
               if (id.includes('node_modules/sonner/')) {
                 return 'sonner-vendor';
+              }
+              if (id.includes('node_modules/@sentry/')) {
+                return 'sentry-vendor';
               }
               return undefined;
             },

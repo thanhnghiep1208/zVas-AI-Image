@@ -1,3 +1,8 @@
+// Sentry được init qua `node --import ./server/instrument.ts` (xem package.json
+// scripts `dev`/`start`) — bắt buộc với ESM để auto-instrumentation patch được
+// express/http trước khi module đó được import ở đây.
+import * as Sentry from '@sentry/node';
+
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -38,6 +43,8 @@ async function startServer() {
                 'https://api.openai.com',
                 'https://*.bytepluses.com',
                 'https://api.seedance.com',
+                // Sentry error/tracing beacons (ingest host phụ thuộc region của DSN).
+                'https://*.sentry.io',
               ],
               fontSrc: ["'self'", 'data:', 'https://fonts.googleapis.com', 'https://fonts.gstatic.com'],
               frameSrc: ["'none'"],
@@ -90,6 +97,9 @@ async function startServer() {
   });
 
   registerApiRoutes(app);
+
+  // Phải đăng ký sau routes để bắt được lỗi từ chúng, và trước fallback SPA/static.
+  Sentry.setupExpressErrorHandler(app);
 
   if (process.env.NODE_ENV !== 'production') {
     const { createServer: createViteServer } = await import('vite');

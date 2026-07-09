@@ -55,6 +55,7 @@ npm start
 | `PORT`                                                   | Cổng HTTP (Cloud Run thường `8080`; mặc định local `3000`)                                                                                                                                                                                                                              |
 | `GEMINI_API_KEY` / `OPENAI_API_KEY` / `SEEDANCE_API_KEY` / `SEEDREAM_API_KEY` | Key nhà cung cấp AI (chỉ server env / Secret Manager) |
 | Firebase Admin | Cloud Run: runtime service account. **Local:** `service-account.json` tại root (tự load trong `server/firebaseAdmin.ts`) hoặc `GOOGLE_APPLICATION_CREDENTIALS`. |
+| `SENTRY_DSN` / `VITE_SENTRY_DSN` | Error tracking (tuỳ chọn) — xem [docs/12-sentry-setup.md](./docs/12-sentry-setup.md) |
 
 
 **Docker (image production):**

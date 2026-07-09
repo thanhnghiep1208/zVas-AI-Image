@@ -4,8 +4,8 @@
   "version": "1.0405",
   "type": "module",
   "scripts": {
-    "dev": "tsx server.ts",
-    "start": "NODE_ENV=production tsx server.ts",
+    "dev": "tsx --import ./server/instrument.ts server.ts",
+    "start": "NODE_ENV=production tsx --import ./server/instrument.ts server.ts",
     "build": "vite build",
     "lint": "tsc --noEmit",
     "test": "tsx --test",
@@ -14,6 +14,8 @@
   },
   "dependencies": {
     "@google/genai": "^1.21.0",
+    "@sentry/node": "^10.64.0",
+    "@sentry/react": "^10.64.0",
     "@tailwindcss/vite": "^4.3.1",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
@@ -31,6 +33,7 @@
     "tsx": "^4.21.0"
   },
   "devDependencies": {
+    "@sentry/vite-plugin": "^5.3.0",
     "@types/node": "^22.14.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
