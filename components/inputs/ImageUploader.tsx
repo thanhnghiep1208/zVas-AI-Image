@@ -1,7 +1,7 @@
 
 import React, { useRef, useState } from 'react';
 import type { ImageFile } from '../../types';
-import { isAcceptedImageFile, ACCEPTED_IMAGE_TYPES } from '../../utils/fileValidation';
+import { isAcceptedImageFile, ACCEPTED_IMAGE_TYPES, MAX_IMAGE_FILE_SIZE_MB } from '../../utils/fileValidation';
 import { UploadIcon } from '../icons/UploadIcon';
 import { TrashIcon } from '../icons/TrashIcon';
 
@@ -85,7 +85,9 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
       {showLabel && (
         <div className="mb-2">
           <h2 className="text-sm font-semibold tracking-tight text-white">Ảnh chính</h2>
-          <p className="mt-0.5 text-xs text-gray-500">Kéo thả hoặc bấm để chọn — PNG, JPEG, WebP</p>
+          <p className="mt-0.5 text-xs text-gray-500">
+            Kéo thả hoặc bấm để chọn — PNG, JPEG, WebP · tối đa {MAX_IMAGE_FILE_SIZE_MB} MB
+          </p>
         </div>
       )}
       <div
@@ -129,7 +131,7 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({
             ) : (
               <>
                 <p className="text-sm font-medium text-gray-200">Chọn ảnh gốc</p>
-                <p className="text-xs text-gray-500">Tối đa một ảnh mỗi lần</p>
+                <p className="text-xs text-gray-500">Một ảnh mỗi lần · tối đa {MAX_IMAGE_FILE_SIZE_MB} MB</p>
               </>
             )}
           </div>

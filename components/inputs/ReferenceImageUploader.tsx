@@ -1,7 +1,7 @@
 
 import React, { useRef, useState } from 'react';
 import type { ImageFile } from '../../types';
-import { isAcceptedImageFile, ACCEPTED_IMAGE_TYPES } from '../../utils/fileValidation';
+import { isAcceptedImageFile, ACCEPTED_IMAGE_TYPES, MAX_IMAGE_FILE_SIZE_MB } from '../../utils/fileValidation';
 import { UploadIcon } from '../icons/UploadIcon';
 import { TrashIcon } from '../icons/TrashIcon';
 
@@ -94,7 +94,7 @@ export const ReferenceImageUploader: React.FC<ReferenceImageUploaderProps> = ({
           <p className="mt-0.5 text-xs text-gray-500">
             {isDisabled
               ? 'Thêm ảnh chính trước — sau đó kéo thả hoặc bấm để thêm nhiều ảnh.'
-              : 'Tùy chọn — gợi ý phong cách hoặc bối cảnh. PNG, JPEG, WebP.'}
+              : `Tùy chọn — gợi ý phong cách hoặc bối cảnh. PNG, JPEG, WebP · tối đa ${MAX_IMAGE_FILE_SIZE_MB} MB mỗi ảnh.`}
           </p>
         </div>
       )}

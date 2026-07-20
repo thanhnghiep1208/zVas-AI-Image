@@ -6,6 +6,12 @@ import type { AppView } from '../components/layout/AppHeader';
 import type { ProviderKey } from '../constants/aiModels';
 import { dataURLtoFile } from '../utils/imageDataUrl';
 import { getClosestAspectRatio } from '../utils/aspectRatio';
+import {
+  isWithinImageSizeLimit,
+  formatFileSize,
+  MAX_IMAGE_FILE_SIZE_MB,
+  MAX_TOTAL_IMAGE_SIZE_BYTES,
+} from '../utils/fileValidation';
 import { useHistoryImages } from './useHistoryImages';
 import { useImageGeneration } from './useImageGeneration';
 
@@ -128,6 +134,13 @@ export function useWorkspaceController({
 
   const handleImageSelect = useCallback(
     (file: File) => {
+      if (!isWithinImageSizeLimit(file)) {
+        setError(
+          `Ảnh "${file.name}" nặng ${formatFileSize(file.size)}, vượt giới hạn ${MAX_IMAGE_FILE_SIZE_MB} MB mỗi ảnh. Vui lòng nén hoặc chọn ảnh nhỏ hơn.`
+        );
+        return;
+      }
+
       const previewUrl = URL.createObjectURL(file);
       setImage((prev) => {
         if (prev) URL.revokeObjectURL(prev.previewUrl);
@@ -158,12 +171,32 @@ export function useWorkspaceController({
     setError(null);
   }, [image, referenceImages, setGeneratedImages, setError]);
 
-  const handleAddReferenceImage = useCallback((file: File) => {
-    setReferenceImages((prev) => [
-      ...prev,
-      { file, previewUrl: URL.createObjectURL(file) },
-    ]);
-  }, []);
+  const handleAddReferenceImage = useCallback(
+    (file: File) => {
+      if (!isWithinImageSizeLimit(file)) {
+        setError(
+          `Ảnh "${file.name}" nặng ${formatFileSize(file.size)}, vượt giới hạn ${MAX_IMAGE_FILE_SIZE_MB} MB mỗi ảnh. Vui lòng nén hoặc chọn ảnh nhỏ hơn.`
+        );
+        return;
+      }
+
+      const usedBytes =
+        (image?.file.size ?? 0) +
+        referenceImages.reduce((sum, ref) => sum + ref.file.size, 0);
+      if (usedBytes + file.size > MAX_TOTAL_IMAGE_SIZE_BYTES) {
+        setError(
+          `Tổng dung lượng ảnh vượt ${formatFileSize(MAX_TOTAL_IMAGE_SIZE_BYTES)} cho một lần tạo. Hãy bớt ảnh tham chiếu hoặc dùng ảnh nhẹ hơn.`
+        );
+        return;
+      }
+
+      setReferenceImages((prev) => [
+        ...prev,
+        { file, previewUrl: URL.createObjectURL(file) },
+      ]);
+    },
+    [image, referenceImages, setError]
+  );
 
   const handleRemoveReferenceImage = useCallback((indexToRemove: number) => {
     setReferenceImages((prev) => {
