@@ -53,3 +53,8 @@ firebase-applet-config.local.json
 coverage
 .turbo
 *.tsbuildinfo
+
+# Agent / editor tooling & generated artifacts (không commit)
+.agent/
+.cursor/
+graphify-out/
