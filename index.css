@@ -2,7 +2,7 @@
 
 @theme {
   --font-sans: "Outfit", ui-sans-serif, system-ui, sans-serif;
-  --font-family-display: "Fraunces", ui-serif, Georgia, "Times New Roman", serif;
+  --font-display: "Space Grotesk", "Outfit", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
 }
 
@@ -40,16 +40,38 @@ body {
   }
 }
 
-.landing-premium .lp-anim-hero {
-  animation: landing-hero-in 0.75s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
+/* Motion is gated behind prefers-reduced-motion (MOTION_INTENSITY 5).
+   Entrance for the hero, scroll-reveal for sections below the fold. */
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
 
-.landing-premium .lp-anim-hero-delay {
-  animation-delay: 0.1s;
-}
+  .landing-premium .lp-anim-hero {
+    animation: landing-hero-in 0.75s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
 
-.landing-premium .lp-anim-panel {
-  animation: landing-hero-in 0.85s cubic-bezier(0.22, 1, 0.36, 1) 0.12s both;
+  .landing-premium .lp-anim-hero-delay {
+    animation-delay: 0.1s;
+  }
+
+  .landing-premium .lp-anim-panel {
+    animation: landing-hero-in 0.85s cubic-bezier(0.22, 1, 0.36, 1) 0.12s both;
+  }
+
+  .landing-premium .lp-reveal {
+    opacity: 0;
+    transform: translateY(26px);
+    transition:
+      opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+      transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+    transition-delay: var(--lp-reveal-delay, 0ms);
+  }
+
+  .landing-premium .lp-reveal.is-visible {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 .lp-grain {
