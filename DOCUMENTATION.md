@@ -14,6 +14,9 @@ Tài liệu đã được tách theo từng chức năng để dễ đọc và b
 8. [08 - Đăng nhập & tài khoản](./docs/08-auth-users-setup.md) — username/password, `users/{uid}`, phiên đa thiết bị, service account local
 9. [09 - Optimize 06/2026](./docs/09-optimize-2026-06.md)
 10. [10 - Security Hardening 06/2026](./docs/10-security-hardening-2026-06.md) — CSP, prompt limit, password 12 chars, SSRF validate, Vite define removal, deps upgrade
+11. [11 - Reliability & Polling 06/2026](./docs/11-reliability-polling-2026-06.md)
+12. [12 - Sentry setup](./docs/12-sentry-setup.md)
+13. [13 - Security SSRF (DNS rebinding) & MIME 07/2026](./docs/13-security-ssrf-mime-2026-07.md) — MIME upload allowlist, SSRF DNS rebinding/redirect (`ssrfSafeFetch`, `ipRanges`)
 
 ## Gợi ý đọc nhanh
 
@@ -24,6 +27,7 @@ Tài liệu đã được tách theo từng chức năng để dễ đọc và b
 - Phiên đăng nhập đa thiết bị (xem, đăng xuất phiên): `docs/08-auth-users-setup.md` § Phiên đăng nhập đa thiết bị.
 - **Thay đổi refactor 05/2026** (admin/analytics split, aggregation, rate limit Firestore, Dockerfile): xem `docs/07-refactor-2026-05.md`.
 - **Security hardening 06/2026** (CSP, prompt limit, password policy, SSRF validate, Vite define removal, firebase-admin v14, vite v8): xem `docs/10-security-hardening-2026-06.md`.
+- **Security 07/2026** (MIME upload allowlist, SSRF DNS rebinding/redirect qua `ssrfSafeFetch`): xem `docs/13-security-ssrf-mime-2026-07.md`.
 - UI shell, logo, banner Create, upload/kết quả: `docs/02-frontend-architecture.md`.
 - So sánh model Gemini (popup header): `docs/so-sanh-model-gemini.md`.
 
@@ -33,7 +37,7 @@ Tài liệu đã được tách theo từng chức năng để dễ đọc và b
 | ----- | -------------- |
 | Kiểm tra types | `npm run lint` |
 | Build frontend | `npm run build` |
-| Tests | `npm test` (26 tests: aggregation + rate limit + validateUserInput + prompts) |
+| Tests | `npm test` (55 tests: aggregation + rate limit + validateUserInput + prompts + fileValidation + ipRanges + ssrfSafeFetch + validateBaseUrl) |
 | Deploy rules + indexes | `firebase deploy --only firestore:rules,firestore:indexes --project zvas-ai-image` |
 | Deploy app | `gcloud run deploy` — Dockerfile cần `COPY server ./server` |
 

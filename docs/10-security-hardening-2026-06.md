@@ -146,6 +146,10 @@ Kiểm tra: URL phải parse được và protocol phải là `https:`. Cùng lo
 
 **Phạm vi:** Áp dụng cho cả Seedance và Seedream trong `generate.ts`. `providerTest.ts` refactor để import từ shared lib thay vì inline.
 
+> **Cập nhật 2026-07:** Check `https:` này chưa phòng được DNS rebinding và redirect.
+> Đã bổ sung chặn literal host nội bộ + guarded DNS lookup ở tầng kết nối
+> (`ssrfSafeFetch`). Xem `docs/13-security-ssrf-mime-2026-07.md`.
+
 ---
 
 ## 6. Xóa Vite `define` inject API key vào client bundle (2026-06-19)

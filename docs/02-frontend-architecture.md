@@ -3,9 +3,10 @@
 ## Stack UI
 
 - React 19 + TypeScript.
-- Vite 6 build/dev server.
+- Vite 8 build/dev server.
 - Tailwind CSS 4.
 - Sonner (toast), Lucide (icons), idb-keyval (IndexedDB).
+- **Hệ font (`index.css @theme`):** `font-display` = **Space Grotesk** (có subset tiếng Việt), `font-sans` = Outfit, `font-mono` = JetBrains Mono. Nạp qua Google Fonts trong `index.html`.
 
 ## Cấu trúc thư mục (rút gọn)
 
@@ -116,6 +117,11 @@ flowchart TD
 ```
 
 
+
+## Landing page & typography (redesign 2026-07)
+
+- `components/landing/LandingPage.tsx` được thiết kế lại theo hướng chuyên nghiệp/hiện đại: hero split bất đối xứng, **mosaic ảnh mẫu thật** (`picsum.photos`, cần thay bằng output thật trước launch) thay cho các mock dựng bằng `<div>`, một màu nhấn teal duy nhất, scroll-reveal qua `IntersectionObserver` (gate `prefers-reduced-motion`), lớp trang trí/grain đặt `fixed` để không repaint khi cuộn.
+- **Sửa token font:** trước đây `@theme` khai báo `--font-family-display` (Fraunces) — sai namespace nên utility `font-display` không hoạt động, heading âm thầm rơi về Outfit. Nay đổi thành `--font-display: "Space Grotesk"`, `font-display` hoạt động **toàn app** (mọi component dùng class này: `AppHeader`, các guard screen, viewers…). Fraunces đã gỡ khỏi Google Fonts.
 
 ## Shell đăng nhập & hệ giao diện
 

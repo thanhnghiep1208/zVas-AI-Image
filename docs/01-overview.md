@@ -42,5 +42,10 @@ Chi tiết: `docs/07-refactor-2026-05.md`
 - Live Deploy: `docs/06-live-deployment.md`
 - Refactor 05/2026: `docs/07-refactor-2026-05.md`
 - Đăng nhập, user Firestore, phiên đa thiết bị: `docs/08-auth-users-setup.md`
+- Optimize 06/2026: `docs/09-optimize-2026-06.md`
+- Security hardening 06/2026: `docs/10-security-hardening-2026-06.md`
+- Reliability & polling 06/2026: `docs/11-reliability-polling-2026-06.md`
+- Sentry setup: `docs/12-sentry-setup.md`
+- Security SSRF (DNS rebinding) & MIME 07/2026: `docs/13-security-ssrf-mime-2026-07.md`
 - So sánh model ảnh Gemini (Nano Banana 2 vs Pro, dùng trong popup header): `docs/so-sanh-model-gemini.md`
 - **Default model:** Nano Banana 2 (`gemini-3.1-flash-image-preview`) — nằm đầu mảng `gemini` trong `constants/aiModels.ts`, được dùng làm fallback khi user chưa chọn model.
