@@ -2,6 +2,7 @@ import type { Request, Response } from 'express';
 import type { Firestore } from 'firebase-admin/firestore';
 import { resolveProviderFromSettings } from '../lib/resolveProvider';
 import { validateHttpsBaseUrl } from '../lib/validateBaseUrl';
+import { ssrfSafeFetch } from '../lib/ssrfSafeFetch';
 import type { AuthenticatedRequest, ProviderTestRequestBody } from '../types';
 
 export function createPostProviderTestHandler(db: Firestore) {
@@ -61,7 +62,7 @@ export function createPostProviderTestHandler(db: Firestore) {
         }
         const seedanceBase = baseCheck.normalized;
 
-        const response = await fetch(`${seedanceBase}/models`, {
+        const response = await ssrfSafeFetch(`${seedanceBase}/models`, {
           method: 'GET',
           headers: { Authorization: `Bearer ${apiKey}` },
         });
@@ -100,7 +101,7 @@ export function createPostProviderTestHandler(db: Firestore) {
         }
         const seedreamBase = baseCheck.normalized;
 
-        const response = await fetch(`${seedreamBase}/models`, {
+        const response = await ssrfSafeFetch(`${seedreamBase}/models`, {
           method: 'GET',
           headers: { Authorization: `Bearer ${apiKey}` },
         });
@@ -150,6 +151,10 @@ export function createPostProviderTestHandler(db: Firestore) {
         message: 'Kết nối Gemini thành công.',
       });
     } catch (error: unknown) {
+      const cause = (error as { cause?: { code?: string } })?.cause;
+      if (cause?.code === 'SSRF_BLOCKED' || (error as { code?: string })?.code === 'SSRF_BLOCKED') {
+        return res.status(400).json({ ok: false, error: 'Base URL không được trỏ tới địa chỉ nội bộ.' });
+      }
       console.error('Provider test error:', error);
       const message = error instanceof Error ? error.message : 'Provider test failed.';
       return res.status(500).json({

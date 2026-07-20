@@ -9,6 +9,7 @@ import {
 import type { AuthenticatedRequest, GenerateRequestBody } from '../types';
 import { validatePrompt } from '../lib/validateUserInput';
 import { validateHttpsBaseUrl } from '../lib/validateBaseUrl';
+import { ssrfSafeFetch } from '../lib/ssrfSafeFetch';
 import { tryConsumeRateLimit } from '../lib/rateLimit/index';
 
 export function createPostGenerateHandler(db: Firestore) {
@@ -86,7 +87,7 @@ export function createPostGenerateHandler(db: Firestore) {
         }
         const baseUrl = baseCheck.normalized;
 
-        const response = await fetch(`${baseUrl}/images/generations`, {
+        const response = await ssrfSafeFetch(`${baseUrl}/images/generations`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -133,7 +134,7 @@ export function createPostGenerateHandler(db: Firestore) {
         }
         const baseUrl = baseCheck.normalized;
 
-        const response = await fetch(`${baseUrl}/images/generations`, {
+        const response = await ssrfSafeFetch(`${baseUrl}/images/generations`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -236,6 +237,10 @@ export function createPostGenerateHandler(db: Firestore) {
           (usage.promptTokenCount || 0) + (usage.candidatesTokenCount || 0),
       });
     } catch (error: unknown) {
+      const cause = (error as { cause?: { code?: string } })?.cause;
+      if (cause?.code === 'SSRF_BLOCKED' || (error as { code?: string })?.code === 'SSRF_BLOCKED') {
+        return res.status(400).json({ error: 'Base URL không được trỏ tới địa chỉ nội bộ.' });
+      }
       console.error('Generate API error:', error);
       const message = error instanceof Error ? error.message : 'Generation failed.';
       return res.status(500).json({ error: message });
