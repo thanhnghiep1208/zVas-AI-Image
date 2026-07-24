@@ -1,5 +1,6 @@
 import { auth } from '../firebase';
 import type { GeneratedImage, ImageSize } from '../types';
+import { describeApiOrNetworkError } from '../utils/userFacingError';
 
 const fileToBase64 = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
@@ -93,37 +94,57 @@ export const generateImageVariations = async (
     } catch (error: any) {
       console.error(`Error generating image for prompt "${prompt}":`, error);
 
-      let userMessage = error.message || 'An unknown error occurred.';
+      // error can be a non-Error rejection (e.g. a FileReader ProgressEvent, or a
+      // plain object) — fall back to a stable placeholder instead of leaking
+      // "[object Object]"/undefined into the analytics message.
+      let userMessage =
+        (typeof error?.message === 'string' && error.message) ||
+        (typeof error === 'string' ? error : '') ||
+        'An unknown error occurred.';
       const provider = String(globalSettings?.activeProvider || 'gemini');
 
       // Extract machine-readable error code BEFORE transforming to user-facing message
       const msgLower = userMessage.toLowerCase();
       let errorCode = 'unknown_error';
-      if (userMessage.includes('429') || msgLower.includes('quota exceeded') || userMessage.includes('RESOURCE_EXHAUSTED')) {
+      if (userMessage.includes('429') || msgLower.includes('quota exceeded') || userMessage.includes('RESOURCE_EXHAUSTED') || msgLower.includes('too many requests')) {
         errorCode = 'quota_exceeded';
       } else if (userMessage.includes('403') || msgLower.includes('forbidden')) {
         errorCode = 'forbidden';
       } else if (userMessage.includes('401') || msgLower.includes('unauthorized')) {
         errorCode = 'auth_error';
+      } else if (userMessage.includes('413') || msgLower.includes('payload too large') || msgLower.includes('too large')) {
+        errorCode = 'payload_too_large';
       } else if (userMessage.includes('500') || msgLower.includes('internal server error')) {
         errorCode = 'server_error';
       } else if (userMessage.includes('502') || msgLower.includes('bad gateway')) {
         errorCode = 'server_error';
       } else if (userMessage.includes('503') || msgLower.includes('service unavailable')) {
         errorCode = 'service_unavailable';
-      } else if (userMessage.includes('Requested entity was not found')) {
+      } else if (userMessage.includes('Requested entity was not found') || (userMessage.includes('404') && msgLower.includes('not found'))) {
         errorCode = 'not_found';
       } else if (msgLower.includes('rate limit')) {
         errorCode = 'rate_limit';
-      } else if (msgLower.includes('timeout') || msgLower.includes('timed out')) {
+      } else if (msgLower.includes('timeout') || msgLower.includes('timed out') || msgLower.includes('deadline exceeded') || msgLower.includes('aborted')) {
         errorCode = 'timeout';
-      } else if (msgLower.includes('failed to fetch') || msgLower.includes('network')) {
+      } else if (
+        msgLower.includes('failed to fetch') ||
+        msgLower.includes('load failed') ||
+        msgLower.includes('networkerror') ||
+        msgLower.includes('network')
+      ) {
         errorCode = 'network_error';
       } else if (msgLower.includes('safety') || msgLower.includes('content filter') || msgLower.includes('blocked')) {
         errorCode = 'content_filter';
       } else if (userMessage.includes('No image was generated')) {
         errorCode = 'no_output';
+      } else if (userMessage.includes('400') || msgLower.includes('bad request')) {
+        errorCode = 'invalid_prompt';
       }
+
+      // rawErrorMessage giữ nguyên message kỹ thuật gốc — chỉ dùng cho
+      // analytics/chẩn đoán (tooltip "Sample error messages"), không hiển thị
+      // cho người dùng.
+      const rawErrorMessage = userMessage;
 
       // Handle specific API errors (Gemini-only messages — do not mislabel Seedream/OpenAI)
       if (errorCode === 'quota_exceeded' && provider === 'gemini') {
@@ -132,11 +153,18 @@ export const generateImageVariations = async (
         userMessage = "Lỗi API (403 Forbidden): Model Gemini image yêu cầu API Key trả phí (Paid) từ Google Cloud. Hoặc chọn SEEDREAM · Dola-Seedream-5.0-lite / ByteDance-Seedream-4.5 trên dropdown (cần SEEDREAM_API_KEY).";
       } else if (errorCode === 'not_found' && provider === 'gemini') {
         userMessage = "Lỗi API: API Key đã chọn có thể không hợp lệ hoặc model không khả dụng cho Key này. Vui lòng thử chọn lại API Key.";
+      } else {
+        // Mọi mã lỗi khác (provider không phải gemini, hoặc chưa có message
+        // riêng ở trên) — không để lộ text kỹ thuật thô (raw fetch/API message,
+        // "An unknown error occurred.", JSON preview từ backend...) ra người
+        // dùng. Message gốc vẫn được lưu ở rawErrorMessage cho analytics.
+        userMessage = describeApiOrNetworkError(userMessage);
       }
 
       return {
         prompt,
         imageUrl: 'error',
+        rawErrorMessage,
         text: userMessage,
         errorCode,
         promptTokens: 0,

@@ -54,14 +54,26 @@ export function describeApiOrNetworkError(raw: string): string {
   if (n.includes('invalid argument') || n.includes('bad request') || n.includes(' 400')) {
     return 'Dữ liệu gửi đi chưa hợp lệ. Kiểm tra prompt và tùy chọn rồi thử lại.';
   }
-  if (n.includes(' 500') || n.includes('internal error')) {
+  if (n.includes(' 500') || n.includes('internal error') || n.includes('bad gateway') || n.includes(' 502')) {
     return 'Máy chủ gặp sự cố tạm thời. Vui lòng thử lại sau.';
+  }
+  if (n.includes('service unavailable') || n.includes(' 503')) {
+    return 'Dịch vụ đang tạm thời không khả dụng. Vui lòng thử lại sau ít phút.';
   }
   if (n.includes('401') || n.includes('unauthenticated')) {
     return 'Phiên đăng nhập hết hạn hoặc chưa xác thực. Hãy đăng nhập lại.';
   }
+  if (n.includes('payload too large') || n.includes(' 413') || (n.includes('too large') && n.includes('file'))) {
+    return 'Ảnh hoặc tệp gửi lên quá lớn. Vui lòng dùng ảnh nhỏ hơn rồi thử lại.';
+  }
+  if (n.includes('no image was generated') || n.includes('no output')) {
+    return 'Model không trả về ảnh nào cho yêu cầu này. Hãy thử lại hoặc chỉnh mô tả.';
+  }
   if (n.includes('invalid') && n.includes('prompt')) {
     return 'Prompt chưa hợp lệ. Kiểm tra và thử lại.';
+  }
+  if (n.includes('not found') || n.includes('entity was not found')) {
+    return 'Không tìm thấy model hoặc tài nguyên yêu cầu. Kiểm tra lại cấu hình model/API key.';
   }
 
   return USER_ERROR_GENERIC;

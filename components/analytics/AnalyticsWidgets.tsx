@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Activity,
   AlertTriangle,
@@ -12,6 +13,61 @@ import {
 } from 'lucide-react';
 import { Line, LineChart, ResponsiveContainer } from 'recharts';
 import type { MonthlyAnalytics, MonthlyErrorBreakdownItem, MonthlyTokenStats } from '../../services/analyticsService';
+
+const TOOLTIP_WIDTH = 320;
+const TOOLTIP_MARGIN = 8;
+
+// Rendered via portal so the tooltip escapes the table wrapper's `overflow-hidden`
+// (needed for the rounded-corner clipping) instead of being cut off by it.
+const ErrorSampleTooltip = ({ messages, title }: { messages: string[]; title: string }) => {
+  const anchorRef = useRef<HTMLSpanElement>(null);
+  const [pos, setPos] = useState<{ top: number; left: number; flip: boolean } | null>(null);
+
+  const show = () => {
+    const rect = anchorRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const flip = rect.top < 160;
+    const left = Math.max(8, Math.min(rect.left, window.innerWidth - TOOLTIP_WIDTH - 8));
+    const top = flip ? rect.bottom + TOOLTIP_MARGIN : rect.top - TOOLTIP_MARGIN;
+    setPos({ top, left, flip });
+  };
+
+  return (
+    <span
+      ref={anchorRef}
+      className="cursor-help select-none text-xs text-gray-600"
+      onMouseEnter={show}
+      onMouseLeave={() => setPos(null)}
+    >
+      ⓘ
+      {pos &&
+        createPortal(
+          <div
+            className="pointer-events-none fixed z-[9999] rounded-xl border border-white/[0.12] bg-gray-900 p-3 shadow-2xl"
+            style={{
+              top: pos.top,
+              left: pos.left,
+              width: TOOLTIP_WIDTH,
+              transform: pos.flip ? undefined : 'translateY(-100%)',
+            }}
+          >
+            <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-gray-500">
+              {title}
+            </p>
+            {messages.map((msg, i) => (
+              <p
+                key={i}
+                className={`break-words text-[11px] leading-snug text-gray-300${i > 0 ? ' mt-1.5 border-t border-white/[0.06] pt-1.5' : ''}`}
+              >
+                {msg}
+              </p>
+            ))}
+          </div>,
+          document.body
+        )}
+    </span>
+  );
+};
 
 export const KpiCard = ({
   title,
@@ -387,17 +443,7 @@ export const ExpandableErrorBreakdown = ({
                         {item.errorType}
                       </span>
                       {item.sampleMessages && item.sampleMessages.length > 0 && (
-                        <>
-                          <span className="cursor-help text-xs text-gray-600 select-none">ⓘ</span>
-                          <div className="pointer-events-none absolute bottom-full left-0 z-50 mb-1.5 hidden w-72 rounded-lg border border-white/[0.12] bg-gray-900 p-2.5 shadow-xl group-hover:block">
-                            <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-gray-500">Ví dụ message gốc</p>
-                            {item.sampleMessages.map((msg, i) => (
-                              <p key={i} className={`break-words text-[11px] leading-snug text-gray-300${i > 0 ? ' mt-1.5 border-t border-white/[0.06] pt-1.5' : ''}`}>
-                                {msg}
-                              </p>
-                            ))}
-                          </div>
-                        </>
+                        <ErrorSampleTooltip messages={item.sampleMessages} title="Ví dụ message gốc" />
                       )}
                     </div>
                   </td>
@@ -563,22 +609,7 @@ export const FailedGenerationsBox = ({
                         </span>
                         <span className="text-gray-200">{item.errorType}</span>
                         {item.sampleMessages && item.sampleMessages.length > 0 && (
-                          <>
-                            <span className="cursor-help select-none text-xs text-gray-600">ⓘ</span>
-                            <div className="pointer-events-none absolute bottom-full left-0 z-50 mb-2 hidden w-80 rounded-xl border border-white/[0.12] bg-gray-900 p-3 shadow-2xl group-hover:block">
-                              <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-gray-500">
-                                Sample error messages
-                              </p>
-                              {item.sampleMessages.map((msg, i) => (
-                                <p
-                                  key={i}
-                                  className={`break-words text-[11px] leading-snug text-gray-300${i > 0 ? ' mt-1.5 border-t border-white/[0.06] pt-1.5' : ''}`}
-                                >
-                                  {msg}
-                                </p>
-                              ))}
-                            </div>
-                          </>
+                          <ErrorSampleTooltip messages={item.sampleMessages} title="Sample error messages" />
                         )}
                       </div>
                     </td>

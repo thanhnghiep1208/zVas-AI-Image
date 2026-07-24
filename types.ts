@@ -6,6 +6,8 @@ export interface GeneratedImage {
   imageUrl: string;
   text?: string | null;
   errorCode?: string;
+  /** Raw technical error message (pre-translation) — for analytics/diagnostics only, never shown to users. */
+  rawErrorMessage?: string;
   promptTokens?: number;
   completionTokens?: number;
   totalTokens?: number;

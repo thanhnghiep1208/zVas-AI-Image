@@ -37,21 +37,33 @@ const mapErrorType = (errorCode?: string): { errorType: string; severity: 'warni
   if (normalized === 'content_filter') return { errorType: 'Content Filter', severity: 'warning' };
   if (normalized === 'invalid_prompt') return { errorType: 'Invalid Prompt', severity: 'warning' };
   if (normalized === 'permission_denied') return { errorType: 'Permission Denied', severity: 'critical' };
-  if (normalized === 'unknown_error') return { errorType: 'Unknown Error', severity: 'warning' };
-  // Fallback keyword matching for legacy events
-  if (normalized.includes('timeout') || normalized.includes('timed out')) return { errorType: 'API Timeout', severity: 'critical' };
-  if (normalized.includes('429') || normalized.includes('quota') || normalized.includes('resource_exhausted')) return { errorType: 'Quota Exceeded (429)', severity: 'critical' };
-  if (normalized.includes('403') || normalized.includes('forbidden')) return { errorType: 'API Key / Permission (403)', severity: 'critical' };
-  if (normalized.includes('401') || normalized.includes('unauthorized')) return { errorType: 'Auth Error (401)', severity: 'critical' };
-  if (normalized.includes('500') || normalized.includes('internal server error') || normalized.includes('502') || normalized.includes('bad gateway')) return { errorType: 'Server Error (500/502)', severity: 'critical' };
-  if (normalized.includes('503') || normalized.includes('service unavailable')) return { errorType: 'Service Unavailable (503)', severity: 'critical' };
-  if (normalized.includes('not found') || normalized.includes('entity was not found')) return { errorType: 'Model Not Found', severity: 'warning' };
-  if (normalized.includes('rate limit')) return { errorType: 'Rate Limit', severity: 'warning' };
-  if (normalized.includes('filter') || normalized.includes('safety') || normalized.includes('blocked')) return { errorType: 'Content Filter', severity: 'warning' };
-  if (normalized.includes('failed to fetch') || normalized.includes('network')) return { errorType: 'Network Error', severity: 'critical' };
-  if (normalized.includes('no image was generated')) return { errorType: 'No Output', severity: 'warning' };
-  if (normalized.includes('prompt') || normalized.includes('invalid')) return { errorType: 'Invalid Prompt', severity: 'warning' };
-  return { errorType: 'Unknown', severity: 'critical' };
+  if (normalized === 'unknown_error') return { errorType: 'Unknown Error', severity: 'critical' };
+  // Fallback keyword matching for legacy events. `errorCode` may be a slug with
+  // underscores instead of spaces (see normalizeErrorCode's fallback in
+  // analyticsService.ts), so compare against a space-normalized copy too —
+  // otherwise phrases like "rate limit" never match "rate_limit" and everything
+  // falls through to Unknown Error even when the raw message was classifiable.
+  const spaced = normalized.replace(/_/g, ' ');
+  if (spaced.includes('timeout') || spaced.includes('timed out') || spaced.includes('deadline exceeded') || spaced.includes('aborted')) return { errorType: 'API Timeout', severity: 'critical' };
+  if (spaced.includes('429') || spaced.includes('quota') || spaced.includes('resource exhausted') || spaced.includes('too many requests')) return { errorType: 'Quota Exceeded (429)', severity: 'critical' };
+  if (spaced.includes('403') || spaced.includes('forbidden')) return { errorType: 'API Key / Permission (403)', severity: 'critical' };
+  if (spaced.includes('401') || spaced.includes('unauthorized')) return { errorType: 'Auth Error (401)', severity: 'critical' };
+  if (spaced.includes('413') || spaced.includes('payload too large') || spaced.includes('too large')) return { errorType: 'Payload Too Large (413)', severity: 'warning' };
+  if (spaced.includes('500') || spaced.includes('internal server error') || spaced.includes('502') || spaced.includes('bad gateway')) return { errorType: 'Server Error (500/502)', severity: 'critical' };
+  if (spaced.includes('503') || spaced.includes('service unavailable')) return { errorType: 'Service Unavailable (503)', severity: 'critical' };
+  if (spaced.includes('400') || spaced.includes('bad request')) return { errorType: 'Bad Request (400)', severity: 'warning' };
+  if (spaced.includes('not found') || spaced.includes('entity was not found')) return { errorType: 'Model Not Found', severity: 'warning' };
+  if (spaced.includes('rate limit')) return { errorType: 'Rate Limit', severity: 'warning' };
+  if (spaced.includes('filter') || spaced.includes('safety') || spaced.includes('blocked')) return { errorType: 'Content Filter', severity: 'warning' };
+  if (spaced.includes('failed to fetch') || spaced.includes('load failed') || spaced.includes('networkerror') || spaced.includes('network')) return { errorType: 'Network Error', severity: 'critical' };
+  if (spaced.includes('no image was generated')) return { errorType: 'No Output', severity: 'warning' };
+  if (spaced.includes('permission denied') || spaced.includes('insufficient permissions')) return { errorType: 'Permission Denied', severity: 'critical' };
+  if (spaced.includes('prompt') || spaced.includes('invalid')) return { errorType: 'Invalid Prompt', severity: 'warning' };
+  // Truly unclassified: kept as ONE bucket (not split across "Unknown"/"Unknown
+  // Error") so sample messages concentrate here instead of being diluted across
+  // two near-duplicate rows — hover the row to read the raw message and add a
+  // new rule above once a pattern emerges.
+  return { errorType: 'Unknown Error', severity: 'critical' };
 };
 
 export const percentTrend = (current: number, previous: number): number => {

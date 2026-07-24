@@ -210,7 +210,10 @@ export function useImageGeneration(params: UseImageGenerationParams) {
             },
           ];
           if (failedResults.length > 0) {
-            ga4Exception(String(failedResults[0]?.text || 'image_generation_failed'), false);
+            const diagMessage = String(
+              failedResults[0]?.rawErrorMessage || failedResults[0]?.text || 'image_generation_failed'
+            );
+            ga4Exception(diagMessage, false);
             batchEvents.push({
               name: 'image_generation_failed',
               payload: {
@@ -220,13 +223,16 @@ export function useImageGeneration(params: UseImageGenerationParams) {
                 image_count: failedResults.length,
                 duration_ms: durationMs,
                 error_code: failedResults[0]?.errorCode || 'unknown',
-                error_message_short: String(failedResults[0]?.text || '').slice(0, 280),
+                error_message_short: diagMessage.slice(0, 280),
               },
             });
           }
           void trackEvents(batchEvents);
         }
         if (failedResults.length > 0 && validResults.length === 0) {
+          const diagMessage = String(
+            failedResults[0]?.rawErrorMessage || failedResults[0]?.text || 'image_generation_failed'
+          );
           trackEvent('image_generation_failed', {
             user_id: user.uid,
             model_name: activeModel,
@@ -234,9 +240,9 @@ export function useImageGeneration(params: UseImageGenerationParams) {
             image_count: failedResults.length,
             duration_ms: durationMs,
             error_code: failedResults[0]?.errorCode || 'unknown',
-            error_message_short: String(failedResults[0]?.text || '').slice(0, 280),
+            error_message_short: diagMessage.slice(0, 280),
           });
-          ga4Exception(String(failedResults[0]?.text || 'image_generation_failed'), false);
+          ga4Exception(diagMessage, false);
         }
       }
 
