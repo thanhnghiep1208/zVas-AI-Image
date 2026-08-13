@@ -135,34 +135,6 @@
           console.warn("Global fetch protection failed:", e);
         }
       })();
-
-      window.addEventListener('error', function(e) {
-        // General error display for other errors
-        if (e.defaultPrevented) return;
-        
-        var errDiv = document.createElement('div');
-        errDiv.style.color = 'red';
-        errDiv.style.padding = '20px';
-        errDiv.style.backgroundColor = '#ffebee';
-        errDiv.style.position = 'fixed';
-        errDiv.style.top = '0';
-        errDiv.style.left = '0';
-        errDiv.style.zIndex = '9999';
-        errDiv.innerHTML = '<strong>Global Error:</strong> ' + e.message + '<br/>' + (e.error ? e.error.stack : '');
-        document.body.appendChild(errDiv);
-      });
-      window.addEventListener('unhandledrejection', function(e) {
-        var errDiv = document.createElement('div');
-        errDiv.style.color = 'red';
-        errDiv.style.padding = '20px';
-        errDiv.style.backgroundColor = '#ffebee';
-        errDiv.style.position = 'fixed';
-        errDiv.style.top = '100px';
-        errDiv.style.left = '0';
-        errDiv.style.zIndex = '9999';
-        errDiv.innerHTML = '<strong>Unhandled Promise Rejection:</strong> ' + e.reason;
-        document.body.appendChild(errDiv);
-      });
     </script>
   </head>
   <body class="bg-gray-900 text-gray-100">
