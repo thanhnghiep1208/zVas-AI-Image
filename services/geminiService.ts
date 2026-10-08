@@ -88,6 +88,7 @@ export const generateImageVariations = async (
         text: responseData.text || '',
         promptTokens: responseData.promptTokens || 0,
         completionTokens: responseData.completionTokens || 0,
+        thinkingTokens: responseData.thinkingTokens || 0,
         totalTokens: responseData.totalTokens || 0
       };
 

@@ -10,6 +10,7 @@ export interface GeneratedImage {
   rawErrorMessage?: string;
   promptTokens?: number;
   completionTokens?: number;
+  thinkingTokens?: number;
   totalTokens?: number;
 }
 

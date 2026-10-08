@@ -5,6 +5,7 @@ import { describeApiOrNetworkError } from '../utils/userFacingError';
 import {
   ALLOWED_GEMINI_MODEL_IDS,
   DEFAULT_ENABLED_PROVIDERS,
+  GEMINI_MODEL_FALLBACK,
   normalizeEnabledProviders,
   normalizeGeminiModelId,
   type ProviderKey,
@@ -14,7 +15,7 @@ import type { AdminSettingsSnapshot } from '../components/admin/types';
 export function useAdminSettings() {
   const [seedanceBaseUrl, setSeedanceBaseUrl] = useState('');
   const [seedreamBaseUrl, setSeedreamBaseUrl] = useState('');
-  const [geminiModel, setGeminiModel] = useState('gemini-3.1-flash-image-preview');
+  const [geminiModel, setGeminiModel] = useState(GEMINI_MODEL_FALLBACK);
   const [seedanceModel, setSeedanceModel] = useState('seed-1.5-pro');
   const [seedreamModel, setSeedreamModel] = useState('seedream-5-0-260128');
   const [enabledProviders, setEnabledProviders] = useState<ProviderKey[]>([

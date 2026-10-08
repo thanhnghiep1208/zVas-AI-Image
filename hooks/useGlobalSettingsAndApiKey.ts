@@ -90,11 +90,12 @@ export function useGlobalSettingsAndApiKey(
   }, []);
 
   const enabledProviders = normalizeEnabledProviders(globalSettings?.enabledProviders);
-  const availableModelOptions = getEnabledModelOptions(enabledProviders);
+  const adminGeminiModel = globalSettings?.geminiModel;
+  const availableModelOptions = getEnabledModelOptions(enabledProviders, adminGeminiModel);
 
   const getSelectedModelOption = useCallback(() => {
-    return resolveModelKey(enabledProviders, selectedModelKey);
-  }, [enabledProviders, selectedModelKey]);
+    return resolveModelKey(enabledProviders, selectedModelKey, adminGeminiModel);
+  }, [enabledProviders, selectedModelKey, adminGeminiModel]);
 
   const isProviderKeyConfigured = useCallback(
     (provider: ProviderKey) => Boolean(providerKeysConfigured[provider]),

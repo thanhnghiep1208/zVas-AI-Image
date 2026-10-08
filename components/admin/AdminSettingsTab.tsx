@@ -1,6 +1,6 @@
 import React from 'react';
 import { CheckCircle, Shield } from 'lucide-react';
-import type { ProviderKey } from '../../constants/aiModels';
+import { GEMINI_ADMIN_MODEL_OPTIONS, type ProviderKey } from '../../constants/aiModels';
 
 interface AdminSettingsTabProps {
   enabledProviders: ProviderKey[];
@@ -93,9 +93,15 @@ export const AdminSettingsTab: React.FC<AdminSettingsTabProps> = ({
               onChange={(e) => onGeminiModelChange(e.target.value)}
               className="rounded-lg border border-white/10 bg-white/[0.05] px-3 py-2.5 text-sm text-white outline-none transition focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/20"
             >
-              <option value="gemini-3-pro-image-preview">Nano Banana Pro</option>
-              <option value="gemini-3.1-flash-image-preview">Nano Banana 2</option>
+              {GEMINI_ADMIN_MODEL_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
             </select>
+            <p className="text-xs text-gray-400">
+              Chọn Nano Banana 2 để rollback: user sẽ thấy Nano Banana 2 thay cho 2.1.
+            </p>
           </div>
         </div>
 

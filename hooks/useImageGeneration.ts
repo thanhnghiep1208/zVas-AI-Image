@@ -20,31 +20,7 @@ import { createHistoryEntry } from '../data/historyRepository';
 import { describeApiOrNetworkError } from '../utils/userFacingError';
 import type { ProviderKey } from '../constants/aiModels';
 import { providerKeyMissingMessage } from '../utils/providerKeyMessages';
-
-// Pricing per https://ai.google.dev/gemini-api/docs/pricing (Standard tier), checked 2026-08-06.
-interface GeminiImagePricing {
-  inputPerMillion: number;
-  outputPerMillion: number;
-  perImageFallback: Partial<Record<ImageSize, number>>;
-}
-
-const GEMINI_3_PRO_IMAGE_PRICING: GeminiImagePricing = {
-  inputPerMillion: 2.0,
-  outputPerMillion: 120.0,
-  perImageFallback: { '1K': 0.134, '2K': 0.134, '4K': 0.24 },
-};
-
-const GEMINI_3_1_FLASH_IMAGE_PRICING: GeminiImagePricing = {
-  inputPerMillion: 0.5,
-  outputPerMillion: 60.0,
-  perImageFallback: { '512px': 0.04482, '1K': 0.0672, '2K': 0.1008, '4K': 0.1512 },
-};
-
-function resolveGeminiImagePricing(modelName: string): GeminiImagePricing {
-  return modelName.includes('3-pro-image')
-    ? GEMINI_3_PRO_IMAGE_PRICING
-    : GEMINI_3_1_FLASH_IMAGE_PRICING;
-}
+import { estimateGeminiCost } from '../utils/geminiPricing';
 
 export interface UseImageGenerationParams {
   user: User | null;
@@ -194,6 +170,10 @@ export function useImageGeneration(params: UseImageGenerationParams) {
             (sum, img) => sum + (img.completionTokens || 0),
             0
           );
+          const thinkingTokens = validResults.reduce(
+            (sum, img) => sum + (img.thinkingTokens || 0),
+            0
+          );
           const totalTokens = validResults.reduce(
             (sum, img) => sum + (img.totalTokens || 0),
             0
@@ -203,16 +183,14 @@ export function useImageGeneration(params: UseImageGenerationParams) {
           if (activeModel.includes('dall-e-3')) {
             estimatedCost = validResults.length * 0.04;
           } else if (activeModel.includes('gemini')) {
-            const pricing = resolveGeminiImagePricing(activeModel);
-            if (totalTokens > 0) {
-              estimatedCost =
-                (promptTokens / 1_000_000) * pricing.inputPerMillion +
-                (completionTokens / 1_000_000) * pricing.outputPerMillion;
-            } else {
-              const perImage =
-                pricing.perImageFallback[imageSize] ?? pricing.perImageFallback['1K'] ?? 0.04;
-              estimatedCost = validResults.length * perImage;
-            }
+            estimatedCost = estimateGeminiCost({
+              model: activeModel,
+              promptTokens,
+              completionTokens,
+              thinkingTokens,
+              imageCount: validResults.length,
+              imageSize,
+            });
           } else {
             estimatedCost = validResults.length * 0.01;
           }

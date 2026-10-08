@@ -43,6 +43,8 @@ export interface CreateViewProps {
   onAspectRatioChange: (v: string) => void;
   imageSize: ImageSize;
   onImageSizeChange: (v: ImageSize) => void;
+  /** Size model đang chọn không hỗ trợ (disable trong ImageSizeSelector). */
+  unsupportedImageSizes?: string[];
   onShowStyleGuide: () => void;
   onGenerate: () => void;
   canGenerate: boolean;
@@ -92,6 +94,7 @@ function CreateViewComponent({
   onAspectRatioChange,
   imageSize,
   onImageSizeChange,
+  unsupportedImageSizes,
   onShowStyleGuide,
   onGenerate,
   canGenerate,
@@ -202,7 +205,11 @@ function CreateViewComponent({
 
         <AspectRatioSelector aspectRatio={aspectRatio} setAspectRatio={onAspectRatioChange} />
 
-        <ImageSizeSelector imageSize={imageSize} setImageSize={onImageSizeChange} />
+        <ImageSizeSelector
+          imageSize={imageSize}
+          setImageSize={onImageSizeChange}
+          unsupportedSizes={unsupportedImageSizes}
+        />
       </div>
 
       <div className="sticky bottom-0 z-10 border-t border-[var(--lp-border)] bg-[var(--lp-surface)] p-5 backdrop-blur-lg lg:static lg:bg-[var(--lp-surface)]/90">

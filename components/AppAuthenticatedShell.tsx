@@ -3,7 +3,12 @@ import type { Dispatch, SetStateAction } from 'react';
 import type { User } from 'firebase/auth';
 import type { GeneratedImage, GlobalSettings } from '../types';
 import type { UserProfile } from '../hooks/useAuthAndProfile';
-import type { ProviderModelOption, ProviderKey } from '../constants/aiModels';
+import {
+  getUnsupportedImageSizes,
+  resolveGeminiRequestModel,
+  type ProviderModelOption,
+  type ProviderKey,
+} from '../constants/aiModels';
 import { AppHeaderWithPending } from './layout/AppHeaderWithPending';
 import type { AppView } from './layout/AppHeader';
 import { AppFooter } from './layout/AppFooter';
@@ -317,6 +322,7 @@ export const AppAuthenticatedShell: React.FC<AppAuthenticatedShellProps> = ({
                   onAspectRatioChange={workspace.setAspectRatio}
                   imageSize={workspace.imageSize}
                   onImageSizeChange={workspace.setImageSize}
+                  unsupportedImageSizes={getUnsupportedImageSizes(getEffectiveModel())}
                   onShowStyleGuide={() => workspace.setIsStyleGuideVisible(true)}
                   onGenerate={workspace.handleGenerateClick}
                   canGenerate={workspace.canGenerate}
@@ -353,6 +359,9 @@ export const AppAuthenticatedShell: React.FC<AppAuthenticatedShellProps> = ({
                   <MergeImage
                     onDownload={handleDownloadImage}
                     onFullscreen={workspace.setFullscreenImage}
+                    unsupportedImageSizes={getUnsupportedImageSizes(
+                      resolveGeminiRequestModel(undefined, globalSettings?.geminiModel)
+                    )}
                   />
                 </main>
               )}
