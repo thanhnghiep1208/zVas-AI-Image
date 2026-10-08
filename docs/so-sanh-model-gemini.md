@@ -15,14 +15,15 @@ Bản tóm tắt trực quan giúp bạn dễ dàng lựa chọn giữa **Nano B
 
 | Điểm khác biệt | Nano Banana 2.1 | Nano Banana Pro |
 | :--- | :--- | :--- |
-| **Model ID** | `gemini-nano-banana-2.1` | `gemini-3-pro-image-preview` |
+| **Model ID** | `gemini-nano-banana-2.1` | `gemini-3-pro-image` |
 | **Tốc độ** | ~12 - 15 giây (ảnh 1K) | **Chậm hơn** (10 - 20 giây) |
 | **Chi phí API** | **Rẻ hơn ~4 lần** ($0.034 / 1K, $0.050 / 2K, $0.113 / 4K) | **Cao hơn** ($0.134 / 1K-2K, $0.24 / 4K) |
 | **Chất lượng ảnh** | Rất cao, chân thực hơn bản 2 ở mọi độ phân giải | **Cao nhất**, hoàn hảo về ánh sáng/vật liệu |
 | **Chữ Tiếng Việt** | Tốt, chữ và infographic chính xác hơn bản 2 | **Xuất sắc**, chính xác cả đoạn dài/font khó |
 | **Sửa ảnh (In/Out-paint)** | Sửa nhanh theo hội thoại, đổi nền linh hoạt | Biên ảnh tinh xảo, ghép sản phẩm chuẩn studio |
-| **Độ nhất quán** | Tối đa 14 ảnh tham chiếu (4 nhân vật + 10 vật thể) | Giữ nhân vật cực tốt từ 1 ảnh tham chiếu |
-| **Độ phân giải** | 1K, 2K, 4K (512px tự nâng lên 1K) | 1K, 2K, 4K |
+| **Ảnh tham chiếu** | **Tối đa 10 vật thể + 4 nhân vật + 3 ảnh style** | Tối đa 6 vật thể |
+| **Giữ nhân vật nhất quán** | **Tốt**, giữ được tới 4 nhân vật | Không tối ưu cho nhân vật nhất quán |
+| **Độ phân giải** | 1K, 2K, 4K (không hỗ trợ 512px) | 1K, 2K, 4K (không hỗ trợ 512px) |
 
 ---
 
@@ -31,7 +32,6 @@ Bản tóm tắt trực quan giúp bạn dễ dàng lựa chọn giữa **Nano B
 * Ảnh đẹp và chân thực hơn ở cả 1K, 2K, 4K.
 * Hết lỗi ảnh bị lặp ô (tiling) ở các tỷ lệ panorama.
 * Viết chữ trong ảnh và infographic chính xác hơn.
-* Nhận tối đa 14 ảnh tham chiếu (4 nhân vật + 10 vật thể).
 * Rẻ hơn: ảnh 1K giảm từ $0.067 xuống **$0.034**.
 
 ---
@@ -41,7 +41,7 @@ Bản tóm tắt trực quan giúp bạn dễ dàng lựa chọn giữa **Nano B
 ### 1. Dùng Nano Banana 2.1 khi
 
 * Cần tạo số lượng lớn ảnh với chi phí tối ưu.
-* Cần giữ nhất quán nhiều nhân vật/vật thể qua nhiều ảnh tham chiếu.
+* Cần giữ nhân vật nhất quán qua nhiều ảnh, hoặc dùng nhiều ảnh tham chiếu (vật thể, nhân vật, style).
 * Cần chỉnh sửa, thay đổi nhanh phông nền theo cuộc hội thoại.
 
 ### 2. Dùng Nano Banana Pro khi

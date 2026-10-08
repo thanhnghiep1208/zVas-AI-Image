@@ -10,8 +10,19 @@ export interface ProviderModelOption {
 
 export const GEMINI_NANO_BANANA_2_1 = 'gemini-nano-banana-2.1';
 /** Nano Banana 2 – chỉ còn dùng làm phương án rollback (admin chọn trong Settings). */
-export const GEMINI_NANO_BANANA_2 = 'gemini-3.1-flash-image-preview';
-export const GEMINI_NANO_BANANA_PRO = 'gemini-3-pro-image-preview';
+export const GEMINI_NANO_BANANA_2 = 'gemini-3.1-flash-image';
+export const GEMINI_NANO_BANANA_PRO = 'gemini-3-pro-image';
+
+/** ID preview cũ (Firestore / localStorage / tab mở sẵn) → ID GA tương ứng. */
+const LEGACY_GEMINI_MODEL_IDS: Record<string, string> = {
+  'gemini-3.1-flash-image-preview': GEMINI_NANO_BANANA_2,
+  'gemini-3-pro-image-preview': GEMINI_NANO_BANANA_PRO,
+};
+
+/** Đổi ID preview cũ sang ID GA; ID khác giữ nguyên. */
+export function canonicalGeminiModelId(id: string): string {
+  return LEGACY_GEMINI_MODEL_IDS[id] ?? id;
+}
 
 const GEMINI_MODEL_LABELS: Record<string, string> = {
   [GEMINI_NANO_BANANA_2_1]: 'Nano Banana 2.1',
@@ -131,11 +142,15 @@ export function resolveModelKey(
   const fallback = options[0] ?? geminiOptionFor(getActiveGeminiFlashModel(adminGeminiModel));
   if (!preferredModelKey) return fallback;
   const parsed = parseModelKey(preferredModelKey);
+  const geminiModel = parsed?.provider === 'gemini' ? canonicalGeminiModelId(parsed.model) : null;
   // Preference Flash cũ/mới (NB2 hoặc 2.1) luôn theo model Flash đang hoạt động.
   const key =
-    parsed?.provider === 'gemini' && isGeminiFlashModel(parsed.model)
-      ? modelKeyFrom('gemini', getActiveGeminiFlashModel(adminGeminiModel))
-      : preferredModelKey;
+    geminiModel === null
+      ? preferredModelKey
+      : modelKeyFrom(
+          'gemini',
+          isGeminiFlashModel(geminiModel) ? getActiveGeminiFlashModel(adminGeminiModel) : geminiModel
+        );
   return options.find((option) => option.key === key) ?? fallback;
 }
 
@@ -148,13 +163,14 @@ export function normalizeGeminiModelId(
   id: string | undefined | null,
   fallback: string = GEMINI_MODEL_FALLBACK
 ): string {
-  const s = id == null ? '' : String(id);
+  const s = canonicalGeminiModelId(id == null ? '' : String(id));
   return ALLOWED_GEMINI_MODEL_IDS.has(s) ? s : fallback;
 }
 
-/** Kích thước ảnh model không hỗ trợ (API 2.1 trả 400 "Image size 512px is not supported"). */
+/** Kích thước ảnh model không hỗ trợ (API trả 400 "Image size 512px is not supported"). */
 const UNSUPPORTED_IMAGE_SIZES: Record<string, string[]> = {
   [GEMINI_NANO_BANANA_2_1]: ['512px'],
+  [GEMINI_NANO_BANANA_PRO]: ['512px'],
 };
 
 export function getUnsupportedImageSizes(model: string): string[] {
@@ -171,9 +187,10 @@ export function resolveGeminiRequestModel(
   adminGeminiModel: string | null | undefined
 ): string {
   const activeFlash = getActiveGeminiFlashModel(adminGeminiModel);
+  const requested = requestedModel ? canonicalGeminiModelId(requestedModel) : null;
   const model =
-    requestedModel && ALLOWED_GEMINI_MODEL_IDS.has(requestedModel)
-      ? requestedModel
+    requested && ALLOWED_GEMINI_MODEL_IDS.has(requested)
+      ? requested
       : adminGeminiModel && ALLOWED_GEMINI_MODEL_IDS.has(adminGeminiModel)
         ? adminGeminiModel
         : activeFlash;

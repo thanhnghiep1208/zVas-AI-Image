@@ -1,5 +1,6 @@
 import type { ImageSize } from '../types';
 import {
+  canonicalGeminiModelId,
   GEMINI_MODEL_FALLBACK,
   GEMINI_NANO_BANANA_2,
   GEMINI_NANO_BANANA_2_1,
@@ -38,7 +39,10 @@ const GEMINI_IMAGE_PRICING: Record<string, GeminiImagePricing> = {
 };
 
 export function resolveGeminiImagePricing(modelName: string): GeminiImagePricing {
-  return GEMINI_IMAGE_PRICING[modelName] ?? GEMINI_IMAGE_PRICING[GEMINI_MODEL_FALLBACK];
+  return (
+    GEMINI_IMAGE_PRICING[canonicalGeminiModelId(modelName)] ??
+    GEMINI_IMAGE_PRICING[GEMINI_MODEL_FALLBACK]
+  );
 }
 
 /** Chi phí theo token usage thực tế; fallback giá cố định theo độ phân giải khi không có token. */

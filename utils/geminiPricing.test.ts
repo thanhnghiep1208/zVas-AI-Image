@@ -33,6 +33,17 @@ describe('resolveGeminiImagePricing', () => {
     assert.equal(p.perImageFallback['4K'], 0.24);
   });
 
+  it('prices legacy preview ids like their GA model', () => {
+    assert.deepEqual(
+      resolveGeminiImagePricing('gemini-3-pro-image-preview'),
+      resolveGeminiImagePricing(GEMINI_NANO_BANANA_PRO)
+    );
+    assert.deepEqual(
+      resolveGeminiImagePricing('gemini-3.1-flash-image-preview'),
+      resolveGeminiImagePricing(GEMINI_NANO_BANANA_2)
+    );
+  });
+
   it('uses fallback model (2.1) pricing for unknown ids', () => {
     assert.deepEqual(
       resolveGeminiImagePricing('gemini-unknown-image'),

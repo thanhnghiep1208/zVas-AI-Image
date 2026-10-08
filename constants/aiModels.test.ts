@@ -127,6 +127,10 @@ describe('getUnsupportedImageSizes', () => {
     assert.deepEqual(getUnsupportedImageSizes(GEMINI_NANO_BANANA_2_1), ['512px']);
   });
 
+  it('marks 512px unsupported for Pro (API returns 400)', () => {
+    assert.deepEqual(getUnsupportedImageSizes(GEMINI_NANO_BANANA_PRO), ['512px']);
+  });
+
   it('allows every size for Nano Banana 2 and non-gemini models', () => {
     assert.deepEqual(getUnsupportedImageSizes(GEMINI_NANO_BANANA_2), []);
     assert.deepEqual(getUnsupportedImageSizes('dall-e-3'), []);
@@ -170,5 +174,42 @@ describe('getAdminGeminiModel', () => {
   it('legacy settings resolve to 2.1 in the user dropdown', () => {
     const admin = getAdminGeminiModel({ geminiModel: GEMINI_NANO_BANANA_2 });
     assert.equal(getEnabledModelOptions(['gemini'], admin)[0].value, GEMINI_NANO_BANANA_2_1);
+  });
+});
+
+describe('GA model ids (preview ids migrated)', () => {
+  const PRO_PREVIEW = 'gemini-3-pro-image-preview';
+  const NB2_PREVIEW = 'gemini-3.1-flash-image-preview';
+
+  it('uses GA ids for Pro and Nano Banana 2', () => {
+    assert.equal(GEMINI_NANO_BANANA_PRO, 'gemini-3-pro-image');
+    assert.equal(GEMINI_NANO_BANANA_2, 'gemini-3.1-flash-image');
+  });
+
+  it('normalizes stored preview ids to GA ids', () => {
+    assert.equal(normalizeGeminiModelId(PRO_PREVIEW), GEMINI_NANO_BANANA_PRO);
+    assert.equal(normalizeGeminiModelId(NB2_PREVIEW), GEMINI_NANO_BANANA_2);
+  });
+
+  it('keeps a saved Pro preview preference as Pro', () => {
+    assert.equal(resolveModelKey(['gemini'], `gemini:${PRO_PREVIEW}`).value, GEMINI_NANO_BANANA_PRO);
+  });
+
+  it('maps a saved Nano Banana 2 preview preference to the active Flash model', () => {
+    assert.equal(resolveModelKey(['gemini'], `gemini:${NB2_PREVIEW}`).value, GEMINI_NANO_BANANA_2_1);
+  });
+
+  it('honours admin settings stored with preview ids', () => {
+    assert.equal(getAdminGeminiModel({ geminiModel: PRO_PREVIEW }), GEMINI_NANO_BANANA_PRO);
+    assert.equal(getAdminGeminiModel({ geminiModel: NB2_PREVIEW }), GEMINI_NANO_BANANA_2_1);
+    assert.equal(
+      getAdminGeminiModel({ geminiModel: NB2_PREVIEW, geminiFlashRollback: true }),
+      GEMINI_NANO_BANANA_2
+    );
+  });
+
+  it('routes stale-tab requests with preview ids to GA ids', () => {
+    assert.equal(resolveGeminiRequestModel(PRO_PREVIEW, undefined), GEMINI_NANO_BANANA_PRO);
+    assert.equal(resolveGeminiRequestModel(NB2_PREVIEW, undefined), GEMINI_NANO_BANANA_2_1);
   });
 });
