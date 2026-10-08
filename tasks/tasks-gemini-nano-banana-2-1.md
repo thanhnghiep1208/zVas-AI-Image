@@ -156,3 +156,11 @@ Ví dụ:
     - Admin chọn NB2 → tạo ảnh từ một tab mở sẵn đang chọn 2.1 → kiểm tra log server gọi `gemini-3.1-flash-image-preview`.
     - Bật lại 2.1, kiểm tra lại.
   - [ ] 7.8 Xoá script tạm `scripts/verify-nano-banana-2-1.ts` (hoặc giữ lại nếu không chứa thông tin nhạy cảm và có ích). Commit theo convention của repo (`feat(models): ...`). Tạo PR có link tới PRD.
+
+- [x] 8.0 Phát sinh sau triển khai (xem `docs/14-nano-banana-2-1-2026-10.md`)
+  - [x] 8.1 Thêm cờ `geminiFlashRollback` (`getAdminGeminiModel`) + key trong `firestore.rules`, sửa lỗi header vẫn hiện NB2 do Firestore lưu sẵn ID NB2 cũ.
+  - [x] 8.2 `Dockerfile`: `COPY constants ./constants` (container crash `ERR_MODULE_NOT_FOUND`).
+  - [x] 8.3 Chuyển Pro và NB2 sang ID GA (`gemini-3-pro-image`, `gemini-3.1-flash-image`), map ID preview cũ qua `canonicalGeminiModelId`.
+  - [x] 8.4 Disable 512px cho Pro (API trả 400).
+  - [x] 8.5 Sửa popup cho khớp docs (ảnh tham chiếu, giữ nhân vật nhất quán).
+  - [ ] 8.6 Deploy Firestore rules → deploy app → smoke test (header 2.1, popup, 512px disable, tạo ảnh).

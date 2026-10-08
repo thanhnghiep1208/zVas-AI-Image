@@ -23,7 +23,7 @@ npm test
 
 Repo có `**.gcloudignore`**: giống `.gitignore` nhưng **không** loại trừ `firebase-applet-config.json`, để khi deploy từ máy đã có file thì build thành công.
 
-Image production (`Dockerfile`) phải copy `server/`, `utils/` (dùng bởi `server/routes/adminUsers.ts`), và `firebase-applet-config.json` — không chỉ `server.ts`. Thiếu một trong các path trên → container crash trước khi listen `PORT=8080`.
+Image production (`Dockerfile`) phải copy `server/`, `utils/` (dùng bởi `server/routes/adminUsers.ts`), `constants/` (dùng bởi `server/routes/generate.ts`, `server/lib/resolveGeminiModel.ts` — `constants/aiModels.ts`), và `firebase-applet-config.json` — không chỉ `server.ts`. **Khi server import thêm thư mục top-level mới, phải thêm `COPY` tương ứng.** Thiếu một trong các path trên → container crash trước khi listen `PORT=8080`.
 
 Deploy từ **clone sạch** (không có file): tạo `firebase-applet-config.json` trước, hoặc dùng Cloud Build + Secret Manager để ghi file trước bước `docker build` (tùy pipeline).
 
@@ -32,9 +32,24 @@ Deploy từ **clone sạch** (không có file): tạo `firebase-applet-config.js
 ```bash
 firebase login
 firebase deploy --only firestore --project zvas-ai-image
+# hoặc chỉ rules:
+firebase deploy --only firestore:rules --project zvas-ai-image
 ```
 
 (hoặc `npx firebase-tools@latest ...` nếu chưa cài global)
+
+- Gõ đúng `firestore:rules` (có **s**). `firebase.json` khai báo Firestore dạng mảng theo database, nên `firestore:rule` bị hiểu là tên database → lỗi `Could not find configurations in firebase.json for the following database targets: rule`.
+- **Deploy rules trước app** khi rules thêm field mới cho `settings/global` (vd. `geminiFlashRollback`, 10/2026). `isSafeGlobalSettings()` dùng `keys().hasOnly([...])`: nếu app mới ghi field mà rules cũ chưa có → Admin **không lưu được** Settings.
+
+### gcloud báo Python 3.9 không còn hỗ trợ
+
+`ERROR: gcloud failed to load. You are running gcloud with Python 3.9` → trỏ gcloud sang Python 3.10–3.14 (Homebrew):
+
+```bash
+echo 'export CLOUDSDK_PYTHON=/opt/homebrew/bin/python3.14' >> ~/.zshrc
+source ~/.zshrc
+gcloud --version
+```
 
 ## 3) Chọn mode deploy (quan trọng)
 
@@ -172,11 +187,12 @@ gcloud run services update-traffic ai-image-zvas --region us-west1 --to-revision
 ## 8) Checklist trước khi bấm deploy
 
 - `firebase-applet-config.json` tồn tại trong working tree (không commit).
-- Firestore rules/indexes đã deploy đúng project/database.
+- Firestore rules/indexes đã deploy đúng project/database (**trước** app nếu rules có field mới).
+- Dockerfile production `COPY` đủ mọi thư mục top-level mà `server/` import (`server`, `utils`, `constants`).
 - Secrets mới đã có version và IAM đúng.
 - **`ALLOWED_ORIGINS` đã set đúng domain production** — thiếu → CORS fail closed (`origin: false`), browser không gọi được API dù app vẫn khởi động.
 - Chọn đúng mode (A/B/C) theo thay đổi của phiên deploy.
-- `npm test` pass (26 tests: aggregation + rate limit + validateUserInput + generation prompts).
+- `npm test` pass (107 tests tại 10/2026: aggregation, rate limit, validateUserInput, generation prompts, aiModels, resolveGeminiModel, geminiPricing, …).
 
 ## 9) Troubleshooting — Revision không ready (PORT 8080)
 
@@ -186,8 +202,9 @@ gcloud run services update-traffic ai-image-zvas --region us-west1 --to-revision
 
 1. Dockerfile thiếu `COPY server ./server` → `Cannot find module './server/routes'` khi chạy `tsx server.ts`.
 2. Dockerfile thiếu `COPY utils ./utils` → `ERR_MODULE_NOT_FOUND: .../utils/authCredentials` (import từ `server/routes/adminUsers.ts`).
-3. `firebase-applet-config.json` thiếu trong image build context.
-3. Lỗi runtime khác trước `app.listen` — xem log revision:
+3. Dockerfile thiếu `COPY constants ./constants` → `ERR_MODULE_NOT_FOUND: Cannot find module '/app/constants/aiModels' imported from /app/server/routes/generate.ts` (gặp 10/2026 khi nâng Nano Banana 2.1).
+4. `firebase-applet-config.json` thiếu trong image build context.
+5. Lỗi runtime khác trước `app.listen` — xem log revision:
 
 ```bash
 gcloud logging read \
@@ -203,7 +220,10 @@ gcloud logging read \
 COPY server.ts firebase-applet-config.json ./
 COPY server ./server
 COPY utils ./utils
+COPY constants ./constants
 ```
+
+Kiểm tra nhanh trước khi deploy: chỉ copy đúng các path trên vào một thư mục tạm (symlink `node_modules`), chạy `PORT=8099 NODE_ENV=production npx tsx server.ts` rồi `curl localhost:8099/_health` → phải trả `{"status":"ok"}`.
 
 Redeploy Mode A sau khi sửa.
 

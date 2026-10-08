@@ -16,7 +16,7 @@
 - **`users/{userId}`:** user đọc doc của chính mình (`isOwner`); admin/advice đọc theo `canViewAnalyticsDashboard`.
 - **`users/{userId}/sessions/{sessionId}`:** chỉ owner (`isOwner(userId)`) được read/create/update; dùng cho theo dõi phiên đa thiết bị (xem `docs/08-auth-users-setup.md`).
 - **`history/{historyId}`:** đọc/ghi khi `resource.data.uid == request.auth.uid`; admin/advice đọc toàn bộ cho analytics; client list phải có `where('uid', '==', request.auth.uid)`.
-- `settings/global` chỉ cho phép ghi các field an toàn (enabled providers, model/base URL, `updatedAt`), chặn key nhạy cảm.
+- `settings/global` chỉ cho phép ghi các field an toàn (enabled providers, model/base URL, `geminiFlashRollback`, `updatedAt`), chặn key nhạy cảm.
 - **`rate_limit_windows/{docId}`:** `allow read, write: if false` — counter rate limit chỉ Cloud Run Admin SDK (`server/lib/rateLimit/firestoreStore.ts`), client không đọc/ghi.
 
 Deploy:

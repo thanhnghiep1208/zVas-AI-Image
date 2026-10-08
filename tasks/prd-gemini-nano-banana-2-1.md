@@ -175,3 +175,13 @@ Khi admin đổi lựa chọn, user nhận cấu hình mới ở lần load app 
 3. Bảng giá của Google ghi ID Nano Banana 2 là `gemini-3.1-flash-image` (không có `-preview`). Bản preview có bị ngừng hỗ trợ không, và khi nào? Nếu có thì phương án rollback cần đổi ID.
 4. Khi rollback về NB2, user đang dùng Pro có cần được thông báo gì không? Đề xuất: không cần.
 5. Có cần hiển thị badge "Mới" cạnh Nano Banana 2.1 trong dropdown trong một khoảng thời gian không?
+
+## 10. Cập nhật sau triển khai (2026-10-08)
+
+Một số yêu cầu đã thay đổi trong lúc triển khai. Chi tiết xem `docs/14-nano-banana-2-1-2026-10.md`.
+
+- **FR-1, FR-4, Non-Goals (không đổi ID NB2/Pro):** đã đổi. Theo docs image-generation, Pro dùng `gemini-3-pro-image` và Nano Banana 2 dùng `gemini-3.1-flash-image` (GA). ID preview cũ tự được đổi sang ID GA (`canonicalGeminiModelId`). Open Question 3 đã được trả lời.
+- **FR-7, FR-8 (rollback):** không suy ra rollback từ `geminiModel` nữa. Rollback chỉ có hiệu lực khi `settings/global.geminiFlashRollback === true`, vì Firestore đã lưu sẵn `geminiModel = gemini-3.1-flash-image-preview` (giá trị mặc định cũ) và bị hiểu nhầm là đang rollback. Cần thêm key này vào `firestore.rules`.
+- **512px:** Pro cũng không hỗ trợ 512px (API trả 400). UI disable 512px cho cả 2.1 và Pro, server nâng lên 1K.
+- **Popup:** ảnh tham chiếu theo docs (2.1: 10 vật thể + 4 nhân vật + 3 ảnh style; Pro: 6 vật thể, không tối ưu giữ nhân vật nhất quán). Bỏ ý "14 ảnh tham chiếu" khỏi mục điểm mới.
+- **Deploy:** `Dockerfile` phải `COPY constants ./constants`.
