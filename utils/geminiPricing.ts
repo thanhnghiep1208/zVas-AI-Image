@@ -22,14 +22,13 @@ const GEMINI_IMAGE_PRICING: Record<string, GeminiImagePricing> = {
     inputPerMillion: 1.5,
     outputPerMillion: 30.0,
     thinkingOutputPerMillion: 7.5,
-    // 2.1 không hỗ trợ 512px; server tự nâng lên 1K.
-    perImageFallback: { '512px': 0.0336, '1K': 0.0336, '2K': 0.0504, '4K': 0.113 },
+    perImageFallback: { '1K': 0.0336, '2K': 0.0504, '4K': 0.113 },
   },
   [GEMINI_NANO_BANANA_2]: {
     inputPerMillion: 0.5,
     outputPerMillion: 60.0,
     thinkingOutputPerMillion: 3.0,
-    perImageFallback: { '512px': 0.04482, '1K': 0.0672, '2K': 0.1008, '4K': 0.1512 },
+    perImageFallback: { '1K': 0.0672, '2K': 0.1008, '4K': 0.1512 },
   },
   [GEMINI_NANO_BANANA_PRO]: {
     inputPerMillion: 2.0,

@@ -16,7 +16,7 @@ describe('resolveGeminiImagePricing', () => {
     assert.equal(p.inputPerMillion, 1.5);
     assert.equal(p.outputPerMillion, 30);
     assert.equal(p.thinkingOutputPerMillion, 7.5);
-    assert.deepEqual(p.perImageFallback, { '512px': 0.0336, '1K': 0.0336, '2K': 0.0504, '4K': 0.113 });
+    assert.deepEqual(p.perImageFallback, { '1K': 0.0336, '2K': 0.0504, '4K': 0.113 });
   });
 
   it('returns Nano Banana 2 pricing', () => {

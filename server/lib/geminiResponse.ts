@@ -1,4 +1,4 @@
-import { resolveGeminiImageSize } from './resolveGeminiModel';
+import { normalizeImageSize } from '../../constants/imageSizes';
 
 export interface GeminiUsageMetadata {
   promptTokenCount?: number;
@@ -7,9 +7,8 @@ export interface GeminiUsageMetadata {
   totalTokenCount?: number;
 }
 
-/** `config.imageConfig` cho generateContent (size không hỗ trợ → 1K). */
+/** `config.imageConfig` cho generateContent (size không hợp lệ/512px cũ → 1K). */
 export function buildGeminiImageConfig({
-  model,
   aspectRatio,
   imageSize,
 }: {
@@ -19,7 +18,7 @@ export function buildGeminiImageConfig({
 }): { aspectRatio: string; imageSize: string } {
   return {
     aspectRatio: aspectRatio || '1:1',
-    imageSize: resolveGeminiImageSize(model, imageSize),
+    imageSize: normalizeImageSize(imageSize),
   };
 }
 

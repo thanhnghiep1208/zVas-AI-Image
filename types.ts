@@ -1,5 +1,5 @@
 
-export type ImageSize = '512px' | '1K' | '2K' | '4K';
+export type ImageSize = '1K' | '2K' | '4K';
 
 export interface GeneratedImage {
   prompt: string;

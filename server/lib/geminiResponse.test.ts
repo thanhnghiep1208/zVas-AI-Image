@@ -22,14 +22,14 @@ describe('buildGeminiImageConfig', () => {
     );
   });
 
-  it('upgrades 512px to 1K for 2.1 and Pro', () => {
-    for (const model of [GEMINI_NANO_BANANA_2_1, GEMINI_NANO_BANANA_PRO]) {
+  it('maps legacy 512px (stale tabs) to 1K for every model', () => {
+    for (const model of [GEMINI_NANO_BANANA_2_1, GEMINI_NANO_BANANA_PRO, GEMINI_NANO_BANANA_2]) {
       assert.equal(buildGeminiImageConfig({ model, imageSize: '512px' }).imageSize, '1K');
     }
   });
 
-  it('keeps 512px for Nano Banana 2', () => {
-    assert.equal(buildGeminiImageConfig({ model: GEMINI_NANO_BANANA_2, imageSize: '512px' }).imageSize, '512px');
+  it('maps unknown sizes to 1K', () => {
+    assert.equal(buildGeminiImageConfig({ model: GEMINI_NANO_BANANA_2_1, imageSize: '8K' }).imageSize, '1K');
   });
 });
 

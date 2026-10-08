@@ -5,7 +5,7 @@ import {
   GEMINI_NANO_BANANA_2_1,
   GEMINI_NANO_BANANA_PRO,
 } from '../../constants/aiModels.ts';
-import { resolveGeminiImageSize, resolveGeminiModel } from './resolveGeminiModel.ts';
+import { resolveGeminiModel } from './resolveGeminiModel.ts';
 
 describe('resolveGeminiModel', () => {
   it('keeps Pro', () => {
@@ -51,25 +51,5 @@ describe('resolveGeminiModel', () => {
       resolveGeminiModel({ requestedModel: undefined, adminGeminiModel: GEMINI_NANO_BANANA_PRO }),
       GEMINI_NANO_BANANA_PRO
     );
-  });
-});
-
-describe('resolveGeminiImageSize', () => {
-  it('upgrades 512px to 1K for 2.1 (unsupported by the API)', () => {
-    assert.equal(resolveGeminiImageSize(GEMINI_NANO_BANANA_2_1, '512px'), '1K');
-  });
-
-  it('keeps supported sizes for 2.1', () => {
-    for (const size of ['1K', '2K', '4K']) {
-      assert.equal(resolveGeminiImageSize(GEMINI_NANO_BANANA_2_1, size), size);
-    }
-  });
-
-  it('keeps 512px for Nano Banana 2', () => {
-    assert.equal(resolveGeminiImageSize(GEMINI_NANO_BANANA_2, '512px'), '512px');
-  });
-
-  it('defaults to 1K when size is missing', () => {
-    assert.equal(resolveGeminiImageSize(GEMINI_NANO_BANANA_2_1, undefined), '1K');
   });
 });

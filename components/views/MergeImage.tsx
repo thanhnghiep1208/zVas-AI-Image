@@ -11,11 +11,9 @@ import { ImageSizeSelector } from '../ImageSizeSelector';
 interface MergeImageProps {
   onDownload: (image: GeneratedImage) => void;
   onFullscreen: (image: GeneratedImage) => void;
-  /** Size model mặc định (server) không hỗ trợ (disable trong ImageSizeSelector). */
-  unsupportedImageSizes?: string[];
 }
 
-function MergeImageComponent({ onDownload, onFullscreen, unsupportedImageSizes }: MergeImageProps) {
+function MergeImageComponent({ onDownload, onFullscreen }: MergeImageProps) {
   const [images, setImages] = useState<ImageFile[]>([]);
   const [prompt, setPrompt] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -171,11 +169,7 @@ function MergeImageComponent({ onDownload, onFullscreen, unsupportedImageSizes }
 
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             <AspectRatioSelector aspectRatio={aspectRatio} setAspectRatio={setAspectRatio} />
-            <ImageSizeSelector
-              imageSize={imageSize}
-              setImageSize={setImageSize}
-              unsupportedSizes={unsupportedImageSizes}
-            />
+            <ImageSizeSelector imageSize={imageSize} setImageSize={setImageSize} />
           </div>
 
           <div className="flex flex-col items-center pt-2">

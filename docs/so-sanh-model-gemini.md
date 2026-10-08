@@ -23,7 +23,7 @@ Bản tóm tắt trực quan giúp bạn dễ dàng lựa chọn giữa **Nano B
 | **Sửa ảnh (In/Out-paint)** | Sửa nhanh theo hội thoại, đổi nền linh hoạt | Biên ảnh tinh xảo, ghép sản phẩm chuẩn studio |
 | **Ảnh tham chiếu** | **Tối đa 10 vật thể + 4 nhân vật + 3 ảnh style** | Tối đa 6 vật thể |
 | **Giữ nhân vật nhất quán** | **Tốt**, giữ được tới 4 nhân vật | Không tối ưu cho nhân vật nhất quán |
-| **Độ phân giải** | 1K, 2K, 4K (không hỗ trợ 512px) | 1K, 2K, 4K (không hỗ trợ 512px) |
+| **Độ phân giải** | 1K, 2K, 4K | 1K, 2K, 4K |
 
 ---
 

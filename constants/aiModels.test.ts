@@ -10,7 +10,6 @@ import {
   getActiveGeminiFlashModel,
   getAdminGeminiModel,
   getEnabledModelOptions,
-  getUnsupportedImageSizes,
   normalizeGeminiModelId,
   resolveGeminiRequestModel,
   resolveModelKey,
@@ -133,21 +132,6 @@ describe('resolveModelKey', () => {
       resolveModelKey(['gemini', 'openai'], 'openai:dall-e-3').key,
       'openai:dall-e-3'
     );
-  });
-});
-
-describe('getUnsupportedImageSizes', () => {
-  it('marks 512px unsupported for 2.1', () => {
-    assert.deepEqual(getUnsupportedImageSizes(GEMINI_NANO_BANANA_2_1), ['512px']);
-  });
-
-  it('marks 512px unsupported for Pro (API returns 400)', () => {
-    assert.deepEqual(getUnsupportedImageSizes(GEMINI_NANO_BANANA_PRO), ['512px']);
-  });
-
-  it('allows every size for Nano Banana 2 and non-gemini models', () => {
-    assert.deepEqual(getUnsupportedImageSizes(GEMINI_NANO_BANANA_2), []);
-    assert.deepEqual(getUnsupportedImageSizes('dall-e-3'), []);
   });
 });
 

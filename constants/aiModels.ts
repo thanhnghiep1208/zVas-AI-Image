@@ -167,16 +167,6 @@ export function normalizeGeminiModelId(
   return ALLOWED_GEMINI_MODEL_IDS.has(s) ? s : fallback;
 }
 
-/** Kích thước ảnh model không hỗ trợ (API trả 400 "Image size 512px is not supported"). */
-const UNSUPPORTED_IMAGE_SIZES: Record<string, string[]> = {
-  [GEMINI_NANO_BANANA_2_1]: ['512px'],
-  [GEMINI_NANO_BANANA_PRO]: ['512px'],
-};
-
-export function getUnsupportedImageSizes(model: string): string[] {
-  return UNSUPPORTED_IMAGE_SIZES[model] ?? [];
-}
-
 /**
  * Model Gemini thật sự được gọi cho một request (dùng chung client/server):
  * - ID không hợp lệ/thiếu → model admin (nếu hợp lệ) hoặc model Flash đang hoạt động.
