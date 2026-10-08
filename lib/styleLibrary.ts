@@ -15,7 +15,7 @@ export interface AiStyle {
   };
 }
 
-const AI_STYLES: AiStyle[] = (aiStylesData as AiStyle[]) ?? [];
+export const AI_STYLES: AiStyle[] = (aiStylesData as AiStyle[]) ?? [];
 
 const normalize = (value: string) => value.trim().toLowerCase();
 

@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { PaletteIcon } from '../icons/PaletteIcon';
+import { getStyleDisplayName } from '../../lib/styleGuide';
 
 interface PromptOptionsProps {
   options: {
@@ -33,28 +34,35 @@ export const PromptOptions: React.FC<PromptOptionsProps> = ({
     outlineType, onOutlineTypeChange, outlineThickness, onOutlineThicknessChange,
     onBackgroundRemovalStrengthChange
 }) => {
+  const selectedStyleName = getStyleDisplayName(selectedStyle);
   return (
     <div className="w-full">
       <div className="space-y-3">
         <div className="grid grid-cols-2 gap-2">
              <label className="col-span-2 text-base font-bold text-gray-400 uppercase tracking-wider">Style & Background</label>
             
-            <button
-                onClick={onShowStyleGuide}
-                className="flex items-center justify-between px-3 py-2 bg-gray-700 border border-gray-600 rounded-md hover:border-cyan-500 transition-colors text-base overflow-hidden"
-                title="Select a visual style"
-            >
-                <span className={`truncate ${selectedStyle ? 'text-cyan-300' : 'text-gray-400'}`}>
-                    {selectedStyle ? `${selectedStyle.split(':')[0]}: ${selectedStyle.split(':')[1]}` : 'Chọn Style'}
-                </span>
-                    {selectedStyle ? (
-                    <span 
-                        role="button"
-                        onClick={(e) => {e.stopPropagation(); onStyleChange('');}}
-                        className="ml-1 hover:text-white flex-shrink-0"
-                    >×</span>
-                ) : <PaletteIcon className="w-5 h-5 ml-1 flex-shrink-0" />}
-            </button>
+            <div className="flex items-stretch overflow-hidden rounded-md border border-gray-600 bg-gray-700 text-base transition-colors hover:border-cyan-500 focus-within:border-cyan-500">
+                <button
+                    type="button"
+                    onClick={onShowStyleGuide}
+                    className="flex min-w-0 flex-1 cursor-pointer items-center justify-between px-3 py-2 text-left"
+                    title="Mở thư viện phong cách"
+                >
+                    <span className={`truncate ${selectedStyleName ? 'text-cyan-300' : 'text-gray-400'}`}>
+                        {selectedStyleName || 'Chọn Style'}
+                    </span>
+                    {!selectedStyleName && <PaletteIcon className="ml-1 h-5 w-5 flex-shrink-0" />}
+                </button>
+                {selectedStyleName && (
+                    <button
+                        type="button"
+                        onClick={() => onStyleChange('')}
+                        className="flex-shrink-0 cursor-pointer px-2 text-gray-400 hover:text-white"
+                        aria-label={`Bỏ chọn style ${selectedStyleName}`}
+                        title="Bỏ chọn style"
+                    >×</button>
+                )}
+            </div>
             
             <div className="relative w-full">
                 <select

@@ -371,6 +371,7 @@ export const AppAuthenticatedShell: React.FC<AppAuthenticatedShellProps> = ({
           <StyleGuideViewer
             onClose={() => workspace.setIsStyleGuideVisible(false)}
             onStyleSelect={workspace.handleStyleSelectFromGuide}
+            selectedStyle={workspace.selectedStyle}
           />
         </Suspense>
       )}
