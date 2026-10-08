@@ -4,6 +4,7 @@ import type { User } from 'firebase/auth';
 import type { GeneratedImage, GlobalSettings } from '../types';
 import type { UserProfile } from '../hooks/useAuthAndProfile';
 import {
+  getAdminGeminiModel,
   getUnsupportedImageSizes,
   resolveGeminiRequestModel,
   type ProviderModelOption,
@@ -360,7 +361,7 @@ export const AppAuthenticatedShell: React.FC<AppAuthenticatedShellProps> = ({
                     onDownload={handleDownloadImage}
                     onFullscreen={workspace.setFullscreenImage}
                     unsupportedImageSizes={getUnsupportedImageSizes(
-                      resolveGeminiRequestModel(undefined, globalSettings?.geminiModel)
+                      resolveGeminiRequestModel(undefined, getAdminGeminiModel(globalSettings))
                     )}
                   />
                 </main>

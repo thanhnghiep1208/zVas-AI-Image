@@ -4,6 +4,7 @@ import type { GlobalSettings } from '../types';
 import { db, doc, getDoc, handleFirestoreError, isFirestoreOfflineOrTransient, OperationType } from '../firebase';
 import {
   DEFAULT_ENABLED_PROVIDERS,
+  getAdminGeminiModel,
   getEnabledModelOptions,
   modelKeyFrom,
   normalizeEnabledProviders,
@@ -90,7 +91,7 @@ export function useGlobalSettingsAndApiKey(
   }, []);
 
   const enabledProviders = normalizeEnabledProviders(globalSettings?.enabledProviders);
-  const adminGeminiModel = globalSettings?.geminiModel;
+  const adminGeminiModel = getAdminGeminiModel(globalSettings);
   const availableModelOptions = getEnabledModelOptions(enabledProviders, adminGeminiModel);
 
   const getSelectedModelOption = useCallback(() => {

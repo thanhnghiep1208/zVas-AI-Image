@@ -81,7 +81,7 @@ server/
 - Input gồm `prompt`, model/provider, ảnh main/reference (base64).
 - **Prompt tối đa 4000 ký tự** — vượt quá trả `400` (validated qua `server/lib/validateUserInput.ts`).
 - Provider hỗ trợ: `gemini`, `openai`, `seedance`, `seedream`.
-- **Gemini (image):** server chọn model qua `resolveGeminiModel` (`server/lib/resolveGeminiModel.ts`) — chỉ chấp nhận id trong `ALLOWED_GEMINI_MODEL_IDS`: **Nano Banana 2.1** `gemini-nano-banana-2.1` (mặc định), **Nano Banana Pro** `gemini-3-pro-image-preview`, **Nano Banana 2** `gemini-3.1-flash-image-preview` (rollback). Request Flash (2.1 hoặc 2) luôn được chuyển sang model Flash đang hoạt động theo `settings/global.geminiModel`; id lạ/thiếu → model admin hoặc Flash đang hoạt động. `resolveGeminiImageSize` nâng `512px` lên `1K` cho 2.1 (API không hỗ trợ). Mô tả so sánh: `docs/so-sanh-model-gemini.md`.
+- **Gemini (image):** server chọn model qua `resolveGeminiModel` (`server/lib/resolveGeminiModel.ts`) — chỉ chấp nhận id trong `ALLOWED_GEMINI_MODEL_IDS`: **Nano Banana 2.1** `gemini-nano-banana-2.1` (mặc định), **Nano Banana Pro** `gemini-3-pro-image-preview`, **Nano Banana 2** `gemini-3.1-flash-image-preview` (rollback). Request Flash (2.1 hoặc 2) luôn được chuyển sang model Flash đang hoạt động theo `getAdminGeminiModel(settings)` — rollback về NB2 chỉ khi `settings/global.geminiFlashRollback === true`; id lạ/thiếu → model admin hoặc Flash đang hoạt động. `resolveGeminiImageSize` nâng `512px` lên `1K` cho 2.1 (API không hỗ trợ). Mô tả so sánh: `docs/so-sanh-model-gemini.md`.
 - Response Gemini có thêm `thinkingTokens` (`usageMetadata.thoughtsTokenCount`) để client tính chi phí thinking (`utils/geminiPricing.ts`).
 - Trả về `imageBase64` + metadata token usage.
 

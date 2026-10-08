@@ -6,6 +6,8 @@ import {
   ALLOWED_GEMINI_MODEL_IDS,
   DEFAULT_ENABLED_PROVIDERS,
   GEMINI_MODEL_FALLBACK,
+  GEMINI_NANO_BANANA_2,
+  getAdminGeminiModel,
   normalizeEnabledProviders,
   normalizeGeminiModelId,
   type ProviderKey,
@@ -32,7 +34,7 @@ export function useAdminSettings() {
       const settingsSnap = await getDoc(settingsRef);
       if (settingsSnap.exists()) {
         const data = settingsSnap.data();
-        const normalizedGeminiModel = normalizeGeminiModelId(data.geminiModel);
+        const normalizedGeminiModel = getAdminGeminiModel(data);
         const normalizedEnabledProviders = normalizeEnabledProviders(
           data.enabledProviders ??
             (data.defaultProvider ? [data.defaultProvider] : DEFAULT_ENABLED_PROVIDERS)
@@ -172,7 +174,12 @@ export function useAdminSettings() {
       const settingsRef = doc(db, 'settings', 'global');
       await setDoc(
         settingsRef,
-        { ...validation.normalized, updatedAt: new Date().toISOString() },
+        {
+          ...validation.normalized,
+          // Rollback chỉ bật khi admin chủ động chọn Nano Banana 2 (xem getAdminGeminiModel).
+          geminiFlashRollback: validation.normalized.geminiModel === GEMINI_NANO_BANANA_2,
+          updatedAt: new Date().toISOString(),
+        },
         { merge: true }
       );
       setInitialSettingsSnapshot(validation.normalized);

@@ -22,6 +22,8 @@ export interface ImageFile {
 export interface GlobalSettings {
   enabledProviders?: string[];
   geminiModel?: string;
+  /** true = admin chủ động rollback model Flash về Nano Banana 2. */
+  geminiFlashRollback?: boolean;
   openaiModel?: string;
   seedanceModel?: string;
   seedanceBaseUrl?: string;

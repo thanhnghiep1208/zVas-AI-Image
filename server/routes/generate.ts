@@ -12,6 +12,7 @@ import { validateHttpsBaseUrl } from '../lib/validateBaseUrl';
 import { ssrfSafeFetch } from '../lib/ssrfSafeFetch';
 import { tryConsumeRateLimit } from '../lib/rateLimit/index';
 import { resolveGeminiImageSize, resolveGeminiModel } from '../lib/resolveGeminiModel';
+import { getAdminGeminiModel } from '../../constants/aiModels';
 
 export function createPostGenerateHandler(db: Firestore) {
   return async function postGenerate(req: Request, res: Response) {
@@ -170,7 +171,7 @@ export function createPostGenerateHandler(db: Firestore) {
       const geminiApiKey = process.env.GEMINI_API_KEY;
       const geminiModel = resolveGeminiModel({
         requestedModel: body.geminiModel,
-        adminGeminiModel: settings.geminiModel,
+        adminGeminiModel: getAdminGeminiModel(settings),
       });
       if (!geminiApiKey) {
         return res.status(400).json({ error: 'Gemini API key missing. Please contact admin.' });

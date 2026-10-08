@@ -8,6 +8,7 @@ import {
   GEMINI_NANO_BANANA_2_1,
   GEMINI_NANO_BANANA_PRO,
   getActiveGeminiFlashModel,
+  getAdminGeminiModel,
   getEnabledModelOptions,
   getUnsupportedImageSizes,
   normalizeGeminiModelId,
@@ -140,5 +141,34 @@ describe('resolveGeminiRequestModel', () => {
 
   it('uses admin Pro when request has no model', () => {
     assert.equal(resolveGeminiRequestModel(undefined, GEMINI_NANO_BANANA_PRO), GEMINI_NANO_BANANA_PRO);
+  });
+});
+
+describe('getAdminGeminiModel', () => {
+  it('treats legacy stored Nano Banana 2 (no rollback flag) as 2.1', () => {
+    assert.equal(getAdminGeminiModel({ geminiModel: GEMINI_NANO_BANANA_2 }), GEMINI_NANO_BANANA_2_1);
+    assert.equal(
+      getAdminGeminiModel({ geminiModel: GEMINI_NANO_BANANA_2, geminiFlashRollback: false }),
+      GEMINI_NANO_BANANA_2_1
+    );
+  });
+
+  it('keeps Nano Banana 2 only when rollback flag is explicitly true', () => {
+    assert.equal(
+      getAdminGeminiModel({ geminiModel: GEMINI_NANO_BANANA_2, geminiFlashRollback: true }),
+      GEMINI_NANO_BANANA_2
+    );
+  });
+
+  it('keeps 2.1 and Pro, normalizes missing/unknown to 2.1', () => {
+    assert.equal(getAdminGeminiModel({ geminiModel: GEMINI_NANO_BANANA_PRO }), GEMINI_NANO_BANANA_PRO);
+    assert.equal(getAdminGeminiModel({ geminiModel: GEMINI_NANO_BANANA_2_1 }), GEMINI_NANO_BANANA_2_1);
+    assert.equal(getAdminGeminiModel({ geminiModel: 'bogus' }), GEMINI_NANO_BANANA_2_1);
+    assert.equal(getAdminGeminiModel(null), GEMINI_NANO_BANANA_2_1);
+  });
+
+  it('legacy settings resolve to 2.1 in the user dropdown', () => {
+    const admin = getAdminGeminiModel({ geminiModel: GEMINI_NANO_BANANA_2 });
+    assert.equal(getEnabledModelOptions(['gemini'], admin)[0].value, GEMINI_NANO_BANANA_2_1);
   });
 });

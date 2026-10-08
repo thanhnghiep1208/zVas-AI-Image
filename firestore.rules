@@ -51,6 +51,7 @@ service cloud.firestore {
       return request.resource.data.keys().hasOnly([
         'enabledProviders',
         'geminiModel',
+        'geminiFlashRollback',
         'openaiModel',
         'seedanceModel',
         'seedanceBaseUrl',

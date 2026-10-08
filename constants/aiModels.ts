@@ -179,3 +179,20 @@ export function resolveGeminiRequestModel(
         : activeFlash;
   return isGeminiFlashModel(model) ? activeFlash : model;
 }
+
+/**
+ * Model Gemini admin đã chọn, đọc từ `settings/global`.
+ * Rollback về Nano Banana 2 chỉ có hiệu lực khi có cờ `geminiFlashRollback === true`:
+ * dữ liệu cũ lưu `geminiModel = NB2` (default trước khi có 2.1) được coi là 2.1.
+ */
+export function getAdminGeminiModel(
+  settings: { geminiModel?: unknown; geminiFlashRollback?: unknown } | null | undefined
+): string {
+  const model = normalizeGeminiModelId(
+    typeof settings?.geminiModel === 'string' ? settings.geminiModel : null
+  );
+  if (model === GEMINI_NANO_BANANA_2 && settings?.geminiFlashRollback !== true) {
+    return GEMINI_NANO_BANANA_2_1;
+  }
+  return model;
+}

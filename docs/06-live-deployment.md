@@ -142,7 +142,7 @@ gcloud run deploy ai-image-zvas \
 
 Dùng khi Nano Banana 2.1 lỗi hoặc chất lượng kém. Không cần deploy.
 
-1. Vào Admin → tab Cấu hình → khối **Gemini** → dropdown **Model**, chọn `Nano Banana 2 (cũ – dùng để rollback)`, bấm lưu.
+1. Vào Admin → tab Cấu hình → khối **Gemini** → dropdown **Model**, chọn `Nano Banana 2 (cũ – dùng để rollback)`, bấm lưu. Lưu sẽ ghi `settings/global.geminiFlashRollback = true`; chỉ cờ này mới bật rollback — dữ liệu cũ có `geminiModel = gemini-3.1-flash-image-preview` mà không có cờ được coi là 2.1 (`getAdminGeminiModel`). Yêu cầu Firestore rules đã deploy có key `geminiFlashRollback` (`firebase deploy --only firestore:rules`).
 2. Kiểm tra: reload app bằng tài khoản user → dropdown header hiện `GEMINI · Nano Banana 2` (không còn 2.1). Tạo một ảnh, log server/Analytics ghi model `gemini-3.1-flash-image-preview`. Tab mở sẵn còn gửi `gemini-nano-banana-2.1` cũng được server chuyển sang Nano Banana 2.
 3. Bật lại 2.1: chọn `Nano Banana 2.1 (mặc định)` (hoặc `Nano Banana Pro`) rồi lưu; user reload sẽ thấy lại Nano Banana 2.1.
 
