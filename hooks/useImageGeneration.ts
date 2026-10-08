@@ -21,6 +21,7 @@ import { describeApiOrNetworkError } from '../utils/userFacingError';
 import type { ProviderKey } from '../constants/aiModels';
 import { providerKeyMissingMessage } from '../utils/providerKeyMessages';
 import { estimateGeminiCost } from '../utils/geminiPricing';
+import { sumGenerationUsage } from '../utils/generationUsage';
 
 export interface UseImageGenerationParams {
   user: User | null;
@@ -162,22 +163,8 @@ export function useImageGeneration(params: UseImageGenerationParams) {
 
       if (user) {
         if (validResults.length > 0) {
-          const promptTokens = validResults.reduce(
-            (sum, img) => sum + (img.promptTokens || 0),
-            0
-          );
-          const completionTokens = validResults.reduce(
-            (sum, img) => sum + (img.completionTokens || 0),
-            0
-          );
-          const thinkingTokens = validResults.reduce(
-            (sum, img) => sum + (img.thinkingTokens || 0),
-            0
-          );
-          const totalTokens = validResults.reduce(
-            (sum, img) => sum + (img.totalTokens || 0),
-            0
-          );
+          const { promptTokens, completionTokens, thinkingTokens, totalTokens } =
+            sumGenerationUsage(validResults);
 
           let estimatedCost = 0;
           if (activeModel.includes('dall-e-3')) {

@@ -114,6 +114,20 @@ describe('resolveModelKey', () => {
     );
   });
 
+  it('maps legacy Nano Banana 2 preference to 2.1 even when another provider is listed first', () => {
+    assert.equal(
+      resolveModelKey(['openai', 'gemini'], `gemini:${GEMINI_NANO_BANANA_2}`).key,
+      `gemini:${GEMINI_NANO_BANANA_2_1}`
+    );
+  });
+
+  it('maps 2.1 preference to Nano Banana 2 during rollback even when another provider is listed first', () => {
+    assert.equal(
+      resolveModelKey(['openai', 'gemini'], `gemini:${GEMINI_NANO_BANANA_2_1}`, GEMINI_NANO_BANANA_2).key,
+      `gemini:${GEMINI_NANO_BANANA_2}`
+    );
+  });
+
   it('keeps non-gemini preferences untouched', () => {
     assert.equal(
       resolveModelKey(['gemini', 'openai'], 'openai:dall-e-3').key,

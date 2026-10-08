@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { Maximize } from 'lucide-react';
 import { ImageSize } from '../types';
+import { getImageSizeOptions, resolveSupportedImageSize } from './imageSizeOptions';
 
 interface ImageSizeSelectorProps {
   imageSize: ImageSize;
@@ -10,28 +11,24 @@ interface ImageSizeSelectorProps {
   unsupportedSizes?: string[];
 }
 
-const sizes: ImageSize[] = ['512px', '1K', '2K', '4K'];
-const FALLBACK_SIZE: ImageSize = '1K';
-
 export const ImageSizeSelector: React.FC<ImageSizeSelectorProps> = ({
   imageSize,
   setImageSize,
   isDisabled = false,
   unsupportedSizes = [],
 }) => {
-  const isCurrentUnsupported = unsupportedSizes.includes(imageSize);
+  const supportedSize = resolveSupportedImageSize(imageSize, unsupportedSizes);
 
   // Đổi sang model không hỗ trợ size đang chọn → tự chuyển về 1K.
   useEffect(() => {
-    if (isCurrentUnsupported) setImageSize(FALLBACK_SIZE);
-  }, [isCurrentUnsupported, setImageSize]);
+    if (supportedSize !== imageSize) setImageSize(supportedSize);
+  }, [supportedSize, imageSize, setImageSize]);
 
   return (
     <div className="w-full">
       <h2 className="text-xs font-bold mb-1.5 text-gray-400 uppercase tracking-wider">Kích thước</h2>
       <div className={`grid grid-cols-4 gap-1.5 ${isDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}>
-        {sizes.map(size => {
-          const isUnsupported = unsupportedSizes.includes(size);
+        {getImageSizeOptions(unsupportedSizes).map(({ size, disabled: isUnsupported }) => {
           return (
             <button
               key={size}

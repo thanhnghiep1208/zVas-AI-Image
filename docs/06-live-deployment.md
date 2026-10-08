@@ -192,7 +192,7 @@ gcloud run services update-traffic ai-image-zvas --region us-west1 --to-revision
 - Secrets mới đã có version và IAM đúng.
 - **`ALLOWED_ORIGINS` đã set đúng domain production** — thiếu → CORS fail closed (`origin: false`), browser không gọi được API dù app vẫn khởi động.
 - Chọn đúng mode (A/B/C) theo thay đổi của phiên deploy.
-- `npm test` pass (107 tests tại 10/2026: aggregation, rate limit, validateUserInput, generation prompts, aiModels, resolveGeminiModel, geminiPricing, …).
+- `npm test` pass (132 tests tại 10/2026: aggregation, rate limit, validateUserInput, generation prompts, aiModels, resolveGeminiModel, geminiPricing, … — gồm `firestore.rules.test.ts` (key `settings/global` khớp rules) và `scripts/dockerfileCoverage.test.ts` (Dockerfile COPY đủ thư mục server nạp)).
 
 ## 9) Troubleshooting — Revision không ready (PORT 8080)
 
