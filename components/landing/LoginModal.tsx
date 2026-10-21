@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { LogIn, X, Sparkles } from 'lucide-react';
 import { resolveLoginEmail } from '../../utils/authCredentials';
+import { useLoginContactText } from '../../hooks/usePublicSettings';
 
 export interface LoginModalProps {
   open: boolean;
@@ -19,6 +20,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
 }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const contactText = useLoginContactText(open);
 
   const handleSubmit = useCallback(
     (e: React.FormEvent) => {
@@ -100,10 +102,12 @@ export const LoginModal: React.FC<LoginModalProps> = ({
               {isLoggingIn ? 'Đang đăng nhập…' : 'Đăng nhập'}
             </button>
           </form>
-          <p className="mt-4 text-center text-xs text-gray-400">
-            Để được cấp tài khoản vui lòng liên hệ: <br />
-            Nghiepnt@vng.com.vn — Zalo: 0933312887
-          </p>
+          {contactText && (
+            <p className="mt-4 whitespace-pre-line text-center text-xs text-gray-400">
+              Để được cấp tài khoản vui lòng liên hệ:{'\n'}
+              {contactText}
+            </p>
+          )}
         </div>
       </div>
     </div>

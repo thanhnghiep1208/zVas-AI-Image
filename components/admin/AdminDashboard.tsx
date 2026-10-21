@@ -4,6 +4,8 @@ import { useAdminSettings } from '../../hooks/useAdminSettings';
 import { AdminDashboardHeader } from './AdminDashboardHeader';
 import { AdminUsersTab } from './AdminUsersTab';
 import { AdminSettingsTab } from './AdminSettingsTab';
+import { AdminLoginContactCard } from './AdminLoginContactCard';
+import { useAdminLoginContact } from '../../hooks/usePublicSettings';
 import { UserHistoryModal } from './UserHistoryModal';
 import { AnalyticsTabFallback } from './AnalyticsTabFallback';
 import type { AdminDashboardProps, AdminTab } from './types';
@@ -36,6 +38,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   const settings = useAdminSettings();
   const { loadSettings } = settings;
+  const loginContact = useAdminLoginContact();
+  const { loadLoginContact } = loginContact;
 
   useEffect(() => {
     if (analyticsOnly) {
@@ -49,8 +53,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
     void loadUsersFromFirestore();
     void loadSettings();
+    void loadLoginContact();
     return undefined;
-  }, [analyticsOnly, loadUsersFromFirestore, loadSettings]);
+  }, [analyticsOnly, loadUsersFromFirestore, loadSettings, loadLoginContact]);
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col overflow-hidden bg-[var(--lp-void)] text-[var(--lp-text)]">
@@ -84,6 +89,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               onCreateUser={handleCreateUser}
               onResetPassword={handleResetPassword}
               onViewHistory={(uid, email) => setSelectedUserHistory({ uid, email })}
+            />
+          )}
+
+          {activeTab === 'settings' && (
+            <AdminLoginContactCard
+              value={loginContact.loginContactText}
+              onChange={loginContact.setLoginContactText}
+              isSaving={loginContact.isSavingLoginContact}
+              onSave={() => void loginContact.handleSaveLoginContact()}
             />
           )}
 

@@ -61,6 +61,13 @@ service cloud.firestore {
       ]);
     }
 
+    /** Khớp utils/publicSettings.ts (PUBLIC_SETTINGS_WRITE_KEYS, LOGIN_CONTACT_MAX_LENGTH). */
+    function isSafePublicSettings() {
+      return request.resource.data.keys().hasOnly(['loginContactText', 'updatedAt']) &&
+        request.resource.data.loginContactText is string &&
+        request.resource.data.loginContactText.size() <= 500;
+    }
+
     function isValidUser(data) {
       return hasRequiredFields(['uid', 'email', 'role', 'status']) &&
         hasOnlyAllowedFields(['uid', 'email', 'username', 'displayName', 'photoURL', 'role', 'status', 'createdAt']) &&
@@ -102,6 +109,12 @@ service cloud.firestore {
     match /settings/global {
       allow read: if isAuthenticated();
       allow write: if isAdmin() && isSafeGlobalSettings();
+    }
+
+    // Cấu hình hiển thị công khai (vd. thông tin liên hệ trên popup đăng nhập) — đọc không cần đăng nhập.
+    match /settings/public {
+      allow read: if true;
+      allow write: if isAdmin() && isSafePublicSettings();
     }
 
     match /history/{historyId} {
