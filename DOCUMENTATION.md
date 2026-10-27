@@ -9,7 +9,7 @@ Tài liệu đã được tách theo từng chức năng để dễ đọc và b
 3. [03 - Backend & API](./docs/03-backend-api.md)
 4. [04 - Workflow & Analytics](./docs/04-workflow-analytics.md)
 5. [05 - Security & Roles](./docs/05-security-roles.md)
-6. [06 - Live Deployment (Cloud Run)](./docs/06-live-deployment.md)
+6. [06 - Live Deployment (Cloud Run)](./docs/06-live-deployment.md) — deploy tự động qua GitHub Actions khi merge `main`, ruleset bảo vệ `main`, sự cố sidecar AI Studio
 7. [07 - Refactor & cập nhật 05/2026](./docs/07-refactor-2026-05.md)
 8. [08 - Đăng nhập & tài khoản](./docs/08-auth-users-setup.md) — username/password, `users/{uid}`, phiên đa thiết bị, service account local
 9. [09 - Optimize 06/2026](./docs/09-optimize-2026-06.md)
@@ -22,7 +22,7 @@ Tài liệu đã được tách theo từng chức năng để dễ đọc và b
 
 - Muốn nắm tổng quan nhanh: bắt đầu từ `docs/01-overview.md`.
 - Muốn hiểu luồng tạo ảnh + analytics: xem `docs/04-workflow-analytics.md`.
-- Chuẩn bị lên production: xem `docs/06-live-deployment.md`.
+- Chuẩn bị lên production: xem `docs/06-live-deployment.md`. Từ 10/2026 deploy = merge PR vào `main` (GitHub Actions, §0); deploy tay bằng `gcloud` chỉ là dự phòng.
 - Cấu hình đăng nhập / tạo user / lỗi “chưa được cấu hình”: xem `docs/08-auth-users-setup.md`.
 - Phiên đăng nhập đa thiết bị (xem, đăng xuất phiên): `docs/08-auth-users-setup.md` § Phiên đăng nhập đa thiết bị.
 - **Thay đổi refactor 05/2026** (admin/analytics split, aggregation, rate limit Firestore, Dockerfile): xem `docs/07-refactor-2026-05.md`.
