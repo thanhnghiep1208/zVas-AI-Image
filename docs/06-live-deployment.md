@@ -36,7 +36,29 @@
    | Variable | `AR_REPO`                | `app`                                                |
 
 3. Tạo Environment `production` (Settings → Environments). Muốn duyệt tay trước khi deploy → bật *Required reviewers*.
-4. Khuyến nghị: branch protection cho `main`, bắt buộc status check `check`.
+4. Branch `main` được bảo vệ bằng ruleset **Protect main** (Settings → Rules → Rulesets, bật 10/2026) — xem mục dưới.
+
+### Bảo vệ branch `main` (ruleset "Protect main")
+
+Mỗi commit lên `main` = một lần deploy prod, nên `main` có các rule:
+
+| Rule                              | Ý nghĩa                                                                 |
+| --------------------------------- | ----------------------------------------------------------------------- |
+| Chặn xoá branch                   | Không xoá được `main`                                                   |
+| Chặn force push                   | Giữ lịch sử, tránh deploy nhầm trạng thái đã ghi đè                      |
+| Bắt buộc merge qua PR             | 0 approval (repo một người — không tự approve PR của mình được)          |
+| Bắt buộc status check `check`     | Chỉ chấp nhận kết quả từ GitHub Actions; lint/test/build fail → không merge |
+| Bypass: role Admin                | Lối thoát khi hotfix khẩn cấp — push thẳng vẫn được nhưng bị ghi nhận bypass |
+
+**Flow hằng ngày:** tạo branch → push → mở PR → chờ `check` xanh → merge → workflow tự deploy. Không push thẳng `main` trừ khi khẩn cấp.
+
+Đổi tên job `check` trong `deploy.yml` → phải sửa tên status check trong ruleset, nếu không mọi PR sẽ kẹt chờ check không bao giờ chạy.
+
+Xem/kiểm tra rule đang áp:
+
+```bash
+gh api repos/thanhnghiep1208/zVas-AI-Image/rules/branches/main --jq '.[].type'
+```
 
 Đổi nội dung `firebase-applet-config.json` → cập nhật lại secret `FIREBASE_APPLET_CONFIG`.
 

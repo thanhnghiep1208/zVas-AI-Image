@@ -118,6 +118,10 @@ gcloud run services describe ai-image-zvas \
 
 **Mặc định:** merge PR vào `main` → GitHub Actions (`.github/workflows/deploy.yml`) tự lint/test/build, build image, deploy Cloud Run và smoke test `/_health`. Theo dõi ở tab Actions; setup một lần xem `docs/06-live-deployment.md` §0.
 
+`main` được bảo vệ (ruleset **Protect main**): chỉ merge qua PR khi status check `check` pass, chặn force push/xoá branch. Không push thẳng `main` trừ hotfix khẩn cấp (admin bypass).
+
+Không deploy từ Google AI Studio — dựng lại sidecar làm CI lỗi `PERMISSION_DENIED` (`docs/06-live-deployment.md` §9.1).
+
 **Dự phòng (deploy tay từ máy):** build từ **Dockerfile** (`--source .`). Nếu trước đây service từng dùng buildpack / base image khác, lần deploy này cần xóa base image đã lưu — nếu không gcloud báo `Missing required argument [--clear-base-image]`:
 
 ```bash
