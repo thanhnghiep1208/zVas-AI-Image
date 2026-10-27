@@ -1,0 +1,122 @@
+# CI cho mọi PR vào main; deploy Cloud Run khi push main (hoặc chạy tay).
+# Setup GCP/GitHub một lần: scripts/setup-github-deploy.sh — chi tiết docs/06-live-deployment.md §0.
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # lint/build/test chỉ cần đúng shape config — PR từ fork không đọc được secret thì dùng file example.
+      - name: Write firebase-applet-config.json
+        env:
+          FIREBASE_APPLET_CONFIG: ${{ secrets.FIREBASE_APPLET_CONFIG }}
+        run: |
+          if [ -n "$FIREBASE_APPLET_CONFIG" ]; then
+            printf '%s' "$FIREBASE_APPLET_CONFIG" > firebase-applet-config.json
+          else
+            cp firebase-applet-config.example.json firebase-applet-config.json
+          fi
+
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+
+  deploy:
+    needs: check
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    # Không cho 2 lần deploy chạy chồng; lần mới chờ lần cũ xong.
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      IMAGE: ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT }}/${{ vars.AR_REPO }}/${{ vars.CLOUD_RUN_SERVICE }}:${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Write firebase-applet-config.json
+        env:
+          FIREBASE_APPLET_CONFIG: ${{ secrets.FIREBASE_APPLET_CONFIG }}
+        run: |
+          if [ -z "$FIREBASE_APPLET_CONFIG" ]; then
+            echo "::error::Thiếu secret FIREBASE_APPLET_CONFIG"
+            exit 1
+          fi
+          printf '%s' "$FIREBASE_APPLET_CONFIG" > firebase-applet-config.json
+
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - run: gcloud auth configure-docker ${{ vars.GCP_REGION }}-docker.pkg.dev --quiet
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ env.IMAGE }}
+          build-args: |
+            VITE_SENTRY_DSN=${{ secrets.VITE_SENTRY_DSN }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Deploy bằng image giữ nguyên env/secrets/IAM đã gắn trên service (tương đương Mode A).
+      - name: Deploy Cloud Run
+        id: deploy
+        run: |
+          gcloud run deploy "${{ vars.CLOUD_RUN_SERVICE }}" \
+            --image "$IMAGE" \
+            --region "${{ vars.GCP_REGION }}" \
+            --project "${{ vars.GCP_PROJECT }}" \
+            --platform managed \
+            --quiet
+          url="$(gcloud run services describe "${{ vars.CLOUD_RUN_SERVICE }}" \
+            --region "${{ vars.GCP_REGION }}" \
+            --project "${{ vars.GCP_PROJECT }}" \
+            --format='value(status.url)')"
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+
+      - name: Smoke test /_health
+        run: |
+          for i in 1 2 3 4 5; do
+            if curl -fsS "${{ steps.deploy.outputs.url }}/_health"; then exit 0; fi
+            sleep 5
+          done
+          echo "::error::/_health không trả 200 — kiểm tra log revision, rollback nếu cần (docs/06 §6)"
+          exit 1
+
+      - name: Summary
+        run: |
+          {
+            echo "### Deployed \`${{ vars.CLOUD_RUN_SERVICE }}\`"
+            echo "- Commit: \`${{ github.sha }}\`"
+            echo "- Image: \`$IMAGE\`"
+            echo "- URL: ${{ steps.deploy.outputs.url }}"
+          } >> "$GITHUB_STEP_SUMMARY"

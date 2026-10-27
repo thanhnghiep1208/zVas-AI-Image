@@ -1,5 +1,46 @@
 # 06 - Live Deployment (Cloud Run)
 
+## 0) Deploy tự động bằng GitHub Actions (mặc định từ 10/2026)
+
+**Flow:** mở PR vào `main` → job `check` (lint, test, build) phải pass → merge → workflow `.github/workflows/deploy.yml` build Docker image, push Artifact Registry (tag = commit SHA), `gcloud run deploy --image` rồi smoke test `/_health`. Không còn chạy `gcloud run deploy --source .` từ máy cho release thường.
+
+- Deploy bằng image **giữ nguyên** env/secrets/IAM đã gắn trên service (giống Mode A). Đổi secrets/env vẫn làm tay theo Mode B (§3), sau đó push code như bình thường.
+- `firebase-applet-config.json` không có trong Git → workflow ghi lại từ secret `FIREBASE_APPLET_CONFIG`.
+- Xác thực GCP bằng Workload Identity Federation (OIDC), **không** có service account key. Provider chỉ chấp nhận token từ repo `thanhnghiep1208/zVas-AI-Image`, ref `refs/heads/main`.
+- Chạy tay: tab Actions → **Deploy** → *Run workflow* (chọn branch `main`).
+- Firestore rules/indexes **không** deploy tự động — vẫn chạy tay theo §2 (trước khi merge nếu rules có field mới).
+- Rollback: chuyển traffic về revision cũ (§6), hoặc *Re-run* workflow của commit cũ trên tab Actions.
+
+### Setup một lần
+
+1. Owner project chạy (idempotent, chạy lại an toàn):
+
+   ```bash
+   bash scripts/setup-github-deploy.sh
+   ```
+
+   Script tạo Artifact Registry `us-west1/app`, service account `github-deployer` (`roles/run.admin`, `roles/artifactregistry.writer` trên repo, `roles/iam.serviceAccountUser` trên runtime SA `…-compute@developer`), WIF pool `github` + provider `github-oidc`, rồi in lệnh `gh` để set secrets/variables.
+
+2. GitHub repo → Settings → Secrets and variables → Actions:
+
+   | Loại     | Tên                      | Giá trị                                              |
+   | -------- | ------------------------ | ---------------------------------------------------- |
+   | Secret   | `WIF_PROVIDER`           | `projects/<number>/locations/global/workloadIdentityPools/github/providers/github-oidc` |
+   | Secret   | `WIF_SERVICE_ACCOUNT`    | `github-deployer@zvas-ai-image.iam.gserviceaccount.com` |
+   | Secret   | `FIREBASE_APPLET_CONFIG` | Nội dung `firebase-applet-config.json`               |
+   | Secret   | `VITE_SENTRY_DSN`        | (tuỳ chọn) DSN Sentry frontend                       |
+   | Variable | `GCP_PROJECT`            | `zvas-ai-image`                                      |
+   | Variable | `GCP_REGION`             | `us-west1`                                           |
+   | Variable | `CLOUD_RUN_SERVICE`      | `ai-image-zvas`                                      |
+   | Variable | `AR_REPO`                | `app`                                                |
+
+3. Tạo Environment `production` (Settings → Environments). Muốn duyệt tay trước khi deploy → bật *Required reviewers*.
+4. Khuyến nghị: branch protection cho `main`, bắt buộc status check `check`.
+
+Đổi nội dung `firebase-applet-config.json` → cập nhật lại secret `FIREBASE_APPLET_CONFIG`.
+
+Deploy tay bằng `gcloud` (các mục dưới) vẫn dùng được làm phương án dự phòng khi GitHub Actions lỗi.
+
 ## 1) Pre-check local
 
 ```bash
