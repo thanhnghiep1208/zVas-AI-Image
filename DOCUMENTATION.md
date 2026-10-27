@@ -39,7 +39,7 @@ Tài liệu đã được tách theo từng chức năng để dễ đọc và b
 | Build frontend | `npm run build` |
 | Tests | `npm test` (55 tests: aggregation + rate limit + validateUserInput + prompts + fileValidation + ipRanges + ssrfSafeFetch + validateBaseUrl) |
 | Deploy rules + indexes | `firebase deploy --only firestore:rules,firestore:indexes --project zvas-ai-image` |
-| Deploy app | `gcloud run deploy` — Dockerfile cần `COPY server ./server` |
+| Deploy app | Push/merge `main` → GitHub Actions (`.github/workflows/deploy.yml`); dự phòng `gcloud run deploy` — Dockerfile cần `COPY server ./server` |
 
 ---
 

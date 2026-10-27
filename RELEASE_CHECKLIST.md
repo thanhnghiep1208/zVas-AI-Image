@@ -116,7 +116,9 @@ gcloud run services describe ai-image-zvas \
 
 ## 4) Deploy to Live Service
 
-Build từ **Dockerfile** (`--source .`). Nếu trước đây service từng dùng buildpack / base image khác, lần deploy này cần xóa base image đã lưu — nếu không gcloud báo `Missing required argument [--clear-base-image]`:
+**Mặc định:** merge PR vào `main` → GitHub Actions (`.github/workflows/deploy.yml`) tự lint/test/build, build image, deploy Cloud Run và smoke test `/_health`. Theo dõi ở tab Actions; setup một lần xem `docs/06-live-deployment.md` §0.
+
+**Dự phòng (deploy tay từ máy):** build từ **Dockerfile** (`--source .`). Nếu trước đây service từng dùng buildpack / base image khác, lần deploy này cần xóa base image đã lưu — nếu không gcloud báo `Missing required argument [--clear-base-image]`:
 
 ```bash
 gcloud run deploy ai-image-zvas \
