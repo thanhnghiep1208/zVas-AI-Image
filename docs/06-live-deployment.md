@@ -10,6 +10,7 @@
 - Chạy tay: tab Actions → **Deploy** → *Run workflow* (chọn branch `main`).
 - Firestore rules/indexes **không** deploy tự động — vẫn chạy tay theo §2 (trước khi merge nếu rules có field mới).
 - Rollback: chuyển traffic về revision cũ (§6), hoặc *Re-run* workflow của commit cũ trên tab Actions.
+- Không deploy từ Google AI Studio nữa — xem §9.1 (sidecar AI Studio làm CI lỗi `PERMISSION_DENIED`).
 
 ### Setup một lần
 
@@ -267,6 +268,37 @@ COPY constants ./constants
 Kiểm tra nhanh trước khi deploy: chỉ copy đúng các path trên vào một thư mục tạm (symlink `node_modules`), chạy `PORT=8099 NODE_ENV=production npx tsx server.ts` rồi `curl localhost:8099/_health` → phải trả `{"status":"ok"}`.
 
 Redeploy Mode A sau khi sửa.
+
+## 9.1) Troubleshooting — CI deploy lỗi bucket `ai-studio-bucket-…` (sidecar AI Studio)
+
+**Triệu chứng:** job `deploy` build/push image xong nhưng bước `gcloud run deploy --image` lỗi:
+
+```
+PERMISSION_DENIED: The source bucket ai-studio-bucket-217522553738-us-west1 must be in the same project as the service and has the used-by=cloudrun label...
+```
+
+**Nguyên nhân:** service ban đầu do Google AI Studio tạo (label `managed-by: google-ai-studio`) dưới dạng **multi-container**:
+
+- `nginx-container` (port 8080) — container mà mọi lần deploy (kể cả `--source .`) thay image, chạy app thật + gắn secrets.
+- `app-container` (sidecar, `image: scratch`) — chạy code "version-1" của AI Studio từ bucket trên, qua annotation `run.googleapis.com/sources` + `run.googleapis.com/base-images` và `runtimeClassName: run.googleapis.com/linux-base-image-update`. App hiện tại không dùng, nhưng mỗi revision mới vẫn kéo theo → SA `github-deployer` không đọc được bucket nên bị từ chối. Deploy tay không lỗi vì tài khoản Owner có quyền bucket.
+
+`--clear-base-image` **không** gỡ được các annotation này. Đã sửa 10/2026 (revision `00079`) bằng cách chuyển service về **một container**:
+
+```bash
+gcloud run services describe ai-image-zvas --region us-west1 --format=export > service.yaml
+# Xoá trong spec.template: container app-container, annotation run.googleapis.com/sources,
+# run.googleapis.com/base-images, run.googleapis.com/container-dependencies, runtimeClassName,
+# label client.knative.dev/nonce. Nâng nginx-container lên cpu '1' (concurrency > 1 cần ≥ 1 vCPU).
+gcloud run services replace service.yaml --region us-west1 --project zvas-ai-image
+```
+
+**Phòng tránh:** **không** deploy lại từ AI Studio — có thể dựng lại sidecar và làm CI lỗi lại. Kiểm tra nhanh:
+
+```bash
+gcloud run services describe ai-image-zvas --region us-west1 --format=json | grep -E "run.googleapis.com/(sources|base-images)|app-container"
+```
+
+Không in gì = sạch. Revision ≤ `00078` vẫn còn sidecar — rollback về đó thì deploy CI kế tiếp sẽ lỗi lại cho tới khi `replace` như trên.
 
 ## 10) Console / GA4 (không chặn deploy)
 
