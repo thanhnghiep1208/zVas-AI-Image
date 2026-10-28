@@ -23,7 +23,7 @@ Ngày: 2026-10-28. Vá lỗ rò khóa API phát hiện khi rà soát bảo mật
 
 - `/api/provider-test` nay cũng qua `tryConsumeRateLimit` (10 req/phút/user) — trước đây không giới hạn, dù nó gọi ra ngoài và là đường rò ở trên.
 
-## Còn lại (không nằm trong vá này)
+## Phòng thủ nhiều lớp (bổ sung)
 
-- `resolveProviderFromSettings` vẫn trả `requested` bất kể `enabledProviders` của admin. Allowlist host đã đóng đường rò khóa, nhưng việc thực thi `enabledProviders` là phòng thủ nhiều lớp, để lần sau.
-- Khóa Gemini nằm ở query string khi test (`?key=...`) — rủi ro thấp (HTTPS tới Google), cân nhắc chuyển sang header nếu Google hỗ trợ.
+- `resolveProviderFromSettings` nay thực thi `enabledProviders`: khi admin cấu hình allowlist (danh sách không rỗng), provider yêu cầu phải nằm trong đó, nếu không dùng provider enabled đầu tiên. Allowlist rỗng/chưa cấu hình giữ nguyên hành vi cũ (không giới hạn) để tương thích ngược.
+- Test khóa Gemini (`/api/provider-test`) chuyển từ query string `?key=...` sang header `x-goog-api-key` — query dễ lọt vào access log/proxy hơn header. Đã xác nhận endpoint Google chấp nhận header này (200) và từ chối khi thiếu (403).
