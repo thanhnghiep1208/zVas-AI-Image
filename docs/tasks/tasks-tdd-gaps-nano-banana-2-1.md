@@ -1,6 +1,6 @@
 # Tasks: Vá lỗ hổng TDD — Nano Banana 2.1
 
-Nguồn: kết quả rà TDD ngày 2026-10-08 (mutation test 13 lần, 1 lần lọt đã được vá). File này vá các phần **chưa có test tự động** và các bước kiểm tra thủ công còn mở trong `tasks/tasks-gemini-nano-banana-2-1.md`.
+Nguồn: kết quả rà TDD ngày 2026-10-08 (mutation test 13 lần, 1 lần lọt đã được vá). File này vá các phần **chưa có test tự động** và các bước kiểm tra thủ công còn mở trong `docs/tasks/tasks-gemini-nano-banana-2-1.md`.
 
 **Nguyên tắc chung:** với mỗi sub-task, làm theo thứ tự sau:
 1. **RED:** viết test, chạy và xác nhận test fail ở assertion vì đúng lý do (không phải fail vì lỗi import).
@@ -87,7 +87,7 @@ Không thêm thư viện mới. Máy không có Java nên không dùng Firestore
     - Admin chọn NB2 → Firestore có `geminiFlashRollback: true` → user thấy NB2.
     - Tab mở sẵn đang chọn 2.1 tạo ảnh → server gọi `gemini-3.1-flash-image`.
     - Bật lại 2.1.
-  - [ ] 7.5 Đánh dấu task 4.6, 5.6, 6.5, 7.6, 7.7, 8.6 trong `tasks/tasks-gemini-nano-banana-2-1.md`.
+  - [ ] 7.5 Đánh dấu task 4.6, 5.6, 6.5, 7.6, 7.7, 8.6 trong `docs/tasks/tasks-gemini-nano-banana-2-1.md`.
 
 - [ ] 8.0 Hoàn tất
   - [x] 8.1 Chạy lại mutation script cho toàn bộ logic (cũ và mới): mọi mutation đều phải bị test bắt.
