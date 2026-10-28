@@ -8,7 +8,7 @@ import {
 } from '../lib/resolveProvider';
 import type { AuthenticatedRequest, GenerateRequestBody } from '../types';
 import { validatePrompt } from '../lib/validateUserInput';
-import { validateHttpsBaseUrl } from '../lib/validateBaseUrl';
+import { validateProviderBaseUrl } from '../lib/validateBaseUrl';
 import { ssrfSafeFetch } from '../lib/ssrfSafeFetch';
 import { tryConsumeRateLimit } from '../lib/rateLimit/index';
 import { resolveGeminiModel } from '../lib/resolveGeminiModel';
@@ -85,7 +85,7 @@ export function createPostGenerateHandler(db: Firestore) {
         if (!apiKey) {
           return res.status(400).json({ error: 'Seedance API Key chưa được cấu hình.' });
         }
-        const baseCheck = validateHttpsBaseUrl(baseUrlRaw, 'Seedance');
+        const baseCheck = validateProviderBaseUrl(baseUrlRaw, 'seedance');
         if (baseCheck.ok === false) {
           return res.status(400).json({ error: baseCheck.error });
         }
@@ -132,7 +132,7 @@ export function createPostGenerateHandler(db: Firestore) {
         if (!apiKey) {
           return res.status(400).json({ error: 'Seedream API Key chưa được cấu hình.' });
         }
-        const baseCheck = validateHttpsBaseUrl(baseUrlRaw, 'Seedream');
+        const baseCheck = validateProviderBaseUrl(baseUrlRaw, 'seedream');
         if (baseCheck.ok === false) {
           return res.status(400).json({ error: baseCheck.error });
         }
