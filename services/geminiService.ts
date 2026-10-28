@@ -2,13 +2,30 @@ import { auth } from '../firebase';
 import type { GeneratedImage, ImageSize } from '../types';
 import { describeApiOrNetworkError } from '../utils/userFacingError';
 import { mapGenerateResponse } from '../utils/generationUsage';
+import { compressImageForUpload } from '../utils/imageCompression';
+import { classifyGenerationError, isGenerationErrorCode } from '../lib/generationErrors';
+
+/**
+ * Lâu hơn tổng ngân sách retry phía server (`GEMINI_TOTAL_BUDGET_MS`, 240s) một
+ * chút để server luôn kịp trả lỗi `timeout` có cấu trúc trước khi client bỏ cuộc,
+ * và vẫn dưới timeout 300s của Cloud Run.
+ */
+const GENERATE_REQUEST_TIMEOUT_MS = 270_000;
+
+/** Trần body JSON của server là 10MB (`server.ts`); chừa chỗ cho prompt + JSON. */
+const MAX_REQUEST_IMAGE_BASE64_CHARS = 9.5 * 1024 * 1024;
+
+type EncodedImage = { data: string; mimeType: string };
 
 const fileToBase64 = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.readAsDataURL(file);
     reader.onload = () => resolve((reader.result as string).split(',')[1]);
-    reader.onerror = (error) => reject(error);
+    // onerror nhận ProgressEvent (không có message) → trước đây thành "An unknown
+    // error occurred." trong analytics. Thường gặp khi file gốc bị thu hồi (ảnh
+    // iCloud/Photos chưa tải về, file bị xóa/di chuyển sau khi chọn).
+    reader.onerror = () => reject(new Error(`File read failed: ${reader.error?.name || 'unknown'}`));
   });
 };
 
@@ -29,39 +46,63 @@ export const generateImageVariations = async (
 
   const idToken = await currentUser.getIdToken();
 
+  const encodeImage = async (file: File): Promise<EncodedImage> => {
+    const upload = await compressImageForUpload(file);
+    return { data: await fileToBase64(upload), mimeType: upload.type };
+  };
+
+  // Nén + base64 một lần cho mọi prompt (trước đây mỗi prompt đọc lại toàn bộ ảnh).
+  // Mỗi prompt vẫn await bên trong try của nó để lỗi đọc file thành kết quả lỗi
+  // của prompt đó thay vì làm sập cả lượt tạo.
+  const encodedImagesPromise = Promise.all([
+    imageFile ? encodeImage(imageFile) : Promise.resolve(null),
+    Promise.all((referenceImageFiles || []).map(encodeImage)),
+  ]);
+  encodedImagesPromise.catch(() => {});
+
   const generateSingleImage = async (prompt: string): Promise<GeneratedImage> => {
     try {
-      const mainImage = imageFile
-        ? { data: await fileToBase64(imageFile), mimeType: imageFile.type }
-        : null;
-      const refs = await Promise.all(
-        (referenceImageFiles || []).map(async (file) => ({
-          data: await fileToBase64(file),
-          mimeType: file.type
-        }))
-      );
+      const [mainImage, refs] = await encodedImagesPromise;
 
-      const response = await fetch('/api/generate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${idToken}`,
-        },
-        body: JSON.stringify({
-          prompt,
-          aspectRatio,
-          imageSize,
-          provider: globalSettings?.activeProvider || 'gemini',
-          geminiModel: globalSettings?.geminiModel,
-          openaiModel: globalSettings?.openaiModel,
-          seedanceModel: globalSettings?.seedanceModel,
-          seedanceBaseUrl: globalSettings?.seedanceBaseUrl,
-          seedreamModel: globalSettings?.seedreamModel,
-          seedreamBaseUrl: globalSettings?.seedreamBaseUrl,
-          mainImage,
-          referenceImages: refs
-        })
-      });
+      const base64Chars = (mainImage?.data.length ?? 0) + refs.reduce((sum, ref) => sum + ref.data.length, 0);
+      if (base64Chars > MAX_REQUEST_IMAGE_BASE64_CHARS) {
+        throw new Error('Request payload too large. Please use a smaller image or compress before upload.');
+      }
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), GENERATE_REQUEST_TIMEOUT_MS);
+      let response: Response;
+      try {
+        response = await fetch('/api/generate', {
+          method: 'POST',
+          signal: controller.signal,
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${idToken}`,
+          },
+          body: JSON.stringify({
+            prompt,
+            aspectRatio,
+            imageSize,
+            provider: globalSettings?.activeProvider || 'gemini',
+            geminiModel: globalSettings?.geminiModel,
+            openaiModel: globalSettings?.openaiModel,
+            seedanceModel: globalSettings?.seedanceModel,
+            seedanceBaseUrl: globalSettings?.seedanceBaseUrl,
+            seedreamModel: globalSettings?.seedreamModel,
+            seedreamBaseUrl: globalSettings?.seedreamBaseUrl,
+            mainImage,
+            referenceImages: refs
+          })
+        });
+      } catch (fetchError) {
+        if (controller.signal.aborted) {
+          throw new Error('Request timed out waiting for the image generation server.');
+        }
+        throw fetchError;
+      } finally {
+        clearTimeout(timeoutId);
+      }
 
       const rawBody = await response.text();
       let responseData: any = {};
@@ -75,7 +116,13 @@ export const generateImageVariations = async (
         const fallbackMessage = rawBody && rawBody.startsWith('<')
           ? `Backend returned non-JSON response (HTTP ${response.status}). Preview: ${preview || 'empty body'}`
           : `Backend error (HTTP ${response.status}): ${preview || 'empty body'}`;
-        throw new Error(responseData.error || fallbackMessage || 'Generation failed.');
+        const httpError = new Error(responseData.error || fallbackMessage || 'Generation failed.');
+        const tagged = httpError as Error & { code?: string; status?: number };
+        tagged.status = response.status;
+        if (typeof responseData.code === 'string') {
+          tagged.code = responseData.code;
+        }
+        throw httpError;
       }
 
       const imageBase64 = responseData.imageBase64;
@@ -94,46 +141,14 @@ export const generateImageVariations = async (
       let userMessage =
         (typeof error?.message === 'string' && error.message) ||
         (typeof error === 'string' ? error : '') ||
-        'An unknown error occurred.';
+        `An unknown error occurred. (${error?.name || error?.constructor?.name || typeof error})`;
       const provider = String(globalSettings?.activeProvider || 'gemini');
 
-      // Extract machine-readable error code BEFORE transforming to user-facing message
-      const msgLower = userMessage.toLowerCase();
-      let errorCode = 'unknown_error';
-      if (userMessage.includes('429') || msgLower.includes('quota exceeded') || userMessage.includes('RESOURCE_EXHAUSTED') || msgLower.includes('too many requests')) {
-        errorCode = 'quota_exceeded';
-      } else if (userMessage.includes('403') || msgLower.includes('forbidden')) {
-        errorCode = 'forbidden';
-      } else if (userMessage.includes('401') || msgLower.includes('unauthorized')) {
-        errorCode = 'auth_error';
-      } else if (userMessage.includes('413') || msgLower.includes('payload too large') || msgLower.includes('too large')) {
-        errorCode = 'payload_too_large';
-      } else if (userMessage.includes('500') || msgLower.includes('internal server error')) {
-        errorCode = 'server_error';
-      } else if (userMessage.includes('502') || msgLower.includes('bad gateway')) {
-        errorCode = 'server_error';
-      } else if (userMessage.includes('503') || msgLower.includes('service unavailable')) {
-        errorCode = 'service_unavailable';
-      } else if (userMessage.includes('Requested entity was not found') || (userMessage.includes('404') && msgLower.includes('not found'))) {
-        errorCode = 'not_found';
-      } else if (msgLower.includes('rate limit')) {
-        errorCode = 'rate_limit';
-      } else if (msgLower.includes('timeout') || msgLower.includes('timed out') || msgLower.includes('deadline exceeded') || msgLower.includes('aborted')) {
-        errorCode = 'timeout';
-      } else if (
-        msgLower.includes('failed to fetch') ||
-        msgLower.includes('load failed') ||
-        msgLower.includes('networkerror') ||
-        msgLower.includes('network')
-      ) {
-        errorCode = 'network_error';
-      } else if (msgLower.includes('safety') || msgLower.includes('content filter') || msgLower.includes('blocked')) {
-        errorCode = 'content_filter';
-      } else if (userMessage.includes('No image was generated')) {
-        errorCode = 'no_output';
-      } else if (userMessage.includes('400') || msgLower.includes('bad request')) {
-        errorCode = 'invalid_prompt';
-      }
+      // Mã máy đọc được, lấy TRƯỚC khi đổi sang message tiếng Việt. Server
+      // (`{ error, code }`) biết rõ nhất nên được ưu tiên.
+      const errorCode = isGenerationErrorCode(error?.code)
+        ? error.code
+        : classifyGenerationError(userMessage);
 
       // rawErrorMessage giữ nguyên message kỹ thuật gốc — chỉ dùng cho
       // analytics/chẩn đoán (tooltip "Sample error messages"), không hiển thị
@@ -161,6 +176,7 @@ export const generateImageVariations = async (
         rawErrorMessage,
         text: userMessage,
         errorCode,
+        ...(typeof error?.status === 'number' ? { httpStatus: error.status } : {}),
         promptTokens: 0,
         completionTokens: 0,
         totalTokens: 0

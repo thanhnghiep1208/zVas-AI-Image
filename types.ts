@@ -8,6 +8,8 @@ export interface GeneratedImage {
   errorCode?: string;
   /** Raw technical error message (pre-translation) — for analytics/diagnostics only, never shown to users. */
   rawErrorMessage?: string;
+  /** HTTP status của `/api/generate` khi lỗi; không có nếu request không tới được server. */
+  httpStatus?: number;
   promptTokens?: number;
   completionTokens?: number;
   thinkingTokens?: number;

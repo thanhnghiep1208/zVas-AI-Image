@@ -10,6 +10,9 @@ const USER_ERROR_UNEXPECTED = 'Đã xảy ra lỗi không mong đợi. Hãy tả
 export function describeApiOrNetworkError(raw: string): string {
   const n = (raw || '').toLowerCase();
 
+  if (n.includes('file read failed')) {
+    return 'Không đọc được ảnh đã chọn (file có thể đã bị di chuyển hoặc chưa tải về máy). Hãy chọn lại ảnh rồi thử lại.';
+  }
   if (n.includes('client is offline') || n.includes('failed to get document because the client is offline')) {
     return 'Bạn đang ngoại tuyến hoặc mạng không ổn định. Kiểm tra kết nối rồi thử lại.';
   }

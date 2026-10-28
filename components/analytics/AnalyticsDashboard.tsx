@@ -20,6 +20,7 @@ import {
   FailedGenerationsBox,
   AnalyticsPageSkeleton,
 } from './AnalyticsWidgets';
+import { FailureDimensionsPanel } from './FailureDimensionsPanel';
 import { DeferredTrendsSection } from './TrendsSection';
 import { UserHistoryCountsPanel } from './UserHistoryCountsPanel';
 import type { AnalyticsDashboardProps } from './types';
@@ -197,6 +198,8 @@ export const AnalyticsDashboard: React.FC<AnalyticsDashboardProps> = ({
               onErrorClick={onErrorClick}
               monthKey={data.loadedMonthKey ?? data.monthKey}
             />
+
+            <FailureDimensionsPanel failureStats={data.failureStats} />
           </div>
         </>
       ) : (

@@ -20,6 +20,16 @@ export const MAX_IMAGE_FILE_SIZE_BYTES = MAX_IMAGE_FILE_SIZE_MB * 1024 * 1024;
  */
 export const MAX_TOTAL_IMAGE_SIZE_BYTES = 7 * 1024 * 1024;
 
+/**
+ * Tổng các ảnh (chính + tham chiếu) có vượt `MAX_TOTAL_IMAGE_SIZE_BYTES` không.
+ * Phải gọi cả khi chọn ảnh chính lẫn khi thêm ảnh tham chiếu — trước đây chỉ
+ * nhánh tham chiếu kiểm tổng, nên thay ảnh chính sau cùng vẫn lọt 413.
+ */
+export function exceedsTotalImageSizeLimit(sizes: Array<number | undefined>): boolean {
+  const total = sizes.reduce<number>((sum, size) => sum + (size ?? 0), 0);
+  return total > MAX_TOTAL_IMAGE_SIZE_BYTES;
+}
+
 export function isAcceptedImageFile(file: File): boolean {
   return ACCEPTED_IMAGE_MIME_TYPES.has(file.type);
 }

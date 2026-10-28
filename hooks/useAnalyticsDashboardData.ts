@@ -4,6 +4,7 @@ import {
   loadMonthlyDashboardBundle,
   type MonthlyAnalytics,
   type MonthlyErrorBreakdownItem,
+  type MonthlyFailureStats,
   type MonthlyTokenStats,
   type MonthlyTopModelStats,
 } from '../services/analyticsService';
@@ -30,6 +31,12 @@ const EMPTY_TOP_MODEL: MonthlyTopModelStats = {
   modelBreakdown: [],
 };
 
+const EMPTY_FAILURE_STATS: MonthlyFailureStats = {
+  bySource: { user: 0, client: 0, system: 0 },
+  byModel: [],
+  byUser: [],
+};
+
 export function useAnalyticsDashboardData() {
   const [monthKey, setMonthKey] = useState<string>(() => {
     const now = new Date();
@@ -43,6 +50,7 @@ export function useAnalyticsDashboardData() {
   const [isErrorBreakdownOpen, setIsErrorBreakdownOpen] = useState(false);
   const [tokenStats, setTokenStats] = useState<MonthlyTokenStats>(EMPTY_TOKEN_STATS);
   const [topModelStats, setTopModelStats] = useState<MonthlyTopModelStats>(EMPTY_TOP_MODEL);
+  const [failureStats, setFailureStats] = useState<MonthlyFailureStats>(EMPTY_FAILURE_STATS);
   const [budgetLimit, setBudgetLimit] = useState<number>(10);
   const [budgetInput, setBudgetInput] = useState<string>('10');
   const [isEditingBudget, setIsEditingBudget] = useState(false);
@@ -64,6 +72,7 @@ export function useAnalyticsDashboardData() {
       setErrorBreakdown([]);
       setTokenStats(EMPTY_TOKEN_STATS);
       setTopModelStats(EMPTY_TOP_MODEL);
+      setFailureStats(EMPTY_FAILURE_STATS);
       setIsErrorBreakdownOpen(false);
       setDashboardBundleFetchedAt(null);
     }
@@ -83,12 +92,15 @@ export function useAnalyticsDashboardData() {
             errorBreakdown: MonthlyErrorBreakdownItem[];
             tokenStats: MonthlyTokenStats;
             topModelStats: MonthlyTopModelStats;
+            failureStats?: MonthlyFailureStats;
           }>(cacheKey);
           if (cached) {
             setAnalytics(cached.data.analytics);
             setErrorBreakdown(cached.data.errorBreakdown);
             setTokenStats(cached.data.tokenStats);
             setTopModelStats(cached.data.topModelStats);
+            // Cache sessionStorage tạo trước khi có failureStats.
+            setFailureStats(cached.data.failureStats ?? EMPTY_FAILURE_STATS);
             setLoadedMonthKey(monthKey);
             setDashboardBundleFetchedAt(cached.savedAt);
             setRequestVersion((v) => v + 1);
@@ -103,6 +115,7 @@ export function useAnalyticsDashboardData() {
         setErrorBreakdown(bundle.errorBreakdown);
         setTokenStats(bundle.tokenStats);
         setTopModelStats(bundle.topModelStats);
+        setFailureStats(bundle.failureStats);
         setLoadedMonthKey(monthKey);
         setRequestVersion((v) => v + 1);
 
@@ -111,6 +124,7 @@ export function useAnalyticsDashboardData() {
           errorBreakdown: bundle.errorBreakdown,
           tokenStats: bundle.tokenStats,
           topModelStats: bundle.topModelStats,
+          failureStats: bundle.failureStats,
         });
         setDashboardBundleFetchedAt(Date.now());
       } catch (error) {
@@ -167,6 +181,7 @@ export function useAnalyticsDashboardData() {
     setIsErrorBreakdownOpen,
     tokenStats,
     topModelStats,
+    failureStats,
     budgetLimit,
     budgetInput,
     setBudgetInput,

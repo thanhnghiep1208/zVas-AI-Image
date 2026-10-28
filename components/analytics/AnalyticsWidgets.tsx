@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { Line, LineChart, ResponsiveContainer } from 'recharts';
 import type { MonthlyAnalytics, MonthlyErrorBreakdownItem, MonthlyTokenStats } from '../../services/analyticsService';
+import { GENERATION_ERROR_SOURCE_LABELS } from '../../lib/generationErrors';
 
 const TOOLTIP_WIDTH = 320;
 const TOOLTIP_MARGIN = 8;
@@ -610,6 +611,9 @@ export const FailedGenerationsBox = ({
                         <span className="text-gray-200">{item.errorType}</span>
                         {item.sampleMessages && item.sampleMessages.length > 0 && (
                           <ErrorSampleTooltip messages={item.sampleMessages} title="Sample error messages" />
+                        )}
+                        {item.source && (
+                          <span className="text-[11px] text-gray-500">· {GENERATION_ERROR_SOURCE_LABELS[item.source]}</span>
                         )}
                       </div>
                     </td>

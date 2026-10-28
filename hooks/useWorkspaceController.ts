@@ -8,6 +8,7 @@ import { dataURLtoFile } from '../utils/imageDataUrl';
 import { getClosestAspectRatio } from '../utils/aspectRatio';
 import {
   isWithinImageSizeLimit,
+  exceedsTotalImageSizeLimit,
   formatFileSize,
   MAX_IMAGE_FILE_SIZE_MB,
   MAX_TOTAL_IMAGE_SIZE_BYTES,
@@ -141,6 +142,14 @@ export function useWorkspaceController({
         return;
       }
 
+      // Ảnh chính mới thay ảnh cũ, nhưng vẫn đi chung request với ảnh tham chiếu.
+      if (exceedsTotalImageSizeLimit([file.size, ...referenceImages.map((ref) => ref.file.size)])) {
+        setError(
+          `Tổng dung lượng ảnh vượt ${formatFileSize(MAX_TOTAL_IMAGE_SIZE_BYTES)} cho một lần tạo. Hãy bớt ảnh tham chiếu hoặc dùng ảnh nhẹ hơn.`
+        );
+        return;
+      }
+
       const previewUrl = URL.createObjectURL(file);
       setImage((prev) => {
         if (prev) URL.revokeObjectURL(prev.previewUrl);
@@ -157,7 +166,7 @@ export function useWorkspaceController({
       setGeneratedImages([]);
       setError(null);
     },
-    [setGeneratedImages, setError]
+    [referenceImages, setGeneratedImages, setError]
   );
 
   const handleImageRemove = useCallback(() => {
@@ -180,10 +189,13 @@ export function useWorkspaceController({
         return;
       }
 
-      const usedBytes =
-        (image?.file.size ?? 0) +
-        referenceImages.reduce((sum, ref) => sum + ref.file.size, 0);
-      if (usedBytes + file.size > MAX_TOTAL_IMAGE_SIZE_BYTES) {
+      if (
+        exceedsTotalImageSizeLimit([
+          image?.file.size,
+          ...referenceImages.map((ref) => ref.file.size),
+          file.size,
+        ])
+      ) {
         setError(
           `Tổng dung lượng ảnh vượt ${formatFileSize(MAX_TOTAL_IMAGE_SIZE_BYTES)} cho một lần tạo. Hãy bớt ảnh tham chiếu hoặc dùng ảnh nhẹ hơn.`
         );

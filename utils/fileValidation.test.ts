@@ -4,7 +4,9 @@ import {
   isAcceptedImageFile,
   isWithinImageSizeLimit,
   formatFileSize,
+  exceedsTotalImageSizeLimit,
   MAX_IMAGE_FILE_SIZE_BYTES,
+  MAX_TOTAL_IMAGE_SIZE_BYTES,
 } from './fileValidation.ts';
 
 function fileOfType(type: string): File {
@@ -60,5 +62,25 @@ describe('formatFileSize', () => {
 
   it('formats sub-megabyte sizes in KB', () => {
     assert.equal(formatFileSize(512 * 1024), '512 KB');
+  });
+});
+
+describe('exceedsTotalImageSizeLimit', () => {
+  it('allows a batch exactly at the total limit', () => {
+    assert.equal(exceedsTotalImageSizeLimit([MAX_TOTAL_IMAGE_SIZE_BYTES - 100, 100]), false);
+  });
+
+  it('rejects a batch one byte over the total limit', () => {
+    assert.equal(exceedsTotalImageSizeLimit([MAX_TOTAL_IMAGE_SIZE_BYTES, 1]), true);
+  });
+
+  // Lỗ hổng cũ: chọn ảnh chính SAU khi đã có ảnh tham chiếu không kiểm tổng → 413.
+  it('rejects a main image that only overflows together with existing references', () => {
+    const refs = [3 * 1024 * 1024, 3 * 1024 * 1024];
+    assert.equal(exceedsTotalImageSizeLimit([2 * 1024 * 1024, ...refs]), true);
+  });
+
+  it('ignores missing entries', () => {
+    assert.equal(exceedsTotalImageSizeLimit([undefined, 1024]), false);
   });
 });
