@@ -1,5 +1,5 @@
 /**
- * Script tạm (task 1.0 – tasks/tasks-gemini-nano-banana-2-1.md):
+ * Script tạm (task 1.0 – docs/tasks/tasks-gemini-nano-banana-2-1.md):
  * xác minh model ID Nano Banana 2.1, hỗ trợ 512px, usageMetadata và đo tốc độ.
  *
  * Chạy: npx tsx --env-file=.env.local scripts/verify-nano-banana-2-1.ts [modelId] [runs]

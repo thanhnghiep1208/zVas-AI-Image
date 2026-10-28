@@ -2,7 +2,7 @@
 
 Ứng dụng web tạo và biến thể ảnh bằng AI (Gemini, OpenAI DALL·E 3, Seedance), kết hợp Firebase Auth/Firestore, Express và Vite.
 
-**Tài liệu chi tiết:** xem [DOCUMENTATION.md](./DOCUMENTATION.md) (trang mục lục) hoặc đọc trực tiếp bộ tài liệu trong thư mục `docs/`. **Shell UI, logo làm mới vùng làm việc, banner Create, upload/kết quả:** [docs/02-frontend-architecture.md](./docs/02-frontend-architecture.md).
+**Tài liệu chi tiết:** xem [docs/README.md](./docs/README.md) (trang mục lục) hoặc đọc trực tiếp bộ tài liệu trong thư mục `docs/`. **Shell UI, logo làm mới vùng làm việc, banner Create, upload/kết quả:** [docs/02-frontend-architecture.md](./docs/02-frontend-architecture.md).
 
 ---
 
@@ -96,5 +96,5 @@ React 19, TypeScript, Vite 6, Tailwind CSS 4, Firebase (Auth + Firestore), Expre
 - Không commit API key thật.
 - **`firebase-applet-config.json`** không được đưa lên Git (chỉ dùng bản `.example` trong repo). Nếu bản thật từng nằm trong lịch sử commit, nên **xoay / thu hồi Web API key** trong Firebase Console và cân nhắc dọn lịch sử (`git filter-repo` / BFG).
 - Ưu tiên Secret Manager / biến môi trường trên Cloud Run cho các key nhà cung cấp AI.
-- Chi tiết mục **Bảo mật** trong [DOCUMENTATION.md](./DOCUMENTATION.md).
+- Chi tiết mục **Bảo mật** trong [docs/README.md](./docs/README.md).
 

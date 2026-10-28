@@ -58,3 +58,4 @@ coverage
 .agent/
 .cursor/
 graphify-out/
+.archify/

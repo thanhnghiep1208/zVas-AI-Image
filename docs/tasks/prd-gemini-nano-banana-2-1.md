@@ -38,9 +38,9 @@ Tài liệu tham khảo:
 
 ### 4.1. Danh sách model và giá trị mặc định
 
-**FR-1.** Thêm Nano Banana 2.1 vào [constants/aiModels.ts](../constants/aiModels.ts) với `value: 'gemini-nano-banana-2.1'` và `label: 'Nano Banana 2.1'`.
+**FR-1.** Thêm Nano Banana 2.1 vào [constants/aiModels.ts](../../constants/aiModels.ts) với `value: 'gemini-nano-banana-2.1'` và `label: 'Nano Banana 2.1'`.
 
-**FR-2.** Đổi `GEMINI_MODEL_FALLBACK` thành `'gemini-nano-banana-2.1'`. Fallback hardcode ở [server/routes/generate.ts:170](../server/routes/generate.ts#L170) và giá trị khởi tạo ở [hooks/useAdminSettings.ts:17](../hooks/useAdminSettings.ts#L17) cũng phải dùng hằng số này, không ghi chuỗi cứng nữa.
+**FR-2.** Đổi `GEMINI_MODEL_FALLBACK` thành `'gemini-nano-banana-2.1'`. Fallback hardcode ở [server/routes/generate.ts:170](../../server/routes/generate.ts#L170) và giá trị khởi tạo ở [hooks/useAdminSettings.ts:17](../../hooks/useAdminSettings.ts#L17) cũng phải dùng hằng số này, không ghi chuỗi cứng nữa.
 
 **FR-3.** Danh sách model Gemini cho **user** (dropdown trên header, `PROVIDER_MODEL_OPTIONS.gemini`) chỉ có 2 mục theo thứ tự:
 1. Model Flash đang được admin chọn: mặc định Nano Banana 2.1, hoặc Nano Banana 2 khi đang rollback (xem FR-7).
@@ -58,7 +58,7 @@ Mục đầu tiên là model mặc định khi user chưa có lựa chọn (logi
 
 ### 4.3. Rollback cho admin (feature flag)
 
-**FR-7.** Trong [components/admin/AdminSettingsTab.tsx](../components/admin/AdminSettingsTab.tsx), dropdown model Gemini hiển thị 3 lựa chọn:
+**FR-7.** Trong [components/admin/AdminSettingsTab.tsx](../../components/admin/AdminSettingsTab.tsx), dropdown model Gemini hiển thị 3 lựa chọn:
 - `Nano Banana 2.1 (mặc định)`
 - `Nano Banana Pro`
 - `Nano Banana 2 (cũ – dùng để rollback)`
@@ -73,11 +73,11 @@ Khi admin đổi lựa chọn, user nhận cấu hình mới ở lần load app 
 
 **FR-9.** Khi đang rollback, mọi request tạo ảnh có `geminiModel = 'gemini-nano-banana-2.1'` phải được server chuyển sang `gemini-3.1-flash-image-preview`. Làm vậy để tab nào đã mở sẵn từ trước vẫn gọi đúng model đã rollback.
 
-**FR-10.** Server ở [server/routes/generate.ts](../server/routes/generate.ts) phải kiểm tra `body.geminiModel` có thuộc `ALLOWED_GEMINI_MODEL_IDS` hay không. ID không hợp lệ thì dùng `normalizeGeminiModelId` để quay về fallback. Hiện server chưa kiểm tra chỗ này.
+**FR-10.** Server ở [server/routes/generate.ts](../../server/routes/generate.ts) phải kiểm tra `body.geminiModel` có thuộc `ALLOWED_GEMINI_MODEL_IDS` hay không. ID không hợp lệ thì dùng `normalizeGeminiModelId` để quay về fallback. Hiện server chưa kiểm tra chỗ này.
 
 ### 4.4. Tính chi phí (analytics)
 
-**FR-11.** Thêm bảng giá 2.1 vào [hooks/useImageGeneration.ts](../hooks/useImageGeneration.ts) (Standard tier, kiểm tra ngày 2026-10-08):
+**FR-11.** Thêm bảng giá 2.1 vào [hooks/useImageGeneration.ts](../../hooks/useImageGeneration.ts) (Standard tier, kiểm tra ngày 2026-10-08):
 
 | Hạng mục | Giá |
 | :--- | :--- |
@@ -94,7 +94,7 @@ Khi admin đổi lựa chọn, user nhận cấu hình mới ở lần load app 
 
 ### 4.5. Popup "So sánh model Gemini"
 
-**FR-14.** Viết lại [docs/so-sanh-model-gemini.md](../docs/so-sanh-model-gemini.md), file mà `GeminiModelComparisonModal` đọc qua `?raw`, gồm các phần:
+**FR-14.** Viết lại [docs/so-sanh-model-gemini.md](../so-sanh-model-gemini.md), file mà `GeminiModelComparisonModal` đọc qua `?raw`, gồm các phần:
 1. **Tóm tắt nhanh:** nên chọn bản nào giữa **Nano Banana 2.1** và **Nano Banana Pro**.
 2. **Bảng so sánh 2 cột** (2.1 và Pro) với các hàng: Model ID, Tốc độ, Chi phí API (theo ảnh 1K/2K/4K), Chất lượng ảnh, Chữ tiếng Việt, Sửa ảnh, Độ nhất quán / ảnh tham chiếu, Độ phân giải hỗ trợ.
 3. **Mục mới "✨ Điểm mới của Nano Banana 2.1 so với Nano Banana 2":**
@@ -109,14 +109,14 @@ Khi admin đổi lựa chọn, user nhận cấu hình mới ở lần load app 
 
 **FR-16.** Số liệu tốc độ của 2.1 phải được **đo thực tế** (gọi tối thiểu 5 lần ở ảnh 1K, ghi lại khoảng thời gian). Không có số đo thì ghi "Nhanh (đang cập nhật)". Không tự đặt ra số liệu.
 
-**FR-17.** Đổi `title` của nút info ở [components/layout/AppHeader.tsx:219](../components/layout/AppHeader.tsx#L219) thành `"So sánh Nano Banana 2.1 và Nano Banana Pro"`.
+**FR-17.** Đổi `title` của nút info ở [components/layout/AppHeader.tsx:219](../../components/layout/AppHeader.tsx#L219) thành `"So sánh Nano Banana 2.1 và Nano Banana Pro"`.
 
 ### 4.6. Tài liệu và test
 
-**FR-18.** Cập nhật các chỗ nhắc tới "Nano Banana 2 là mặc định" hoặc liệt kê model trong: [docs/01-overview.md](../docs/01-overview.md), [docs/02-frontend-architecture.md](../docs/02-frontend-architecture.md), [docs/03-backend-api.md](../docs/03-backend-api.md), [docs/06-live-deployment.md](../docs/06-live-deployment.md). Thêm hướng dẫn rollback (FR-7, FR-8) vào `06-live-deployment.md`.
+**FR-18.** Cập nhật các chỗ nhắc tới "Nano Banana 2 là mặc định" hoặc liệt kê model trong: [docs/01-overview.md](../01-overview.md), [docs/02-frontend-architecture.md](../02-frontend-architecture.md), [docs/03-backend-api.md](../03-backend-api.md), [docs/06-live-deployment.md](../06-live-deployment.md). Thêm hướng dẫn rollback (FR-7, FR-8) vào `06-live-deployment.md`.
 
 **FR-19.** Viết test theo hướng TDD, viết test trước rồi mới code:
-- Cập nhật [utils/generationModelPreference.test.ts](../utils/generationModelPreference.test.ts).
+- Cập nhật [utils/generationModelPreference.test.ts](../../utils/generationModelPreference.test.ts).
 - `normalizeGeminiModelId`: chấp nhận cả 3 ID, ID lạ thì trả về 2.1.
 - `resolveModelKey`: không có preference thì ra 2.1; preference NB2 thì chuyển sang model Flash đang hoạt động; preference Pro thì giữ Pro.
 - Tính model Flash cho user theo setting admin (FR-8), test cả trạng thái thường và rollback.
@@ -143,7 +143,7 @@ Khi admin đổi lựa chọn, user nhận cấu hình mới ở lần load app 
 ## 7. Lưu ý kỹ thuật (Technical Considerations)
 
 - **Chỗ cần xác minh model ID:** trang tài liệu của Google ghi ID là `gemini-nano-banana-2.1`, khác kiểu đặt tên cũ (`gemini-3.1-flash-image-preview`). Trước khi code, chạy một request thật qua `@google/genai` với ID này để xác nhận. Nếu ID khác, chỉ cần sửa ở `constants/aiModels.ts` (FR-2 đã gom fallback về một hằng số).
-- **Độ phân giải 512px:** app có size `512px` ([components/ImageSizeSelector.tsx](../components/ImageSizeSelector.tsx)), nhưng tài liệu 2.1 chỉ nêu 1K/2K/4K và bảng giá cũng không có mức 512px. Cần thử gọi 2.1 với 512px:
+- **Độ phân giải 512px:** app có size `512px` ([components/ImageSizeSelector.tsx](../../components/ImageSizeSelector.tsx)), nhưng tài liệu 2.1 chỉ nêu 1K/2K/4K và bảng giá cũng không có mức 512px. Cần thử gọi 2.1 với 512px:
   - Nếu API trả lỗi, server phải tự nâng lên `1K` khi model là 2.1. Ghi nhận cách xử lý này trong PR.
   - Fallback giá cho 512px của 2.1 dùng mức giá 1K.
 - **Thinking tokens:** 2.1 tính output text/thinking ($7.50/1M) khác output ảnh ($30/1M). Hiện server chỉ trả `completionTokens` tổng. Nếu `usageMetadata` có tách riêng thinking tokens (`thoughtsTokenCount`) thì nên tính riêng. Nếu không, chấp nhận tính toàn bộ theo giá output ảnh và ghi chú lại.
@@ -156,7 +156,7 @@ Khi admin đổi lựa chọn, user nhận cấu hình mới ở lần load app 
   5. Sửa client và admin.
   6. Cập nhật bảng giá.
   7. Viết lại popup và docs.
-  8. Kiểm tra thủ công theo `RELEASE_CHECKLIST.md`.
+  8. Kiểm tra thủ công theo `docs/RELEASE_CHECKLIST.md`.
 
 ## 8. Chỉ số thành công (Success Metrics)
 

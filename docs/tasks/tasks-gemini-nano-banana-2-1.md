@@ -48,7 +48,7 @@ Ví dụ:
   - [x] 1.3 Chạy lại với `imageSize: '512px'`. Ghi lại kết quả: API chấp nhận, hay báo lỗi (kèm nội dung lỗi).
   - [x] 1.4 In toàn bộ `response.usageMetadata`. Kiểm tra có trường `thoughtsTokenCount` (hoặc tương tự) tách riêng thinking tokens không.
   - [x] 1.5 Đo thời gian 5 lần gọi ở ảnh 1K, ghi khoảng min–max (dùng cho task 6.0).
-  - [x] 1.6 Ghi kết quả 1.2–1.5 vào mục "Open Questions" của `tasks/prd-gemini-nano-banana-2-1.md` (đánh dấu đã trả lời). Báo lại cho người giao task nếu ID khác `gemini-nano-banana-2.1` hoặc 512px bị lỗi.
+  - [x] 1.6 Ghi kết quả 1.2–1.5 vào mục "Open Questions" của `docs/tasks/prd-gemini-nano-banana-2-1.md` (đánh dấu đã trả lời). Báo lại cho người giao task nếu ID khác `gemini-nano-banana-2.1` hoặc 512px bị lỗi.
 
 - [x] 2.0 Cập nhật danh sách model và logic chọn model Flash trong `constants/aiModels.ts` (TDD)
   - [x] 2.1 Viết test trước trong `constants/aiModels.test.ts`:
@@ -147,7 +147,7 @@ Ví dụ:
     - Cách kiểm tra đã rollback thành công.
     - Cách bật lại 2.1.
   - [x] 7.5 Chạy toàn bộ test (`npx tsx --test`), `npx tsc --noEmit`, `npm run build`. Tất cả phải pass.
-  - [ ] 7.6 Kiểm tra thủ công theo `RELEASE_CHECKLIST.md`, tập trung vào:
+  - [ ] 7.6 Kiểm tra thủ công theo `docs/RELEASE_CHECKLIST.md`, tập trung vào:
     - User mới → 2.1.
     - User có preference NB2 trong localStorage → tự chuyển 2.1.
     - User chọn Pro → giữ Pro.
