@@ -1,13 +1,28 @@
 import type { Request, Response } from 'express';
 import type { Firestore } from 'firebase-admin/firestore';
 import { resolveProviderFromSettings } from '../lib/resolveProvider';
-import { validateHttpsBaseUrl } from '../lib/validateBaseUrl';
+import { validateProviderBaseUrl } from '../lib/validateBaseUrl';
 import { ssrfSafeFetch } from '../lib/ssrfSafeFetch';
+import { tryConsumeRateLimit } from '../lib/rateLimit/index';
 import type { AuthenticatedRequest, ProviderTestRequestBody } from '../types';
 
 export function createPostProviderTestHandler(db: Firestore) {
   return async function postProviderTest(req: Request, res: Response) {
     try {
+      // Provider-test cũng gọi ra ngoài (và là đường rò khóa ở Finding 1) nên
+      // phải chịu cùng rate limit như /api/generate.
+      const { uid } = (req as AuthenticatedRequest).user;
+      let rateLimitAllowed: boolean;
+      try {
+        rateLimitAllowed = await tryConsumeRateLimit(uid);
+      } catch (err) {
+        console.error('[ERROR] Rate limit backend unavailable:', err);
+        return res.status(503).json({ ok: false, error: 'rate_limit_unavailable' });
+      }
+      if (!rateLimitAllowed) {
+        return res.status(429).json({ ok: false, error: 'Rate limit exceeded. Please wait a minute.' });
+      }
+
       const body = ((req as AuthenticatedRequest).body || {}) as ProviderTestRequestBody;
       const settingsDoc = await db.collection('settings').doc('global').get();
       const settings = settingsDoc.exists ? settingsDoc.data() || {} : {};
@@ -56,7 +71,7 @@ export function createPostProviderTestHandler(db: Firestore) {
             error: 'Seedance API Key chưa được cấu hình.',
           });
         }
-        const baseCheck = validateHttpsBaseUrl(baseUrlRaw, 'Seedance');
+        const baseCheck = validateProviderBaseUrl(baseUrlRaw, 'seedance');
         if (baseCheck.ok === false) {
           return res.status(400).json({ ok: false, provider, error: baseCheck.error });
         }
@@ -95,7 +110,7 @@ export function createPostProviderTestHandler(db: Firestore) {
             error: 'Seedream API Key chưa được cấu hình.',
           });
         }
-        const baseCheck = validateHttpsBaseUrl(baseUrlRaw, 'Seedream');
+        const baseCheck = validateProviderBaseUrl(baseUrlRaw, 'seedream');
         if (baseCheck.ok === false) {
           return res.status(400).json({ ok: false, provider, error: baseCheck.error });
         }
