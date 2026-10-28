@@ -4,6 +4,7 @@ import {
   aggregateHistoryCountsByUid,
   aggregateTrendPoints,
   buildMonthlyErrorBreakdownFromEvents,
+  buildMonthlyFailureStatsFromEvents,
   buildMonthlyRollupDocument,
   monthBoundsFromKey,
   percentTrend,
@@ -68,6 +69,7 @@ describe('analyticsAggregation', () => {
         average_generations_per_user: 1,
       },
       errorBreakdown: [],
+      failureStats: { bySource: { user: 0, client: 0, system: 0 }, byModel: [], byUser: [] },
       tokenStats: {
         avgTotal: 0,
         avgInput: 0,
@@ -99,5 +101,68 @@ describe('buildMonthlyErrorBreakdownFromEvents — error types', () => {
     assert.equal(typeOf('payload_too_large'), 'Payload Too Large (413)');
     assert.equal(typeOf('content_filter'), 'Content Filter');
     assert.equal(typeOf('no_output'), 'No Output');
+  });
+});
+
+describe('buildMonthlyErrorBreakdownFromEvents — legacy events', () => {
+  it('falls back to the raw message when error_code is unknown_error', () => {
+    const rows = buildMonthlyErrorBreakdownFromEvents([
+      {
+        event_name: 'image_generation_failed',
+        user_id: 'u',
+        error_code: 'unknown_error',
+        error_message_short: 'Request payload too large. Please use a smaller image or compress before upload.',
+      } as AnalyticsEventRecord,
+    ]);
+    assert.equal(rows[0].errorType, 'Payload Too Large (413)');
+    assert.equal(rows[0].source, 'user');
+  });
+});
+
+describe('buildMonthlyFailureStatsFromEvents', () => {
+  const ev = (event_name: string, user_id: string, model_name: string, extra: Partial<AnalyticsEventRecord> = {}) =>
+    ({ event_name, user_id, model_name, image_count: 1, ...extra }) as AnalyticsEventRecord;
+
+  const events = [
+    ev('image_generation_started', 'a', 'flash'),
+    ev('image_generation_started', 'a', 'flash'),
+    ev('image_generation_started', 'a', 'flash'),
+    ev('image_generation_started', 'a', 'flash'),
+    ev('image_generation_started', 'b', 'pro'),
+    ev('image_generation_started', 'b', 'pro'),
+    ev('image_generation_failed', 'a', 'flash', { error_code: 'payload_too_large' }),
+    ev('image_generation_failed', 'a', 'flash', { error_code: 'payload_too_large' }),
+    ev('image_generation_failed', 'a', 'flash', { error_code: 'network_error' }),
+    ev('image_generation_failed', 'b', 'pro', { error_code: 'service_unavailable' }),
+  ];
+
+  it('splits failures by source', () => {
+    assert.deepEqual(buildMonthlyFailureStatsFromEvents(events).bySource, { user: 2, client: 1, system: 1 });
+  });
+
+  it('computes failure rate per model, worst first', () => {
+    assert.deepEqual(buildMonthlyFailureStatsFromEvents(events).byModel, [
+      { modelName: 'flash', attempts: 4, failed: 3, failRate: 75, topErrorType: 'Payload Too Large (413)' },
+      { modelName: 'pro', attempts: 2, failed: 1, failRate: 50, topErrorType: 'Service Unavailable (503)' },
+    ]);
+  });
+
+  it('ranks users by failures with their share of all failures', () => {
+    const [first, second] = buildMonthlyFailureStatsFromEvents(events).byUser;
+    assert.deepEqual(first, {
+      userId: 'a',
+      attempts: 4,
+      failed: 3,
+      shareOfFailures: 75,
+      topErrorType: 'Payload Too Large (413)',
+    });
+    assert.equal(second.userId, 'b');
+  });
+
+  it('caps the user list', () => {
+    const many = Array.from({ length: 15 }, (_, i) =>
+      ev('image_generation_failed', `u${i}`, 'flash', { error_code: 'timeout' })
+    );
+    assert.equal(buildMonthlyFailureStatsFromEvents(many).byUser.length, 10);
   });
 });

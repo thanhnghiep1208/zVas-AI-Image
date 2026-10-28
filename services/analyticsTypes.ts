@@ -1,3 +1,4 @@
+import type { GenerationErrorSource } from '../lib/generationErrors';
 import type { AnalyticsEventRecord } from '../data/analyticsRepository';
 
 export type { AnalyticsEventRecord };
@@ -57,7 +58,15 @@ export interface MonthlyErrorBreakdownItem {
   count: number;
   lastOccurred: Date | null;
   severity: 'warning' | 'critical';
+  /** Không có ở dữ liệu cũ; xem `GenerationErrorSource`. */
+  source?: GenerationErrorSource;
   sampleMessages?: string[];
+}
+
+export interface MonthlyFailureStats {
+  bySource: Record<GenerationErrorSource, number>;
+  byModel: Array<{ modelName: string; attempts: number; failed: number; failRate: number; topErrorType: string }>;
+  byUser: Array<{ userId: string; attempts: number; failed: number; shareOfFailures: number; topErrorType: string }>;
 }
 
 export interface MonthlyTokenStats {
@@ -83,6 +92,7 @@ export interface MonthlyDashboardBundle {
   errorBreakdown: MonthlyErrorBreakdownItem[];
   tokenStats: MonthlyTokenStats;
   topModelStats: MonthlyTopModelStats;
+  failureStats: MonthlyFailureStats;
 }
 
 export type TrendMetric = 'generations' | 'activeUsers' | 'cost';
@@ -93,4 +103,5 @@ export interface TrendPoint {
   value: number;
 }
 
-export const ANALYTICS_ROLLUP_VERSION = 1;
+/** v2: thêm `failureStats` (10/2026). Rollup v1 bị bỏ qua → dashboard quét events. */
+export const ANALYTICS_ROLLUP_VERSION = 2;

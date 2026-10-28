@@ -28,6 +28,7 @@ import type {
   MonthlyTokenStats,
   MonthlyTopModelStats,
 } from './analyticsTypes';
+import { classifyGenerationError } from '../lib/generationErrors';
 
 export type {
   AnalyticsEventName,
@@ -36,6 +37,7 @@ export type {
   MonthlyCosts,
   MonthlyDashboardBundle,
   MonthlyErrorBreakdownItem,
+  MonthlyFailureStats,
   MonthlyTokenStats,
   MonthlyTopModelStats,
   TrendMetric,
@@ -43,36 +45,11 @@ export type {
   TrendRange,
 } from './analyticsTypes';
 
-const MAX_ERROR_CODE_LENGTH = 96;
 const MAX_ERROR_MESSAGE_LENGTH = 280;
 
+/** Message thô / slug cũ → mã chuẩn; message gốc vẫn giữ ở `error_message_short`. */
 function normalizeErrorCode(raw: unknown): string {
-  const text = String(raw ?? '').toLowerCase();
-  if (!text || text === 'unknown') return 'unknown_error';
-  // Already-normalized codes — pass through directly
-  const CLEAN_CODES = ['quota_exceeded', 'forbidden', 'not_found', 'rate_limit', 'timeout',
-    'network_error', 'no_output', 'server_error', 'service_unavailable', 'auth_error',
-    'content_filter', 'invalid_prompt', 'payload_too_large', 'file_read_failed', 'unknown_error'];
-  if (CLEAN_CODES.includes(text)) return text;
-  // Keyword matching for raw messages
-  if (text.includes('permission_denied') || text.includes('missing or insufficient permissions'))
-    return 'permission_denied';
-  if (text.includes('timeout') || text.includes('deadline exceeded') || text.includes('timed out'))
-    return 'timeout';
-  if (text.includes('429') || text.includes('quota') || text.includes('rate limit') || text.includes('too many requests') || text.includes('resource_exhausted'))
-    return 'quota_exceeded';
-  if (text.includes('403') || text.includes('forbidden')) return 'forbidden';
-  if (text.includes('401') || text.includes('unauthorized')) return 'auth_error';
-  if (text.includes('500') || text.includes('internal server error') || text.includes('502') || text.includes('bad gateway'))
-    return 'server_error';
-  if (text.includes('503') || text.includes('service unavailable')) return 'service_unavailable';
-  if (text.includes('filter') || text.includes('safety') || text.includes('blocked')) return 'content_filter';
-  if (text.includes('invalid') || text.includes('prompt')) return 'invalid_prompt';
-  if (text.includes('auth') || text.includes('api_key') || text.includes('unregistered callers'))
-    return 'auth_error';
-  if (text.includes('failed to fetch') || text.includes('network')) return 'network_error';
-  const slug = text.replace(/[^a-z0-9_]+/g, '_').replace(/^_+|_+$/g, '').slice(0, MAX_ERROR_CODE_LENGTH);
-  return slug || 'unknown_error';
+  return classifyGenerationError(String(raw ?? ''));
 }
 
 function sanitizePayload(eventName: AnalyticsEventName, payload: AnalyticsEventPayload): AnalyticsEventPayload {
@@ -140,7 +117,7 @@ export const getMonthlyCosts = async (monthKey: string): Promise<MonthlyCosts | 
 
 /**
  * Tải bundle dashboard tháng:
- * - Ưu tiên doc `analytics_monthly_rollups/{YYYY-MM}` (version 1).
+ * - Ưu tiên doc `analytics_monthly_rollups/{YYYY-MM}` (đúng `ANALYTICS_ROLLUP_VERSION`).
  * - Fallback: quét `analytics_events` (repository pagination) cho tháng hiện tại + tháng trước.
  */
 export async function loadMonthlyDashboardBundle(monthKey: string): Promise<MonthlyDashboardBundle> {
@@ -155,6 +132,7 @@ export async function loadMonthlyDashboardBundle(monthKey: string): Promise<Mont
       errorBreakdown: normalizeErrorBreakdownFromRollup(rollupRaw.errorBreakdown),
       tokenStats: rollupRaw.tokenStats,
       topModelStats: rollupRaw.topModelStats,
+      failureStats: rollupRaw.failureStats,
     };
   }
 

@@ -1,4 +1,4 @@
-# 15 - Giảm lượt tạo thất bại — Phase 0 & 1 (10/2026)
+# 15 - Giảm lượt tạo thất bại — Phase 0–2 (10/2026)
 
 Ngày: 2026-10-28. Dựa trên 326 sự kiện `image_generation_failed` (04–10/2026, ~1,9% số lượt tạo tháng 10).
 
@@ -37,6 +37,26 @@ Nguyên nhân: nút "Tạo ảnh" chỉ dựa vào `disabled={isLoading}`, có h
 
 `http_status` (không có = request không tới server), `online` (`navigator.onLine`), `page_visibility` (`document.visibilityState`).
 
-## Còn lại (Phase 2)
+## Phase 2 — số liệu và dashboard
 
-Gộp 3 bộ phân loại lỗi trùng lặp (`geminiService`, `normalizeErrorCode`, `mapErrorType`), dashboard theo model/user, tách lỗi do user với lỗi hệ thống.
+### Một bộ phân loại lỗi
+
+`lib/generationErrors.ts` thay cho 3 bộ luật keyword trùng lặp (`geminiService`, `normalizeErrorCode` trong `analyticsService`, `mapErrorType` trong `analyticsAggregation`). Mỗi mã có `label`, `severity` và `source`:
+
+| `source` | Nghĩa | Mã |
+|---|---|---|
+| `user` | Do nội dung/thao tác | `payload_too_large`, `file_read_failed`, `content_filter`, `invalid_prompt` |
+| `client` | Mạng/thiết bị user | `network_error` |
+| `system` | Server, nhà cung cấp, cấu hình | còn lại (kể cả `no_output`, `unknown_error`) |
+
+Rule được kiểm bằng message thật trong `analytics_events`. Chạy lại trên 326 lỗi 04–10/2026: chỉ còn 24 `unknown_error` (event không có chi tiết); trước đây ô "Unknown Error" gom cả 44 lỗi 413 vì event cũ ghi `error_code=unknown_error` — dashboard giờ phân loại lại từ `error_message_short` khi code là unknown. Thêm mã `config_error` (thiếu/sai API key, credentials).
+
+Khi gặp message mới không phân loại được: thêm case vào `generationErrors.test.ts` rồi thêm rule vào `RULES` (thứ tự quan trọng — rule cụ thể đứng trước).
+
+### Dashboard
+
+- Bảng "Lượt tạo thất bại" ghi nguồn của từng loại lỗi.
+- Panel mới `FailureDimensionsPanel`: số lỗi theo nguồn, tỉ lệ lỗi theo model, top 10 user theo số lỗi (tô vàng user chiếm ≥ 30% số lỗi).
+- `MonthlyDashboardBundle.failureStats` (`buildMonthlyFailureStatsFromEvents`); `ANALYTICS_ROLLUP_VERSION` lên 2. Tại 2026-10-28 collection `analytics_monthly_rollups` trống (`rebuildMonthlyAnalyticsRollup` chưa được gọi ở đâu) nên không cần migrate.
+
+Dữ liệu tháng 10/2026 trên panel mới: 32 lỗi, toàn bộ của một user (user đó chiếm 1.700/1.713 lượt tạo) — 41% hệ thống, 31% mạng/thiết bị, 28% do nội dung.

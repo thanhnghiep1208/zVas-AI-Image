@@ -3,6 +3,7 @@ import type { GeneratedImage, ImageSize } from '../types';
 import { describeApiOrNetworkError } from '../utils/userFacingError';
 import { mapGenerateResponse } from '../utils/generationUsage';
 import { compressImageForUpload } from '../utils/imageCompression';
+import { classifyGenerationError, isGenerationErrorCode } from '../lib/generationErrors';
 
 /**
  * Lâu hơn tổng ngân sách retry phía server (`GEMINI_TOTAL_BUDGET_MS`, 240s) một
@@ -13,18 +14,6 @@ const GENERATE_REQUEST_TIMEOUT_MS = 270_000;
 
 /** Trần body JSON của server là 10MB (`server.ts`); chừa chỗ cho prompt + JSON. */
 const MAX_REQUEST_IMAGE_BASE64_CHARS = 9.5 * 1024 * 1024;
-
-/** Mã lỗi server trả trong `code` — ưu tiên hơn đoán từ message. */
-const SERVER_ERROR_CODES = new Set([
-  'content_filter',
-  'no_output',
-  'timeout',
-  'service_unavailable',
-  'server_error',
-  'payload_too_large',
-  'quota_exceeded',
-  'rate_limit',
-]);
 
 type EncodedImage = { data: string; mimeType: string };
 
@@ -155,48 +144,11 @@ export const generateImageVariations = async (
         `An unknown error occurred. (${error?.name || error?.constructor?.name || typeof error})`;
       const provider = String(globalSettings?.activeProvider || 'gemini');
 
-      // Extract machine-readable error code BEFORE transforming to user-facing message
-      const msgLower = userMessage.toLowerCase();
-      let errorCode = 'unknown_error';
-      if (msgLower.includes('file read failed')) {
-        errorCode = 'file_read_failed';
-      } else if (userMessage.includes('429') || msgLower.includes('quota exceeded') || userMessage.includes('RESOURCE_EXHAUSTED') || msgLower.includes('too many requests')) {
-        errorCode = 'quota_exceeded';
-      } else if (userMessage.includes('403') || msgLower.includes('forbidden')) {
-        errorCode = 'forbidden';
-      } else if (userMessage.includes('401') || msgLower.includes('unauthorized')) {
-        errorCode = 'auth_error';
-      } else if (userMessage.includes('413') || msgLower.includes('payload too large') || msgLower.includes('too large')) {
-        errorCode = 'payload_too_large';
-      } else if (userMessage.includes('500') || msgLower.includes('internal server error')) {
-        errorCode = 'server_error';
-      } else if (userMessage.includes('502') || msgLower.includes('bad gateway')) {
-        errorCode = 'server_error';
-      } else if (userMessage.includes('503') || msgLower.includes('service unavailable')) {
-        errorCode = 'service_unavailable';
-      } else if (userMessage.includes('Requested entity was not found') || (userMessage.includes('404') && msgLower.includes('not found'))) {
-        errorCode = 'not_found';
-      } else if (msgLower.includes('rate limit')) {
-        errorCode = 'rate_limit';
-      } else if (msgLower.includes('timeout') || msgLower.includes('timed out') || msgLower.includes('deadline exceeded') || msgLower.includes('aborted')) {
-        errorCode = 'timeout';
-      } else if (
-        msgLower.includes('failed to fetch') ||
-        msgLower.includes('load failed') ||
-        msgLower.includes('networkerror') ||
-        msgLower.includes('network')
-      ) {
-        errorCode = 'network_error';
-      } else if (msgLower.includes('safety') || msgLower.includes('content filter') || msgLower.includes('blocked')) {
-        errorCode = 'content_filter';
-      } else if (userMessage.includes('No image was generated')) {
-        errorCode = 'no_output';
-      } else if (userMessage.includes('400') || msgLower.includes('bad request')) {
-        errorCode = 'invalid_prompt';
-      }
-      if (typeof error?.code === 'string' && SERVER_ERROR_CODES.has(error.code)) {
-        errorCode = error.code;
-      }
+      // Mã máy đọc được, lấy TRƯỚC khi đổi sang message tiếng Việt. Server
+      // (`{ error, code }`) biết rõ nhất nên được ưu tiên.
+      const errorCode = isGenerationErrorCode(error?.code)
+        ? error.code
+        : classifyGenerationError(userMessage);
 
       // rawErrorMessage giữ nguyên message kỹ thuật gốc — chỉ dùng cho
       // analytics/chẩn đoán (tooltip "Sample error messages"), không hiển thị

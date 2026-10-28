@@ -4,6 +4,7 @@ import type {
   MonthlyCosts,
   MonthlyDashboardBundle,
   MonthlyErrorBreakdownItem,
+  MonthlyFailureStats,
   MonthlyTokenStats,
   MonthlyTopModelStats,
   TrendMetric,
@@ -11,6 +12,8 @@ import type {
   TrendRange,
 } from './analyticsTypes';
 import { ANALYTICS_ROLLUP_VERSION } from './analyticsTypes';
+import { describeGenerationError } from '../lib/generationErrors';
+import type { GenerationErrorInfo } from '../lib/generationErrors';
 
 export { ANALYTICS_ROLLUP_VERSION };
 
@@ -21,51 +24,14 @@ const toDateValue = (value: Date | { toDate?: () => Date } | null | undefined): 
   return null;
 };
 
-const mapErrorType = (errorCode?: string): { errorType: string; severity: 'warning' | 'critical' } => {
-  const normalized = (errorCode || '').toLowerCase();
-  // Clean codes (new)
-  if (normalized === 'quota_exceeded') return { errorType: 'Quota Exceeded (429)', severity: 'critical' };
-  if (normalized === 'forbidden') return { errorType: 'API Key / Permission (403)', severity: 'critical' };
-  if (normalized === 'auth_error') return { errorType: 'Auth Error (401)', severity: 'critical' };
-  if (normalized === 'not_found') return { errorType: 'Model Not Found', severity: 'warning' };
-  if (normalized === 'rate_limit') return { errorType: 'Rate Limit', severity: 'warning' };
-  if (normalized === 'timeout') return { errorType: 'API Timeout', severity: 'critical' };
-  if (normalized === 'network_error') return { errorType: 'Network Error', severity: 'critical' };
-  if (normalized === 'no_output') return { errorType: 'No Output', severity: 'warning' };
-  if (normalized === 'server_error') return { errorType: 'Server Error (500/502)', severity: 'critical' };
-  if (normalized === 'service_unavailable') return { errorType: 'Service Unavailable (503)', severity: 'critical' };
-  if (normalized === 'content_filter') return { errorType: 'Content Filter', severity: 'warning' };
-  if (normalized === 'invalid_prompt') return { errorType: 'Invalid Prompt', severity: 'warning' };
-  if (normalized === 'permission_denied') return { errorType: 'Permission Denied', severity: 'critical' };
-  if (normalized === 'payload_too_large') return { errorType: 'Payload Too Large (413)', severity: 'warning' };
-  if (normalized === 'file_read_failed') return { errorType: 'File Read Failed', severity: 'warning' };
-  if (normalized === 'unknown_error') return { errorType: 'Unknown Error', severity: 'critical' };
-  // Fallback keyword matching for legacy events. `errorCode` may be a slug with
-  // underscores instead of spaces (see normalizeErrorCode's fallback in
-  // analyticsService.ts), so compare against a space-normalized copy too —
-  // otherwise phrases like "rate limit" never match "rate_limit" and everything
-  // falls through to Unknown Error even when the raw message was classifiable.
-  const spaced = normalized.replace(/_/g, ' ');
-  if (spaced.includes('timeout') || spaced.includes('timed out') || spaced.includes('deadline exceeded') || spaced.includes('aborted')) return { errorType: 'API Timeout', severity: 'critical' };
-  if (spaced.includes('429') || spaced.includes('quota') || spaced.includes('resource exhausted') || spaced.includes('too many requests')) return { errorType: 'Quota Exceeded (429)', severity: 'critical' };
-  if (spaced.includes('403') || spaced.includes('forbidden')) return { errorType: 'API Key / Permission (403)', severity: 'critical' };
-  if (spaced.includes('401') || spaced.includes('unauthorized')) return { errorType: 'Auth Error (401)', severity: 'critical' };
-  if (spaced.includes('413') || spaced.includes('payload too large') || spaced.includes('too large')) return { errorType: 'Payload Too Large (413)', severity: 'warning' };
-  if (spaced.includes('500') || spaced.includes('internal server error') || spaced.includes('502') || spaced.includes('bad gateway')) return { errorType: 'Server Error (500/502)', severity: 'critical' };
-  if (spaced.includes('503') || spaced.includes('service unavailable')) return { errorType: 'Service Unavailable (503)', severity: 'critical' };
-  if (spaced.includes('400') || spaced.includes('bad request')) return { errorType: 'Bad Request (400)', severity: 'warning' };
-  if (spaced.includes('not found') || spaced.includes('entity was not found')) return { errorType: 'Model Not Found', severity: 'warning' };
-  if (spaced.includes('rate limit')) return { errorType: 'Rate Limit', severity: 'warning' };
-  if (spaced.includes('filter') || spaced.includes('safety') || spaced.includes('blocked')) return { errorType: 'Content Filter', severity: 'warning' };
-  if (spaced.includes('failed to fetch') || spaced.includes('load failed') || spaced.includes('networkerror') || spaced.includes('network')) return { errorType: 'Network Error', severity: 'critical' };
-  if (spaced.includes('no image was generated')) return { errorType: 'No Output', severity: 'warning' };
-  if (spaced.includes('permission denied') || spaced.includes('insufficient permissions')) return { errorType: 'Permission Denied', severity: 'critical' };
-  if (spaced.includes('prompt') || spaced.includes('invalid')) return { errorType: 'Invalid Prompt', severity: 'warning' };
-  // Truly unclassified: kept as ONE bucket (not split across "Unknown"/"Unknown
-  // Error") so sample messages concentrate here instead of being diluted across
-  // two near-duplicate rows — hover the row to read the raw message and add a
-  // new rule above once a pattern emerges.
-  return { errorType: 'Unknown Error', severity: 'critical' };
+/**
+ * Event cũ có thể mang `error_code=unknown_error` trong khi message vẫn đọc được
+ * (vd. 44 lỗi 413 trước 07/2026) → thử phân loại lại từ message.
+ */
+const describeFailedEvent = (data: AnalyticsEventRecord): GenerationErrorInfo => {
+  const fromCode = describeGenerationError(data.error_code);
+  if (fromCode.code !== 'unknown_error') return fromCode;
+  return describeGenerationError(data.error_message_short);
 };
 
 export const percentTrend = (current: number, previous: number): number => {
@@ -167,7 +133,7 @@ export function buildMonthlyErrorBreakdownFromEvents(
   events.forEach((data) => {
     if (data.event_name !== 'image_generation_failed') return;
 
-    const { errorType, severity } = mapErrorType(data.error_code);
+    const { label: errorType, severity, source } = describeFailedEvent(data);
     const count = data.image_count || 1;
     const eventDate = toDateValue(data.timestamp);
     const rawMsg = data.error_message_short?.trim() || '';
@@ -175,7 +141,7 @@ export function buildMonthlyErrorBreakdownFromEvents(
     const current = grouped.get(errorType);
     if (!current) {
       grouped.set(errorType, {
-        errorType, count, lastOccurred: eventDate, severity,
+        errorType, count, lastOccurred: eventDate, severity, source,
         sampleMessages: rawMsg ? [rawMsg] : [],
       });
       return;
@@ -191,6 +157,85 @@ export function buildMonthlyErrorBreakdownFromEvents(
   });
 
   return Array.from(grouped.values()).sort((a, b) => b.count - a.count);
+}
+
+const MAX_FAILURE_USERS = 10;
+const roundPercent = (value: number) => Math.round(value * 10) / 10;
+
+function topKey(counts: Map<string, number>): string {
+  let best = '';
+  let bestCount = 0;
+  counts.forEach((count, key) => {
+    if (count > bestCount) {
+      best = key;
+      bestCount = count;
+    }
+  });
+  return best;
+}
+
+/**
+ * Lỗi theo nguồn (user / client / system), theo model và theo user.
+ * Một user có thể chiếm phần lớn lỗi (10/2026: 1 tài khoản = 62%) — bảng theo
+ * user giúp nhận ra tỉ lệ lỗi bị lệch bởi một người thay vì cả hệ thống.
+ */
+export function buildMonthlyFailureStatsFromEvents(events: AnalyticsEventRecord[]): MonthlyFailureStats {
+  const bySource = { user: 0, client: 0, system: 0 };
+  type Bucket = { attempts: number; failed: number; errors: Map<string, number> };
+  const models = new Map<string, Bucket>();
+  const users = new Map<string, Bucket>();
+  const bucket = (map: Map<string, Bucket>, key: string) => {
+    let b = map.get(key);
+    if (!b) {
+      b = { attempts: 0, failed: 0, errors: new Map() };
+      map.set(key, b);
+    }
+    return b;
+  };
+  let totalFailed = 0;
+
+  events.forEach((data) => {
+    const count = data.image_count || 1;
+    const modelName = data.model_name || 'unknown';
+    const userId = data.user_id || 'unknown';
+    if (data.event_name === 'image_generation_started') {
+      bucket(models, modelName).attempts += count;
+      bucket(users, userId).attempts += count;
+    } else if (data.event_name === 'image_generation_failed') {
+      const { label, source } = describeFailedEvent(data);
+      bySource[source] += count;
+      totalFailed += count;
+      for (const b of [bucket(models, modelName), bucket(users, userId)]) {
+        b.failed += count;
+        b.errors.set(label, (b.errors.get(label) ?? 0) + count);
+      }
+    }
+  });
+
+  const byModel = Array.from(models.entries())
+    .filter(([, b]) => b.failed > 0)
+    .map(([modelName, b]) => ({
+      modelName,
+      attempts: b.attempts,
+      failed: b.failed,
+      failRate: b.attempts > 0 ? roundPercent((b.failed / b.attempts) * 100) : 0,
+      topErrorType: topKey(b.errors),
+    }))
+    .sort((a, b) => b.failRate - a.failRate || b.failed - a.failed);
+
+  const byUser = Array.from(users.entries())
+    .filter(([, b]) => b.failed > 0)
+    .map(([userId, b]) => ({
+      userId,
+      attempts: b.attempts,
+      failed: b.failed,
+      shareOfFailures: totalFailed > 0 ? roundPercent((b.failed / totalFailed) * 100) : 0,
+      topErrorType: topKey(b.errors),
+    }))
+    .sort((a, b) => b.failed - a.failed)
+    .slice(0, MAX_FAILURE_USERS);
+
+  return { bySource, byModel, byUser };
 }
 
 interface TokenEventDoc {
@@ -329,6 +374,7 @@ export function normalizeErrorBreakdownFromRollup(items: unknown): MonthlyErrorB
       count: Number(r.count ?? 0),
       lastOccurred: last,
       severity: r.severity === 'warning' || r.severity === 'critical' ? r.severity : 'critical',
+      ...(r.source === 'user' || r.source === 'client' || r.source === 'system' ? { source: r.source } : {}),
       sampleMessages: Array.isArray(r.sampleMessages) ? r.sampleMessages.map(String) : [],
     };
   });
@@ -340,8 +386,10 @@ export function isDashboardRollupPayload(raw: Record<string, unknown> | null): r
   errorBreakdown: unknown;
   tokenStats: MonthlyTokenStats;
   topModelStats: MonthlyTopModelStats;
+  failureStats: MonthlyFailureStats;
 } {
   if (!raw || raw.version !== ANALYTICS_ROLLUP_VERSION) return false;
+  if (typeof raw.failureStats !== 'object' || raw.failureStats === null) return false;
   if (typeof raw.analytics !== 'object' || raw.analytics === null) return false;
   if (!Array.isArray(raw.errorBreakdown)) return false;
   if (typeof raw.tokenStats !== 'object' || raw.tokenStats === null) return false;
@@ -364,6 +412,7 @@ export function buildMonthlyRollupDocument(
     })),
     tokenStats: bundle.tokenStats,
     topModelStats: bundle.topModelStats,
+    failureStats: bundle.failureStats,
   };
 }
 
@@ -379,6 +428,7 @@ export function buildMonthlyDashboardBundleFromEvents(
     errorBreakdown: buildMonthlyErrorBreakdownFromEvents(currentEvents),
     tokenStats: buildMonthlyTokenStatsFromEvents(currentEvents, prevEvents),
     topModelStats: buildMonthlyTopModelStatsFromEvents(currentEvents),
+    failureStats: buildMonthlyFailureStatsFromEvents(currentEvents),
   };
 }
 
