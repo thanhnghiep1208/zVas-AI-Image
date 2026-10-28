@@ -13,9 +13,18 @@ export function resolveProviderFromSettings(
   const enabled = Array.isArray(enabledProviders)
     ? enabledProviders.filter((item): item is ImageProvider => typeof item === 'string' && isImageProvider(item))
     : [];
-  const fallback = enabled.find((item) => PROVIDERS.includes(item)) || 'gemini';
-  if (requested && isImageProvider(requested)) return requested;
-  return fallback;
+  const requestedValid = requested && isImageProvider(requested) ? requested : null;
+
+  // Allowlist rỗng (admin chưa cấu hình) → không giới hạn, giữ hành vi cũ.
+  if (enabled.length === 0) {
+    return requestedValid || 'gemini';
+  }
+  // Allowlist có giá trị → provider yêu cầu phải nằm trong đó, nếu không dùng
+  // provider enabled đầu tiên. Chặn việc gọi provider admin đã tắt (Finding 3).
+  if (requestedValid && enabled.includes(requestedValid)) {
+    return requestedValid;
+  }
+  return enabled[0];
 }
 
 export function openAiSizeFromAspectRatio(aspectRatio?: string): string {

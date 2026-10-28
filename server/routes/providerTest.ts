@@ -146,10 +146,12 @@ export function createPostProviderTestHandler(db: Firestore) {
         });
       }
 
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(geminiApiKey)}`,
-        { method: 'GET' }
-      );
+      // Khóa ở header x-goog-api-key, không để trong query string (`?key=`) —
+      // query dễ lọt vào access log / proxy hơn header.
+      const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models', {
+        method: 'GET',
+        headers: { 'x-goog-api-key': geminiApiKey },
+      });
       if (!response.ok) {
         const errText = await response.text();
         return res.status(response.status).json({
