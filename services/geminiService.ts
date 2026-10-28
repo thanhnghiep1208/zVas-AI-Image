@@ -2,6 +2,31 @@ import { auth } from '../firebase';
 import type { GeneratedImage, ImageSize } from '../types';
 import { describeApiOrNetworkError } from '../utils/userFacingError';
 import { mapGenerateResponse } from '../utils/generationUsage';
+import { compressImageForUpload } from '../utils/imageCompression';
+
+/**
+ * Lâu hơn tổng ngân sách retry phía server (`GEMINI_TOTAL_BUDGET_MS`, 240s) một
+ * chút để server luôn kịp trả lỗi `timeout` có cấu trúc trước khi client bỏ cuộc,
+ * và vẫn dưới timeout 300s của Cloud Run.
+ */
+const GENERATE_REQUEST_TIMEOUT_MS = 270_000;
+
+/** Trần body JSON của server là 10MB (`server.ts`); chừa chỗ cho prompt + JSON. */
+const MAX_REQUEST_IMAGE_BASE64_CHARS = 9.5 * 1024 * 1024;
+
+/** Mã lỗi server trả trong `code` — ưu tiên hơn đoán từ message. */
+const SERVER_ERROR_CODES = new Set([
+  'content_filter',
+  'no_output',
+  'timeout',
+  'service_unavailable',
+  'server_error',
+  'payload_too_large',
+  'quota_exceeded',
+  'rate_limit',
+]);
+
+type EncodedImage = { data: string; mimeType: string };
 
 const fileToBase64 = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
@@ -29,39 +54,63 @@ export const generateImageVariations = async (
 
   const idToken = await currentUser.getIdToken();
 
+  const encodeImage = async (file: File): Promise<EncodedImage> => {
+    const upload = await compressImageForUpload(file);
+    return { data: await fileToBase64(upload), mimeType: upload.type };
+  };
+
+  // Nén + base64 một lần cho mọi prompt (trước đây mỗi prompt đọc lại toàn bộ ảnh).
+  // Mỗi prompt vẫn await bên trong try của nó để lỗi đọc file thành kết quả lỗi
+  // của prompt đó thay vì làm sập cả lượt tạo.
+  const encodedImagesPromise = Promise.all([
+    imageFile ? encodeImage(imageFile) : Promise.resolve(null),
+    Promise.all((referenceImageFiles || []).map(encodeImage)),
+  ]);
+  encodedImagesPromise.catch(() => {});
+
   const generateSingleImage = async (prompt: string): Promise<GeneratedImage> => {
     try {
-      const mainImage = imageFile
-        ? { data: await fileToBase64(imageFile), mimeType: imageFile.type }
-        : null;
-      const refs = await Promise.all(
-        (referenceImageFiles || []).map(async (file) => ({
-          data: await fileToBase64(file),
-          mimeType: file.type
-        }))
-      );
+      const [mainImage, refs] = await encodedImagesPromise;
 
-      const response = await fetch('/api/generate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${idToken}`,
-        },
-        body: JSON.stringify({
-          prompt,
-          aspectRatio,
-          imageSize,
-          provider: globalSettings?.activeProvider || 'gemini',
-          geminiModel: globalSettings?.geminiModel,
-          openaiModel: globalSettings?.openaiModel,
-          seedanceModel: globalSettings?.seedanceModel,
-          seedanceBaseUrl: globalSettings?.seedanceBaseUrl,
-          seedreamModel: globalSettings?.seedreamModel,
-          seedreamBaseUrl: globalSettings?.seedreamBaseUrl,
-          mainImage,
-          referenceImages: refs
-        })
-      });
+      const base64Chars = (mainImage?.data.length ?? 0) + refs.reduce((sum, ref) => sum + ref.data.length, 0);
+      if (base64Chars > MAX_REQUEST_IMAGE_BASE64_CHARS) {
+        throw new Error('Request payload too large. Please use a smaller image or compress before upload.');
+      }
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), GENERATE_REQUEST_TIMEOUT_MS);
+      let response: Response;
+      try {
+        response = await fetch('/api/generate', {
+          method: 'POST',
+          signal: controller.signal,
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${idToken}`,
+          },
+          body: JSON.stringify({
+            prompt,
+            aspectRatio,
+            imageSize,
+            provider: globalSettings?.activeProvider || 'gemini',
+            geminiModel: globalSettings?.geminiModel,
+            openaiModel: globalSettings?.openaiModel,
+            seedanceModel: globalSettings?.seedanceModel,
+            seedanceBaseUrl: globalSettings?.seedanceBaseUrl,
+            seedreamModel: globalSettings?.seedreamModel,
+            seedreamBaseUrl: globalSettings?.seedreamBaseUrl,
+            mainImage,
+            referenceImages: refs
+          })
+        });
+      } catch (fetchError) {
+        if (controller.signal.aborted) {
+          throw new Error('Request timed out waiting for the image generation server.');
+        }
+        throw fetchError;
+      } finally {
+        clearTimeout(timeoutId);
+      }
 
       const rawBody = await response.text();
       let responseData: any = {};
@@ -75,7 +124,11 @@ export const generateImageVariations = async (
         const fallbackMessage = rawBody && rawBody.startsWith('<')
           ? `Backend returned non-JSON response (HTTP ${response.status}). Preview: ${preview || 'empty body'}`
           : `Backend error (HTTP ${response.status}): ${preview || 'empty body'}`;
-        throw new Error(responseData.error || fallbackMessage || 'Generation failed.');
+        const httpError = new Error(responseData.error || fallbackMessage || 'Generation failed.');
+        if (typeof responseData.code === 'string') {
+          (httpError as Error & { code?: string }).code = responseData.code;
+        }
+        throw httpError;
       }
 
       const imageBase64 = responseData.imageBase64;
@@ -133,6 +186,9 @@ export const generateImageVariations = async (
         errorCode = 'no_output';
       } else if (userMessage.includes('400') || msgLower.includes('bad request')) {
         errorCode = 'invalid_prompt';
+      }
+      if (typeof error?.code === 'string' && SERVER_ERROR_CODES.has(error.code)) {
+        errorCode = error.code;
       }
 
       // rawErrorMessage giữ nguyên message kỹ thuật gốc — chỉ dùng cho
