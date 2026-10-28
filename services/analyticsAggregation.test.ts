@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 import {
   aggregateHistoryCountsByUid,
   aggregateTrendPoints,
+  buildMonthlyErrorBreakdownFromEvents,
   buildMonthlyRollupDocument,
   monthBoundsFromKey,
   percentTrend,
@@ -82,5 +83,21 @@ describe('analyticsAggregation', () => {
     });
     assert.equal(doc.version, ANALYTICS_ROLLUP_VERSION);
     assert.equal(doc.monthKey, '2026-04');
+  });
+});
+
+describe('buildMonthlyErrorBreakdownFromEvents — error types', () => {
+  const failed = (error_code: string) =>
+    ({ event_name: 'image_generation_failed', user_id: 'u', error_code, image_count: 1 }) as AnalyticsEventRecord;
+  const typeOf = (code: string) => buildMonthlyErrorBreakdownFromEvents([failed(code)])[0]?.errorType;
+
+  it('labels file_read_failed instead of falling into Unknown Error', () => {
+    assert.equal(typeOf('file_read_failed'), 'File Read Failed');
+  });
+
+  it('labels server-provided codes from Phase 0', () => {
+    assert.equal(typeOf('payload_too_large'), 'Payload Too Large (413)');
+    assert.equal(typeOf('content_filter'), 'Content Filter');
+    assert.equal(typeOf('no_output'), 'No Output');
   });
 });

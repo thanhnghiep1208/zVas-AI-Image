@@ -22,6 +22,10 @@ export interface AnalyticsEventPayload {
   status?: string;
   error_code?: string;
   error_message_short?: string;
+  /** Chẩn đoán lượt tạo thất bại — phân biệt lỗi mạng thật với tab ẩn/offline. */
+  http_status?: number;
+  online?: boolean;
+  page_visibility?: string;
   export_type?: 'jpg' | 'png';
   remove_background?: boolean;
 }

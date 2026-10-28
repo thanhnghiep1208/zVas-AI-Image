@@ -33,7 +33,10 @@ const fileToBase64 = (file: File): Promise<string> => {
     const reader = new FileReader();
     reader.readAsDataURL(file);
     reader.onload = () => resolve((reader.result as string).split(',')[1]);
-    reader.onerror = (error) => reject(error);
+    // onerror nhận ProgressEvent (không có message) → trước đây thành "An unknown
+    // error occurred." trong analytics. Thường gặp khi file gốc bị thu hồi (ảnh
+    // iCloud/Photos chưa tải về, file bị xóa/di chuyển sau khi chọn).
+    reader.onerror = () => reject(new Error(`File read failed: ${reader.error?.name || 'unknown'}`));
   });
 };
 
@@ -125,8 +128,10 @@ export const generateImageVariations = async (
           ? `Backend returned non-JSON response (HTTP ${response.status}). Preview: ${preview || 'empty body'}`
           : `Backend error (HTTP ${response.status}): ${preview || 'empty body'}`;
         const httpError = new Error(responseData.error || fallbackMessage || 'Generation failed.');
+        const tagged = httpError as Error & { code?: string; status?: number };
+        tagged.status = response.status;
         if (typeof responseData.code === 'string') {
-          (httpError as Error & { code?: string }).code = responseData.code;
+          tagged.code = responseData.code;
         }
         throw httpError;
       }
@@ -147,13 +152,15 @@ export const generateImageVariations = async (
       let userMessage =
         (typeof error?.message === 'string' && error.message) ||
         (typeof error === 'string' ? error : '') ||
-        'An unknown error occurred.';
+        `An unknown error occurred. (${error?.name || error?.constructor?.name || typeof error})`;
       const provider = String(globalSettings?.activeProvider || 'gemini');
 
       // Extract machine-readable error code BEFORE transforming to user-facing message
       const msgLower = userMessage.toLowerCase();
       let errorCode = 'unknown_error';
-      if (userMessage.includes('429') || msgLower.includes('quota exceeded') || userMessage.includes('RESOURCE_EXHAUSTED') || msgLower.includes('too many requests')) {
+      if (msgLower.includes('file read failed')) {
+        errorCode = 'file_read_failed';
+      } else if (userMessage.includes('429') || msgLower.includes('quota exceeded') || userMessage.includes('RESOURCE_EXHAUSTED') || msgLower.includes('too many requests')) {
         errorCode = 'quota_exceeded';
       } else if (userMessage.includes('403') || msgLower.includes('forbidden')) {
         errorCode = 'forbidden';
@@ -217,6 +224,7 @@ export const generateImageVariations = async (
         rawErrorMessage,
         text: userMessage,
         errorCode,
+        ...(typeof error?.status === 'number' ? { httpStatus: error.status } : {}),
         promptTokens: 0,
         completionTokens: 0,
         totalTokens: 0

@@ -37,6 +37,8 @@ const mapErrorType = (errorCode?: string): { errorType: string; severity: 'warni
   if (normalized === 'content_filter') return { errorType: 'Content Filter', severity: 'warning' };
   if (normalized === 'invalid_prompt') return { errorType: 'Invalid Prompt', severity: 'warning' };
   if (normalized === 'permission_denied') return { errorType: 'Permission Denied', severity: 'critical' };
+  if (normalized === 'payload_too_large') return { errorType: 'Payload Too Large (413)', severity: 'warning' };
+  if (normalized === 'file_read_failed') return { errorType: 'File Read Failed', severity: 'warning' };
   if (normalized === 'unknown_error') return { errorType: 'Unknown Error', severity: 'critical' };
   // Fallback keyword matching for legacy events. `errorCode` may be a slug with
   // underscores instead of spaces (see normalizeErrorCode's fallback in

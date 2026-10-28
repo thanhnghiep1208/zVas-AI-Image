@@ -52,7 +52,7 @@ function normalizeErrorCode(raw: unknown): string {
   // Already-normalized codes — pass through directly
   const CLEAN_CODES = ['quota_exceeded', 'forbidden', 'not_found', 'rate_limit', 'timeout',
     'network_error', 'no_output', 'server_error', 'service_unavailable', 'auth_error',
-    'content_filter', 'invalid_prompt', 'unknown_error'];
+    'content_filter', 'invalid_prompt', 'payload_too_large', 'file_read_failed', 'unknown_error'];
   if (CLEAN_CODES.includes(text)) return text;
   // Keyword matching for raw messages
   if (text.includes('permission_denied') || text.includes('missing or insufficient permissions'))

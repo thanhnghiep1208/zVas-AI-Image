@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 import type { User } from 'firebase/auth';
 import type { ImageFile, GeneratedImage, ImageSize, GlobalSettings } from '../types';
@@ -22,6 +22,16 @@ import type { ProviderKey } from '../constants/aiModels';
 import { providerKeyMissingMessage } from '../utils/providerKeyMessages';
 import { estimateGeminiCost } from '../utils/geminiPricing';
 import { sumGenerationUsage } from '../utils/generationUsage';
+import { createSingleFlightGuard } from '../utils/singleFlight';
+
+/** Field chẩn đoán cho `image_generation_failed` (bỏ field không có — Firestore từ chối `undefined`). */
+function failureDiagnostics(failed: GeneratedImage | undefined) {
+  return {
+    ...(typeof failed?.httpStatus === 'number' ? { http_status: failed.httpStatus } : {}),
+    ...(typeof navigator !== 'undefined' ? { online: navigator.onLine } : {}),
+    ...(typeof document !== 'undefined' ? { page_visibility: document.visibilityState } : {}),
+  };
+}
 
 export interface UseImageGenerationParams {
   user: User | null;
@@ -76,6 +86,7 @@ export function useImageGeneration(params: UseImageGenerationParams) {
 
   const [isLoading, setIsLoading] = useState(false);
   const [generatedImages, setGeneratedImages] = useState<GeneratedImage[]>([]);
+  const generationGuardRef = useRef(createSingleFlightGuard());
 
   useEffect(() => {
     if (!user) {
@@ -84,7 +95,7 @@ export function useImageGeneration(params: UseImageGenerationParams) {
     }
   }, [user]);
 
-  const handleGenerateClick = async () => {
+  const runGeneration = async () => {
     const activePrompts = prompts.filter((p) => p.trim() !== '');
     if (activePrompts.length === 0) {
       setError('Vui lòng cung cấp ít nhất một mô tả.');
@@ -227,6 +238,7 @@ export function useImageGeneration(params: UseImageGenerationParams) {
                 duration_ms: durationMs,
                 error_code: failedResults[0]?.errorCode || 'unknown',
                 error_message_short: diagMessage.slice(0, 280),
+                ...failureDiagnostics(failedResults[0]),
               },
             });
           }
@@ -244,6 +256,7 @@ export function useImageGeneration(params: UseImageGenerationParams) {
             duration_ms: durationMs,
             error_code: failedResults[0]?.errorCode || 'unknown',
             error_message_short: diagMessage.slice(0, 280),
+            ...failureDiagnostics(failedResults[0]),
           });
           ga4Exception(diagMessage, false);
         }
@@ -294,6 +307,7 @@ export function useImageGeneration(params: UseImageGenerationParams) {
           image_count: finalPrompts.length,
           error_code: errorMessage,
           error_message_short: errorMessage,
+          ...failureDiagnostics(undefined),
         });
         ga4Exception(errorMessage, false);
       }
@@ -310,6 +324,16 @@ export function useImageGeneration(params: UseImageGenerationParams) {
       }
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleGenerateClick = async () => {
+    // Bỏ qua lần gọi thứ hai khi lượt trước còn chạy (click kép trước khi nút kịp disabled).
+    if (!generationGuardRef.current.tryAcquire()) return;
+    try {
+      await runGeneration();
+    } finally {
+      generationGuardRef.current.release();
     }
   };
 

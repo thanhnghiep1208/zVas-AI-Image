@@ -4,6 +4,7 @@ import { Upload, X, Sparkles, Image as ImageIcon, Loader2, Download, Maximize2 }
 import type { ImageFile, GeneratedImage, ImageSize } from '../../types';
 import { generateImageVariations } from '../../services/geminiService';
 import { describeApiOrNetworkError } from '../../utils/userFacingError';
+import { createSingleFlightGuard } from '../../utils/singleFlight';
 import { GenerationErrorAlert } from '../feedback/GenerationErrorAlert';
 import { AspectRatioSelector } from '../AspectRatioSelector';
 import { ImageSizeSelector } from '../ImageSizeSelector';
@@ -21,6 +22,7 @@ function MergeImageComponent({ onDownload, onFullscreen }: MergeImageProps) {
   const [aspectRatio, setAspectRatio] = useState('1:1');
   const [imageSize, setImageSize] = useState<ImageSize>('1K');
   const [error, setError] = useState<string | null>(null);
+  const generationGuardRef = useRef(createSingleFlightGuard());
 
   const imagesRef = useRef(images);
   imagesRef.current = images;
@@ -65,6 +67,7 @@ function MergeImageComponent({ onDownload, onFullscreen }: MergeImageProps) {
       return;
     }
 
+    if (!generationGuardRef.current.tryAcquire()) return;
     setIsLoading(true);
     setError(null);
 
@@ -89,6 +92,7 @@ function MergeImageComponent({ onDownload, onFullscreen }: MergeImageProps) {
       const raw = err instanceof Error ? err.message : String(err ?? '');
       setError(describeApiOrNetworkError(raw));
     } finally {
+      generationGuardRef.current.release();
       setIsLoading(false);
     }
   };
