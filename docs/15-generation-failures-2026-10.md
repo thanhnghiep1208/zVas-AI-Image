@@ -1,5 +1,7 @@
 # 15 - Giảm lượt tạo thất bại — Phase 0–2 (10/2026)
 
+> **Nhật ký thay đổi** — ghi lại trạng thái tại thời điểm viết, không sửa theo code mới. Trạng thái hiện tại xem docs 01–06, 08 và [00-onboarding](./00-onboarding.md).
+
 Ngày: 2026-10-28. Dựa trên 326 sự kiện `image_generation_failed` (04–10/2026, ~1,9% số lượt tạo tháng 10).
 
 | Nhóm lỗi | Tỉ trọng | Nguyên nhân | Sửa |

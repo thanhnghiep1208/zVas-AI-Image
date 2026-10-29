@@ -1,5 +1,7 @@
 # 16 - Chốt base URL provider theo allowlist (10/2026)
 
+> **Nhật ký thay đổi** — ghi lại trạng thái tại thời điểm viết, không sửa theo code mới. Trạng thái hiện tại xem docs 01–06, 08 và [00-onboarding](./00-onboarding.md).
+
 Ngày: 2026-10-28. Vá lỗ rò khóa API phát hiện khi rà soát bảo mật.
 
 ## Lỗ hổng

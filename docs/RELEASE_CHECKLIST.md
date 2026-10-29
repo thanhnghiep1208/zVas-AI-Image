@@ -9,7 +9,8 @@
 - Ensure local checks pass:
   - `npm run lint`
   - `npm run build`
-  - `npm test` (analytics aggregation + rate limit)
+  - `npm test` (toàn bộ `*.test.ts`)
+- Mặc định các bước này do job `check` của GitHub Actions chạy trên mọi PR — chạy tay khi deploy dự phòng.
 - Repo đã có `firebase.json` + `.firebaserc` + `firestore.indexes.json` — chạy lệnh Firebase từ **thư mục gốc** dự án (`zvas-ai-image`).
 - Local dev tạo user qua Admin API: có `service-account.json` (đúng tên, không khoảng trắng đầu file) — xem `docs/08-auth-users-setup.md`.
 
@@ -53,7 +54,10 @@ Create or rotate secrets:
 echo -n 'YOUR_GEMINI_API_KEY' | gcloud secrets versions add GEMINI_API_KEY --data-file=- --project zvas-ai-image
 echo -n 'YOUR_OPENAI_API_KEY' | gcloud secrets versions add OPENAI_API_KEY --data-file=- --project zvas-ai-image
 echo -n 'YOUR_SEEDANCE_API_KEY' | gcloud secrets versions add SEEDANCE_API_KEY --data-file=- --project zvas-ai-image
+echo -n 'YOUR_SEEDREAM_API_KEY' | gcloud secrets versions add SEEDREAM_API_KEY --data-file=- --project zvas-ai-image
 ```
+
+Chỉ tạo/gắn secret cho provider thực sự bật.
 
 If secret does not exist yet, use `gcloud secrets create ...` first.
 
@@ -135,7 +139,7 @@ gcloud run deploy ai-image-zvas \
 
 Chỉ cần `--clear-base-image` **một lần** khi chuyển sang Dockerfile; deploy sau vẫn có thể giữ flag (an toàn) hoặc bỏ nếu không còn cảnh báo.
 
-**Dockerfile:** phải copy `server/` (không chỉ `server.ts`). Thiếu → Cloud Run báo container không listen PORT 8080. Xem `docs/06-live-deployment.md` §9.
+**Dockerfile:** phải copy `server/`, `utils/`, `constants/` (không chỉ `server.ts`). Thiếu → Cloud Run báo container không listen PORT 8080. Xem `docs/06-live-deployment.md` §9.
 
 Production rate limit: mặc định Firestore backend (`RATE_LIMIT_BACKEND=firestore` khi `NODE_ENV=production`). Tùy chọn: `--set-env-vars=RATE_LIMIT_BACKEND=firestore`.
 
@@ -152,14 +156,14 @@ gcloud run services describe ai-image-zvas \
 ## 5) Smoke Test (Required)
 
 - Open live URL and hard refresh.
-- Login with Google.
+- Đăng nhập bằng username/mật khẩu.
 - Generate image with:
   - default model
   - switched model on header
 - Open Admin Analytics:
   - Chọn tháng → bấm **Yêu cầu dữ liệu** → KPI / token / model / trends
   - (Tuỳ chọn) Generate >10 lần/phút → 429 rate limit trên prod
-- Confirm non-admin user can access tool (approved status).
+- Confirm non-admin user can access tool (approved status); user `pending` gọi `/api/generate` phải nhận `403`.
 - GA4 `ERR_BLOCKED_BY_CLIENT` trong console = ad blocker, không fail release.
 
 ---

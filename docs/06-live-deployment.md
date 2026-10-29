@@ -64,7 +64,9 @@ gh api repos/thanhnghiep1208/zVas-AI-Image/rules/branches/main --jq '.[].type'
 
 Deploy tay bằng `gcloud` (các mục dưới) vẫn dùng được làm phương án dự phòng khi GitHub Actions lỗi.
 
-## 1) Pre-check local
+## 1) Pre-check local (dùng cho deploy tay)
+
+CI đã chạy đủ các bước này cho mọi PR; chạy tay khi deploy dự phòng hoặc muốn kiểm tra trước khi push.
 
 ```bash
 npm install
@@ -186,9 +188,9 @@ gcloud run deploy ai-image-zvas \
   --clear-base-image
 ```
 
-### B. Nhiều key (Gemini + OpenAI + Seedance)
+### B. Nhiều key (Gemini + OpenAI + Seedance + Seedream)
 
-Thêm versions cho cả 3 secret và grant `secretAccessor` cho runtime service account.
+Thêm versions cho từng secret cần dùng và grant `secretAccessor` cho runtime service account.
 
 Deploy:
 
@@ -198,9 +200,11 @@ gcloud run deploy ai-image-zvas \
   --region us-west1 \
   --platform managed \
   --allow-unauthenticated \
-  --update-secrets=GEMINI_API_KEY=GEMINI_API_KEY:latest,OPENAI_API_KEY=OPENAI_API_KEY:latest,SEEDANCE_API_KEY=SEEDANCE_API_KEY:latest \
+  --update-secrets=GEMINI_API_KEY=GEMINI_API_KEY:latest,OPENAI_API_KEY=OPENAI_API_KEY:latest,SEEDANCE_API_KEY=SEEDANCE_API_KEY:latest,SEEDREAM_API_KEY=SEEDREAM_API_KEY:latest \
   --clear-base-image
 ```
+
+Chỉ gắn secret của provider thực sự bật — key thiếu thì `GET /api/provider-keys` báo `false` và UI chặn nút Generate cho provider đó.
 
 ## 5) Smoke test
 
@@ -209,12 +213,12 @@ gcloud run deploy ai-image-zvas \
 - Vào Admin → tab Cấu hình: xác nhận không còn ô nhập API key (chỉ còn enable provider/model/base URL).
 - Bấm **Kiểm tra tất cả provider đang bật** để xác nhận server đã đọc secrets/env đúng.
 - Model (khi provider mặc định là Gemini): đổi dropdown Nano Banana 2.1 / Pro; bấm icon info — popup so sánh từ `docs/so-sanh-model-gemini.md` hiển thị đủ, đóng bằng X / nền / Escape.
-- Login Google.
+- Đăng nhập bằng username/mật khẩu (`{username}@zvas.local`).
 - Generate ảnh.
 - Kiểm tra Analytics:
   - Chọn tháng, bấm **Yêu cầu dữ liệu** để tải KPI/breakdown/trends.
   - Xác nhận đổi tháng không tự gọi read cho đến khi bấm lại nút.
-  - Trong bảng số ảnh theo user: ưu tiên dữ liệu `stats_by_user_month/{YYYY-MM}`; nếu thiếu thì chỉ quét history khi bấm **Cập nhật số ảnh**.
+  - Trong bảng số ảnh theo user: cột số ảnh hiện `—` cho tới khi bấm **Cập nhật số ảnh** (quét `analytics_events` của tháng).
 - Kiểm tra role `advice` chỉ thấy Analytics.
 
 ### Rollback Nano Banana 2.1 → Nano Banana 2
@@ -254,9 +258,9 @@ gcloud run services update-traffic ai-image-zvas --region us-west1 --to-revision
 - Firestore rules/indexes đã deploy đúng project/database (**trước** app nếu rules có field mới).
 - Dockerfile production `COPY` đủ mọi thư mục top-level mà `server/` import (`server`, `utils`, `constants`).
 - Secrets mới đã có version và IAM đúng.
-- **`ALLOWED_ORIGINS` đã set đúng domain production** — thiếu → CORS fail closed (`origin: false`), browser không gọi được API dù app vẫn khởi động.
+- **`ALLOWED_ORIGINS` đã set đúng domain production** — thiếu → CORS fail closed (`origin: false`): mọi request cross-origin (domain khác gọi API) bị chặn; app same-origin vẫn chạy nhưng log `[WARN]` mỗi lần khởi động.
 - Chọn đúng mode (A/B/C) theo thay đổi của phiên deploy.
-- `npm test` pass (139 tests tại 10/2026, gồm `firestore.rules.test.ts` (key `settings/global` khớp rules) và `scripts/dockerfileCoverage.test.ts` (Dockerfile COPY đủ thư mục server nạp)). **Lưu ý:** `tsx --test` chỉ tự tìm `*.test.ts` — **không** chạy `*.test.tsx`; test component viết dạng `.test.ts` với `React.createElement`.
+- `npm test` pass (gồm `firestore.rules.test.ts` (key `settings/global` khớp rules) và `scripts/dockerfileCoverage.test.ts` (Dockerfile COPY đủ thư mục server nạp)). **Lưu ý:** `tsx --test` chỉ tự tìm `*.test.ts` — **không** chạy `*.test.tsx`; test component viết dạng `.test.ts` với `React.createElement`.
 
 ## 9) Troubleshooting — Revision không ready (PORT 8080)
 

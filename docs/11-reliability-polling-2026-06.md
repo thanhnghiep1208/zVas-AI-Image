@@ -1,5 +1,7 @@
 # 11 - Phase 2: Reliability & Polling Centralization (06/2026)
 
+> **Nhật ký thay đổi** — ghi lại trạng thái tại thời điểm viết, không sửa theo code mới. Trạng thái hiện tại xem docs 01–06, 08 và [00-onboarding](./00-onboarding.md).
+
 Ngày: 2026-06-19. Ghi lại các thay đổi liên quan đến độ tin cậy server và tập trung hóa timer polling trên client.
 
 ---

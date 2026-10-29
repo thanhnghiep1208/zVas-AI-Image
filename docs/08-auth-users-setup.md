@@ -9,7 +9,7 @@ Hướng dẫn cấu hình **Firebase Auth (email/mật khẩu)** + document Fir
 3. `signInWithEmailAndPassword` (Firebase Auth).
 4. App đọc Firestore **`users/{uid}`** — `uid` là UID từ Auth, **không** phải username.
 5. Theo `status` và `role`:
-   - `approved` (hoặc `admin`) → vào tool (`AppAuthenticatedShell`).
+   - `approved` (hoặc `admin`) → vào tool (`AppAuthenticatedShell`). Server áp cùng điều kiện qua `requireApproved` cho `/api/generate`, `/api/provider-*`.
    - `pending` → màn chờ duyệt.
    - `rejected` → màn từ chối.
    - Không có document → màn **Tài khoản chưa được cấu hình** (không tự logout im lặng).
@@ -76,6 +76,7 @@ Restart `npm run dev` sau khi thêm/sửa credential.
 
 - Tạo user Firebase Auth (`email` = `{username}@zvas.local`).
 - Ghi document `users/{uid}` với `status: approved`.
+- Mật khẩu tối thiểu **12 ký tự** (`server/lib/validateUserInput.ts`); reset mật khẩu qua `POST /api/admin/users/reset-password`.
 
 Yêu cầu:
 
@@ -88,6 +89,7 @@ Lỗi HTTP:
 | --- | -------- |
 | 401 | Thiếu / token không hợp lệ |
 | 403 | Không phải admin |
+| 400 | Dữ liệu không hợp lệ (vd. mật khẩu < 12 ký tự) |
 | 409 | Email/username đã tồn tại (`auth/email-already-exists`) |
 | 503 | Server thiếu Firebase Admin credential |
 | 500 | Lỗi khác (xem log terminal `npm run dev`) |
@@ -214,12 +216,13 @@ Index: collection group `sessions`, field `lastActiveAt` DESC (query list phiên
 | `utils/authSessionId.ts` | `getOrCreateLocalSessionId`, `buildDeviceLabel` |
 | `hooks/useAuthAndProfile.ts` | Login, profile gate, logout + revoke phiên |
 | `hooks/useUserSessions.ts` | Đăng ký phiên, list, revoke, remote logout |
-| `repositories/userSessionRepository.ts` | Firestore CRUD `users/{uid}/sessions` |
+| `data/userSessionRepository.ts` | Firestore CRUD `users/{uid}/sessions` |
 | `components/account/ActiveSessionsModal.tsx` | UI quản lý phiên |
 | `components/landing/LoginModal.tsx` | UI đăng nhập |
 | `components/guards/AccountGateScreen.tsx` | Thiếu / lỗi hồ sơ |
 | `components/layout/AppHeader.tsx` | Nút mở modal phiên |
-| `server/routes/adminUsers.ts` | API tạo user |
+| `server/routes/adminUsers.ts` | API tạo user, reset mật khẩu |
+| `server/middleware/requireApproved.ts` | Chặn API cho user chưa duyệt (khớp cổng client) |
 | `server/firebaseAdmin.ts` | Admin SDK + credential |
 | `firestore.rules` | `users`, `users/.../sessions`, `history` |
 | `firestore.indexes.json` | Index `sessions` + `lastActiveAt` |

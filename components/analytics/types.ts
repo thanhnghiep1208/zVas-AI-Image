@@ -12,7 +12,7 @@ export interface AnalyticsUserRow {
   photoURL: string;
 }
 
-export type UserHistoryScanMode = 'precomputed' | 'paginated' | 'missing_precomputed';
+export type UserHistoryScanMode = 'not_scanned' | 'paginated';
 
 export interface UserHistoryScanInfo {
   mode: UserHistoryScanMode;
