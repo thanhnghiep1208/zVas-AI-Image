@@ -1,5 +1,7 @@
 # 13. Security hardening 2026-07 — SSRF (DNS rebinding) & MIME upload
 
+> **Nhật ký thay đổi** — ghi lại trạng thái tại thời điểm viết, không sửa theo code mới. Trạng thái hiện tại xem docs 01–06, 08 và [00-onboarding](./00-onboarding.md). Số test ở đây là tại 07/2026.
+
 Bổ sung cho `docs/10-security-hardening-2026-06.md`. Tất cả thay đổi làm theo TDD
 (Red → Green → Refactor). Trạng thái sau cùng: **55/55 test pass**, `tsc --noEmit` sạch.
 

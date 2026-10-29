@@ -23,5 +23,4 @@ export function formatAnalyticsBundleFetchedAt(timestamp: number): string {
   });
 }
 
-export const STATS_BY_USER_MONTH_COLLECTION = 'stats_by_user_month';
 export const HISTORY_AGG_PAGE_SIZE = 500;

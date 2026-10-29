@@ -13,35 +13,43 @@
 
 | Đường dẫn                               | Vai trò                                         |
 | --------------------------------------- | ----------------------------------------------- |
-| `App.tsx`                               | Auth gate, view switch, overlays; lazy `AppAuthenticatedShell`; **GA4** (prod) |
-| `components/AppAuthenticatedShell.tsx`  | Shell sau đăng nhập: create/merge/multiple, lazy admin, download |
+| `index.tsx`                             | Entry: `initSentry()` (`lib/sentry.ts`), `ErrorBoundary`, render `App` |
+| `App.tsx`                               | Auth gate (landing / guard screens / shell), view switch, overlays; **GA4** (prod) |
+| `components/AppAuthenticatedShell.tsx`  | Shell sau đăng nhập: lazy `CreateView` / `MergeImage` / `MultipleImage`, lazy admin, viewers, download |
 | `components/admin/`                     | Admin: Users, Settings, lazy Analytics tab (`AdminDashboard.tsx`, tabs, `UserHistoryModal`) |
 | `components/analytics/`                 | Analytics dashboard: widgets, trends, cache, `UserHistoryCountsPanel` |
 | `components/AdminDashboard.tsx`         | Re-export → `./admin/AdminDashboard` |
 | `components/AnalyticsDashboard.tsx`     | Re-export → `./analytics/AnalyticsDashboard` |
 | `components/views/CreateView.tsx`       | Màn create chính (banner chào, upload, kết quả) |
-| `components/MergeImage.tsx`             | Chế độ trộn nhiều ảnh                           |
-| `components/MultipleImage.tsx`          | Chế độ hàng loạt / nhiều biến thể               |
-| `components/ImageUploader.tsx`          | Ảnh chính (kéo thả; prop `showLabel`)           |
-| `components/ReferenceImageUploader.tsx` | Ảnh tham chiếu (nhiều file)                     |
-| `components/ResultsDisplay.tsx`         | Lưới ảnh gốc + kết quả, trạng thái rỗng/loading |
+| `components/views/MergeImage.tsx`       | Chế độ trộn nhiều ảnh                           |
+| `components/views/MultipleImage.tsx`    | Chế độ hàng loạt / nhiều biến thể               |
+| `components/inputs/ImageUploader.tsx`   | Ảnh chính (kéo thả; prop `showLabel`); `MaskUploader.tsx` cùng thư mục |
+| `components/inputs/ReferenceImageUploader.tsx` | Ảnh tham chiếu (nhiều file)                     |
+| `components/results/ResultsDisplay.tsx` | Lưới ảnh gốc + kết quả, trạng thái rỗng/loading; `HistoryDisplay.tsx` cùng thư mục |
+| `components/prompts/`                   | `PromptManager`, `PromptOptions` (nhiều prompt, tuỳ chọn phong cách) |
+| `components/feedback/GenerationErrorAlert.tsx` | Hiển thị lỗi generate theo nhóm (`lib/generationErrors.ts`) |
 | `components/layout/`                    | Header/Footer/Auth loading + `GeminiModelComparisonModal` (popup so sánh model); header **GA4** `select_content` khi mở popup; nút **Phiên đăng nhập** |
 | `components/account/ActiveSessionsModal.tsx` | Danh sách phiên, đăng xuất phiên / phiên khác |
-| `repositories/userSessionRepository.ts` | Firestore `users/{uid}/sessions` |
+| `data/`                                 | Lớp truy cập Firestore phía client: `historyRepository`, `analyticsRepository`, `userSessionRepository` (`users/{uid}/sessions`) |
 | `utils/authSessionId.ts`                | `zvas_auth_session_id` (localStorage), `buildDeviceLabel` |
 | `hooks/`                                | Business logic tách khỏi UI                     |
+| `hooks/useWorkspaceController.ts`       | State vùng làm việc (prompt, ảnh, options) dùng chung các view |
+| `hooks/usePublicSettings.ts`            | Đọc `settings/public` (thông tin liên hệ trên popup đăng nhập, không cần đăng nhập) |
 | `hooks/usePolling.ts`                   | Shared `setInterval` + `visibilitychange` hook; `enabled`, `minFocusGapMs`, `runImmediately`, `runOnFocus` |
 | `hooks/useUserSessions.ts`              | Đăng ký phiên, heartbeat (via `usePolling`), revoke, remote logout |
 | `hooks/useAdminUsers.ts`                | Admin: users, pending, approve/reject           |
 | `hooks/useAdminSettings.ts`             | Admin: `settings/global`, test provider         |
 | `hooks/useAnalyticsDashboardData.ts`    | Analytics: bundle tháng, cache TTL, `requestVersion` |
 | `lib/buildGenerationPrompts.ts`         | Prompt pipeline                                 |
+| `lib/generationErrors.ts`               | Phân loại lỗi generate (dùng cho UI + analytics `error_code`) |
+| `lib/styleGuide.ts`, `lib/styleLibrary.ts` | Thư viện phong cách từ `ai_styles.json` |
+| `lib/sentry.ts`                         | Init Sentry frontend (no-op nếu thiếu `VITE_SENTRY_DSN`) |
 | `constants/`                            | Model/prompt maps (`aiModels.ts`: Gemini + `normalizeGeminiModelId`)           |
 | `types.ts`                              | Core types: `GeneratedImage`, `ImageFile`, **`GlobalSettings`** |
 | `services/analyticsTypes.ts`            | Types analytics dùng chung                      |
 | `services/analyticsAggregation.ts`      | Pure aggregation (không I/O Firestore)          |
 | `services/analyticsService.ts`          | `trackEvent`, `loadMonthlyDashboardBundle`, rollup |
-| `services/`                             | API client + analytics I/O                      |
+| `services/geminiService.ts`             | Client gọi `POST /api/generate` (`generateImageVariations`) — dùng cho mọi provider |
 | `utils/`                                | Helper ảnh/runtime env + **`gtagEvent.ts`** (GA4, chỉ `import.meta.env.PROD`) |
 
 
@@ -50,7 +58,7 @@
 - `useAuthAndProfile`: đăng nhập email/mật khẩu; đọc `users/{uid}` (`getDoc`); `profileGate` (`ready` / `missing` / `error`); `waitForProfileGate` sau login; refetch theo chu kỳ / visibility.
 - `components/landing/LandingPage.tsx` + `LoginModal.tsx`: landing và modal đăng nhập (username → `@zvas.local`).
 - `components/guards/`: `PendingAccessScreen`, `RejectedAccessScreen`, `AccountGateScreen` (thiếu hồ sơ Firestore).
-- `useUserSessions`: sau đăng nhập — ghi `users/{uid}/sessions/{sessionId}`, heartbeat, modal **Phiên đăng nhập**, đăng xuất phiên từ xa (`repositories/userSessionRepository.ts`).
+- `useUserSessions`: sau đăng nhập — ghi `users/{uid}/sessions/{sessionId}`, heartbeat, modal **Phiên đăng nhập**, đăng xuất phiên từ xa (`data/userSessionRepository.ts`).
 - `useGlobalSettingsAndApiKey`: `settings/global` bằng `**getDoc**` + refetch theo chu kỳ / visibility (không listener liên tục). Trả về `GlobalSettings | null` (typed, không còn `any`).
 - `useHistoryImages`: đồng bộ history + IndexedDB.
 - `usePendingUsersNotifier`: admin — polling 5 phút qua `usePolling`; toast khi số user pending tăng.
@@ -60,7 +68,7 @@
 
 ## Shell dev/prod
 
-- `npm run dev`: `tsx server.ts` (Express + Vite middleware).
+- `npm run dev`: `tsx --import ./server/instrument.ts server.ts` (Express + Vite middleware, HMR cổng 24679).
 - `npm run build`: build frontend ra `dist/`.
 - `npm start`: chạy server production phục vụ static + API.
 
@@ -97,7 +105,7 @@ flowchart LR
   end
 
   subgraph server["Node (Express)"]
-    API["API: /api/rate-limit + /api/generate"]
+    API["API: /api/generate, /api/provider-keys,<br/>/api/provider-test, /api/admin/*"]
   end
 
   browser -->|Bearer token + payload| API
@@ -157,11 +165,11 @@ flowchart TD
 ## Firestore — giảm đọc (Admin / Analytics)
 
 - **`components/admin/AdminDashboard`:** logic users/settings trong `useAdminUsers` / `useAdminSettings`; `getDocs` khi mở / sau thao tác; modal lịch sử: `getDocs` (50 mục). `React.lazy` + `Suspense` cho tab Analytics.
-- **`App.tsx` / `AppAuthenticatedShell`:** lazy `AdminDashboard` — giảm JS ban đầu.
+- **`AppAuthenticatedShell`:** lazy `AdminDashboard` và các view — giảm JS ban đầu.
 - **`components/analytics/AnalyticsDashboard`:** data qua `useAnalyticsDashboardData` — không auto-fetch khi đổi tháng; chỉ đọc khi bấm **Yêu cầu dữ liệu**; cache `sessionStorage` TTL 15 phút theo `monthKey`.
 - **`TrendsSection`:** mount theo `requestVersion` (sau **Yêu cầu dữ liệu**).
 - **`useTrendData`:** cache events theo `range + ngày`; aggregation qua `aggregateTrendPoints` (`analyticsAggregation.ts`).
-- **`UserHistoryCountsPanel`:** `aggregateHistoryCountsByUid`; ưu tiên `stats_by_user_month/{YYYY-MM}`; quét history chỉ khi bấm **Cập nhật số ảnh**.
+- **`UserHistoryCountsPanel`:** mở bảng chỉ đọc `users` (cột số ảnh hiện `—`); bấm **Cập nhật số ảnh** mới quét `analytics_events` (`image_generation_succeeded`) của tháng. Không có dữ liệu tổng hợp sẵn — nếu cần sau này, gộp vào `analytics_monthly_rollups` thay vì tạo collection riêng.
 - **Rollup tháng:** `loadMonthlyDashboardBundle` ưu tiên `analytics_monthly_rollups/{YYYY-MM}` (`version: 1`), fallback pagination `analytics_events` (`ANALYTICS_EVENTS_PAGE_SIZE = 500`).
 
 Chi tiết module map: `docs/07-refactor-2026-05.md`

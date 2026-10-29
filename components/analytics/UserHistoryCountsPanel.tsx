@@ -1,19 +1,10 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import {
-  db,
-  collection,
-  getDocs,
-  doc,
-  getDoc,
-} from '../../firebase';
+import { db, collection, getDocs } from '../../firebase';
 import { Clock, Image as ImageIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { describeApiOrNetworkError } from '../../utils/userFacingError';
 import { monthBoundsFromKey } from '../../services/analyticsAggregation';
 import { getAnalyticsEventsByDateRangeAndName } from '../../data/analyticsRepository';
-import {
-  STATS_BY_USER_MONTH_COLLECTION,
-} from './constants';
 import type { AnalyticsUserRow, UserHistoryScanInfo } from './types';
 
 export const UserHistoryCountsPanel: React.FC<{ monthKey: string }> = ({ monthKey }) => {
@@ -26,7 +17,9 @@ export const UserHistoryCountsPanel: React.FC<{ monthKey: string }> = ({ monthKe
   const monthRange = useMemo(() => monthBoundsFromKey(monthKey), [monthKey]);
 
   const loadPanelData = useCallback(
-    async (forceClientScan: boolean) => {
+    // Quét analytics_events tốn lượt đọc theo số event trong tháng, nên chỉ quét
+    // khi admin bấm nút; lúc mở bảng chỉ đọc danh sách users.
+    async (scanEvents: boolean) => {
       setIsUsersLoading(true);
       setIsCountsLoading(true);
       setUserCounts({});
@@ -53,25 +46,8 @@ export const UserHistoryCountsPanel: React.FC<{ monthKey: string }> = ({ monthKe
           return;
         }
 
-        if (!forceClientScan) {
-          try {
-            const statsSnap = await getDoc(doc(db, STATS_BY_USER_MONTH_COLLECTION, monthKey));
-            if (statsSnap.exists()) {
-              const raw = statsSnap.data() as { counts?: unknown };
-              const c = raw.counts;
-              if (c && typeof c === 'object' && !Array.isArray(c)) {
-                setUserCounts(c as Record<string, number>);
-                setScanInfo({ mode: 'precomputed' });
-                setIsCountsLoading(false);
-                return;
-              }
-            }
-          } catch {
-            /* fall through */
-          }
-
-          setUserCounts({});
-          setScanInfo({ mode: 'missing_precomputed' });
+        if (!scanEvents) {
+          setScanInfo({ mode: 'not_scanned' });
           setIsCountsLoading(false);
           return;
         }
@@ -110,7 +86,7 @@ export const UserHistoryCountsPanel: React.FC<{ monthKey: string }> = ({ monthKe
         setIsCountsLoading(false);
       }
     },
-    [monthKey, monthRange.endDate, monthRange.startDate]
+    [monthRange.endDate, monthRange.startDate]
   );
 
   useEffect(() => {
@@ -125,14 +101,13 @@ export const UserHistoryCountsPanel: React.FC<{ monthKey: string }> = ({ monthKe
     });
   }, [users, userCounts]);
 
-  const scanHint =
-    scanInfo?.mode === 'precomputed'
-      ? 'Nguồn: doc stats_by_user_month/{tháng} (1 lần đọc). Bấm cập nhật để quét lại analytics_events.'
-      : scanInfo?.mode === 'missing_precomputed'
-        ? 'Chưa có doc stats_by_user_month/{tháng}. Bấm "Cập nhật số ảnh" để quét analytics_events thủ công.'
-        : scanInfo?.mode === 'paginated' && typeof scanInfo.docCount === 'number'
-          ? `Đã quét ${scanInfo.docCount.toLocaleString('vi-VN')} events image_generation_succeeded từ analytics_events.`
-          : null;
+  const notScanned = scanInfo?.mode === 'not_scanned';
+
+  const scanHint = notScanned
+    ? 'Bấm "Cập nhật số ảnh" để đếm số ảnh tháng này.'
+    : scanInfo?.mode === 'paginated' && typeof scanInfo.docCount === 'number'
+      ? `Đã quét ${scanInfo.docCount.toLocaleString('vi-VN')} events image_generation_succeeded từ analytics_events.`
+      : null;
 
   return (
     <div className="overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.03] backdrop-blur-sm">
@@ -145,10 +120,8 @@ export const UserHistoryCountsPanel: React.FC<{ monthKey: string }> = ({ monthKe
             Số ảnh đã tạo theo người dùng
           </h3>
           <p className="mt-1 text-xs text-gray-500">
-            Một lần đọc <code className="text-gray-400">users</code>
-            {scanInfo?.mode === 'precomputed'
-              ? ' + doc tổng hợp theo tháng (Cloud Function / job có thể ghi sẵn).'
-              : ' + analytics_events (image_generation_succeeded) theo tháng.'}
+            Một lần đọc <code className="text-gray-400">users</code> + analytics_events
+            (image_generation_succeeded) theo tháng.
             {scanHint ? <span className="mt-1 block text-gray-500">{scanHint}</span> : null}
           </p>
         </div>
@@ -206,7 +179,7 @@ export const UserHistoryCountsPanel: React.FC<{ monthKey: string }> = ({ monthKe
                   </td>
                   <td className="px-5 py-3 text-center">
                     <span className="text-sm font-mono font-bold text-cyan-400">
-                      {isCountsLoading ? '…' : (userCounts[user.uid] ?? 0)}
+                      {isCountsLoading ? '…' : notScanned ? '—' : (userCounts[user.uid] ?? 0)}
                     </span>
                   </td>
                 </tr>

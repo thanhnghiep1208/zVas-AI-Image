@@ -3,12 +3,28 @@
 ## Workflow tạo ảnh
 
 1. User đăng nhập (username + mật khẩu → Firebase Auth email `{username}@zvas.local`; cần `users/{uid}` — xem `docs/08-auth-users-setup.md`).
-2. App build prompt cuối qua `buildGenerationPrompts`.
-3. Client gọi `/api/rate-limit`.
-4. Client gọi `/api/generate` với provider/model đang chọn.
-5. Server trả base64 + usage metadata.
-6. Client ghi metadata vào Firestore `history`.
-7. Blob/dataURL ảnh lưu vào IndexedDB (`img_{docId}`).
+2. App build prompt cuối qua `buildGenerationPrompts` (mỗi biến thể = một prompt) và ghi `image_generation_started`.
+3. Client (`services/geminiService.ts`) nén ảnh, rồi gọi `POST /api/generate` **một lần cho mỗi prompt** với provider/model đang chọn.
+4. Server: `authenticate` → `requireApproved` → rate limit (10 req/phút/user) → validate prompt → gọi provider (Gemini có retry/timeout).
+5. Server trả base64 + usage metadata (hoặc `{ error, code }` khi lỗi).
+6. Client ghi metadata vào Firestore `history` (`data/historyRepository.ts`) + `image_generation_succeeded` / `image_generation_failed`.
+7. Blob/dataURL ảnh lưu vào IndexedDB (`img_{docId}`) — ảnh **không** lưu trên server/Firestore.
+
+```mermaid
+sequenceDiagram
+  participant UI as Browser (useImageGeneration)
+  participant API as Express /api/generate
+  participant FS as Firestore
+  participant P as Provider (Gemini/OpenAI/...)
+  UI->>FS: analytics_events: image_generation_started
+  UI->>API: POST (Bearer token, prompt, ảnh base64)
+  API->>FS: users/{uid} (requireApproved), rate_limit_windows, settings/global
+  API->>P: generate
+  P-->>API: ảnh + usage
+  API-->>UI: imageBase64 + tokens
+  UI->>FS: history + image_generation_succeeded
+  UI->>UI: IndexedDB img_{docId}
+```
 
 ## Analytics events
 
@@ -19,6 +35,8 @@ Các event chính được ghi vào `analytics_events`:
 - `image_generation_succeeded`
 - `image_generation_failed`
 - `image_downloaded`
+
+Event `image_generation_failed` mang `error_code` (phân loại bởi `lib/generationErrors.ts`, ưu tiên `code` từ server); dashboard có panel phân tích lỗi theo nguồn/model/user (`components/analytics/FailureDimensionsPanel.tsx`) — xem `docs/15-generation-failures-2026-10.md`.
 
 Payload và chuẩn hóa lỗi: `services/analyticsService.ts` (`trackEvent` → repository Firestore).
 
@@ -33,7 +51,7 @@ Payload và chuẩn hóa lỗi: `services/analyticsService.ts` (`trackEvent` →
 - Dashboard bundle: ưu tiên `analytics_monthly_rollups/{YYYY-MM}` (`version: 1`); thiếu doc thì aggregate từ events.
 - Trends (`hooks/useTrendData.ts`) gọi aggregation thay vì logic trùng lặp.
 - Job rebuild rollup (Admin SDK): `server/lib/monthlyRollupBuilder.ts` → `rebuildMonthlyAnalyticsRollup(monthKey)` (không có route HTTP public).
-- Tests: `npm test` — `analyticsAggregation.test.ts`, `rateLimit.test.ts`.
+- Tests: `services/analyticsAggregation.test.ts` (chạy trong `npm test`).
 
 #### Date bucketing — UTC nhất quán
 
@@ -102,6 +120,7 @@ Hệ thống có **hai luồng** bổ sung cho nhau:
 | ---------- | ---- |
 | Shell + nút **Yêu cầu dữ liệu** | `components/analytics/AnalyticsDashboard.tsx` |
 | KPI / token / model | `components/analytics/AnalyticsWidgets.tsx` |
+| Phân tích lỗi | `components/analytics/FailureDimensionsPanel.tsx` |
 | Trends | `components/analytics/TrendsSection.tsx` + `hooks/useTrendData.ts` |
 | Đếm ảnh/user | `components/analytics/UserHistoryCountsPanel.tsx` — nguồn: `analytics_events` (không bị mất khi user xóa history) |
 | Cache session | `components/analytics/analyticsCache.ts` |

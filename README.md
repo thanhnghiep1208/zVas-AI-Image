@@ -1,6 +1,8 @@
 # AI Image ZVAS
 
-Ứng dụng web tạo và biến thể ảnh bằng AI (Gemini, OpenAI DALL·E 3, Seedance), kết hợp Firebase Auth/Firestore, Express và Vite.
+Ứng dụng web tạo và biến thể ảnh bằng AI (Gemini, OpenAI DALL·E 3, Seedance, Seedream), kết hợp Firebase Auth/Firestore, Express và Vite.
+
+**Người mới:** đọc [docs/00-onboarding.md](./docs/00-onboarding.md) trước — lộ trình từ cài đặt đến PR đầu tiên.
 
 **Tài liệu chi tiết:** xem [docs/README.md](./docs/README.md) (trang mục lục) hoặc đọc trực tiếp bộ tài liệu trong thư mục `docs/`. **Shell UI, logo làm mới vùng làm việc, banner Create, upload/kết quả:** [docs/02-frontend-architecture.md](./docs/02-frontend-architecture.md).
 
@@ -16,10 +18,10 @@
 npm install
 ```
 
-Cấu hình khóa API phía **server** (không đặt key thật trong `VITE_`*):
+Cấu hình khóa API phía **server** (không đặt key thật trong `VITE_*`):
 
-- **Mẫu env:** `[.env.example](./.env.example)` — sao chép thành `.env` hoặc `.env.local` (đã gitignore).
-- **Mẫu Firebase client:** `[firebase-applet-config.example.json](./firebase-applet-config.example.json)` — sao chép thành `firebase-applet-config.json` (file này **không** có trong repo, đã `.gitignore`; key web nên giới hạn domain trong Firebase Console).
+- **Mẫu env:** [`.env.example`](./.env.example) — sao chép thành `.env` hoặc `.env.local` (đã gitignore).
+- **Mẫu Firebase client:** [`firebase-applet-config.example.json`](./firebase-applet-config.example.json) — sao chép thành `firebase-applet-config.json` (file này **không** có trong repo, đã `.gitignore`; key web nên giới hạn domain trong Firebase Console).
 - Biến môi trường server (`.env.local`): `GEMINI_API_KEY`, `OPENAI_API_KEY`, `SEEDANCE_API_KEY`, `SEEDREAM_API_KEY` tùy provider đã bật.
 - `settings/global` (Firestore) chỉ lưu model/base URL / provider bật — **không** lưu API key.
 - Đăng nhập: username + mật khẩu (email Auth = `{username}@zvas.local`). Cần document `users/{uid}` — xem [docs/08-auth-users-setup.md](./docs/08-auth-users-setup.md).
@@ -45,7 +47,7 @@ npm start
 
 ## Production (live)
 
-Ứng dụng chạy thật = **một process Node** phục vụ `dist/` + `/api/`*. Build frontend trước, rồi `NODE_ENV=production`.
+Ứng dụng chạy thật = **một process Node** phục vụ `dist/` + `/api/*`. Build frontend trước, rồi `NODE_ENV=production`.
 
 **Biến môi trường (server):**
 
@@ -55,8 +57,13 @@ npm start
 | `PORT`                                                   | Cổng HTTP (Cloud Run thường `8080`; mặc định local `3000`)                                                                                                                                                                                                                              |
 | `GEMINI_API_KEY` / `OPENAI_API_KEY` / `SEEDANCE_API_KEY` / `SEEDREAM_API_KEY` | Key nhà cung cấp AI (chỉ server env / Secret Manager) |
 | Firebase Admin | Cloud Run: runtime service account. **Local:** `service-account.json` tại root (tự load trong `server/firebaseAdmin.ts`) hoặc `GOOGLE_APPLICATION_CREDENTIALS`. |
+| `ALLOWED_ORIGINS` | Danh sách origin được gọi API cross-origin (phân tách dấu phẩy). Thiếu trên production → server log `[WARN]` và chặn mọi request cross-origin (same-origin vẫn chạy) |
+| `RATE_LIMIT_BACKEND` | `memory` \| `firestore` — mặc định `firestore` khi `NODE_ENV=production`, `memory` khi dev |
+| `SEEDANCE_ALLOWED_HOSTS` / `SEEDREAM_ALLOWED_HOSTS` / `SSRF_ALLOWED_HOSTS` | Mở rộng allowlist host base URL provider / bỏ qua chặn IP nội bộ (tuỳ chọn) — xem [docs/16](./docs/16-provider-baseurl-allowlist-2026-10.md), [docs/13](./docs/13-security-ssrf-mime-2026-07.md) |
 | `SENTRY_DSN` / `VITE_SENTRY_DSN` | Error tracking (tuỳ chọn) — xem [docs/12-sentry-setup.md](./docs/12-sentry-setup.md) |
 
+
+**Deploy:** merge PR vào `main` → GitHub Actions tự lint/test/build, build image và deploy Cloud Run (xem [docs/06-live-deployment.md](./docs/06-live-deployment.md) §0). Lệnh Docker dưới đây chỉ để chạy thử image ở máy.
 
 **Docker (image production):**
 
@@ -76,10 +83,11 @@ Khi `docker build`, cần có `firebase-applet-config.json` trong **ngữ cảnh
 
 | Lệnh            | Mô tả                                   |
 | --------------- | --------------------------------------- |
-| `npm run dev`   | `tsx server.ts` — API + Vite middleware |
+| `npm run dev`   | `tsx --import ./server/instrument.ts server.ts` — API + Vite middleware (HMR) |
 | `npm run build` | `vite build` → thư mục `dist/`          |
 | `npm start`     | Production: static + Express API        |
 | `npm run lint`  | `tsc --noEmit`                          |
+| `npm test`      | `tsx --test` — chạy mọi `*.test.ts` (chỉ `.ts`, không `.tsx`) |
 | `npm run provision-user` | Ghi `users/{uid}` cho UID đã có trên Auth (cần service account) |
 
 
@@ -87,7 +95,7 @@ Khi `docker build`, cần có `firebase-applet-config.json` trong **ngữ cảnh
 
 ## Công nghệ (rút gọn)
 
-React 19, TypeScript, Vite 6, Tailwind CSS 4, Firebase (Auth + Firestore), Express 5, `@google/genai`, IndexedDB (`idb-keyval`), Sonner.
+React 19, TypeScript, Vite 8, Tailwind CSS 4, Firebase (Auth + Firestore), Express 5, `@google/genai`, IndexedDB (`idb-keyval`), Sonner, Recharts, Sentry.
 
 ---
 

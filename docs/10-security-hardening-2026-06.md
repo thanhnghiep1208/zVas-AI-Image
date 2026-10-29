@@ -1,5 +1,7 @@
 # 10 - Security Hardening & Dependency Upgrade (06/2026)
 
+> **Nhật ký thay đổi** — ghi lại trạng thái tại thời điểm viết, không sửa theo code mới. Trạng thái hiện tại xem docs 01–06, 08 và [00-onboarding](./00-onboarding.md).
+
 ## Tổng quan
 
 Ngày: 2026-06-16. Bản hardening tập trung vào 4 lỗ hổng server-side đã xác định qua audit kiến trúc, kết hợp upgrade dependencies có breaking changes.

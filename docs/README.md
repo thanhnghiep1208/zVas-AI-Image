@@ -1,57 +1,68 @@
 # Tài Liệu Dự Án AI Image ZVAS
 
-Tài liệu đã được tách theo từng chức năng để dễ đọc và bảo trì.
+**Người mới bắt đầu từ [00 - Onboarding](./00-onboarding.md)** — cài đặt, lộ trình đọc, bản đồ code, quy trình PR → deploy.
 
-Cấu trúc thư mục `docs/`:
+Tài liệu chia thành hai loại:
 
-- `NN-*.md`: tài liệu chính, đánh số theo thứ tự (mục lục bên dưới).
-- [RELEASE_CHECKLIST.md](./RELEASE_CHECKLIST.md): checklist kiểm tra trước khi phát hành.
+- **Tài liệu tham chiếu** (00–06, 08, 12, `RELEASE_CHECKLIST`): mô tả hệ thống **hiện tại**, phải sửa cùng PR khi code đổi.
+- **Nhật ký thay đổi** (07, 09–11, 13–16): ghi lại một đợt thay đổi tại thời điểm đó, không sửa theo code mới. Khi mâu thuẫn với tài liệu tham chiếu hoặc code, tin tài liệu tham chiếu và code.
+
+Ngoài ra:
+
+- [so-sanh-model-gemini.md](./so-sanh-model-gemini.md): nội dung popup so sánh model trên header — app import trực tiếp qua `?raw`, **không đổi tên/di chuyển**.
 - [tasks/](./tasks/): PRD và danh sách task của từng tính năng.
 - [templates/](./templates/): mẫu prompt để sinh PRD (`create-prd.md`) và task list (`generate-tasks.md`).
 
-## Mục lục tài liệu
+## Tài liệu tham chiếu
 
-1. [01 - Tổng Quan](./01-overview.md)
-2. [02 - Kiến Trúc Frontend](./02-frontend-architecture.md)
-3. [03 - Backend & API](./03-backend-api.md)
-4. [04 - Workflow & Analytics](./04-workflow-analytics.md)
-5. [05 - Security & Roles](./05-security-roles.md)
-6. [06 - Live Deployment (Cloud Run)](./06-live-deployment.md) — deploy tự động qua GitHub Actions khi merge `main`, ruleset bảo vệ `main`, sự cố sidecar AI Studio
-7. [07 - Refactor & cập nhật 05/2026](./07-refactor-2026-05.md)
-8. [08 - Đăng nhập & tài khoản](./08-auth-users-setup.md) — username/password, `users/{uid}`, phiên đa thiết bị, service account local
-9. [09 - Optimize 06/2026](./09-optimize-2026-06.md)
-10. [10 - Security Hardening 06/2026](./10-security-hardening-2026-06.md) — CSP, prompt limit, password 12 chars, SSRF validate, Vite define removal, deps upgrade
-11. [11 - Reliability & Polling 06/2026](./11-reliability-polling-2026-06.md)
-12. [12 - Sentry setup](./12-sentry-setup.md)
-13. [13 - Security SSRF (DNS rebinding) & MIME 07/2026](./13-security-ssrf-mime-2026-07.md) — MIME upload allowlist, SSRF DNS rebinding/redirect (`ssrfSafeFetch`, `ipRanges`)
-14. [14 - Nano Banana 2.1 10/2026](./14-nano-banana-2-1-2026-10.md) — model mặc định 2.1, model ID GA, rollback cho admin
-15. [15 - Giảm lượt tạo thất bại 10/2026](./15-generation-failures-2026-10.md) — phân loại lỗi, phân tích lỗi theo nguồn/model/user
-16. [16 - Allowlist base URL provider 10/2026](./16-provider-baseurl-allowlist-2026-10.md) — chặn rò khóa API qua base URL tùy ý
+| Doc | Nội dung |
+| --- | -------- |
+| [00 - Onboarding](./00-onboarding.md) | Lộ trình cho người mới: setup local, lần theo request tạo ảnh, sửa X ở đâu, quy trình PR |
+| [01 - Tổng quan](./01-overview.md) | Mục tiêu, tính năng, stack |
+| [02 - Kiến trúc Frontend](./02-frontend-architecture.md) | Cấu trúc thư mục, hooks, shell UI, chọn model, Firestore reads |
+| [03 - Backend & API](./03-backend-api.md) | `server/`, chuỗi middleware, endpoint, rate limit, key provider |
+| [04 - Workflow & Analytics](./04-workflow-analytics.md) | Luồng tạo ảnh, analytics events, GA4, dashboard |
+| [05 - Security & Roles](./05-security-roles.md) | Bảo vệ API, Firestore rules, role, CSP, mật khẩu |
+| [06 - Live Deployment](./06-live-deployment.md) | GitHub Actions, ruleset `main`, secrets, rollback, troubleshooting |
+| [08 - Đăng nhập & tài khoản](./08-auth-users-setup.md) | Username/password, `users/{uid}`, phiên đa thiết bị, service account |
+| [12 - Sentry](./12-sentry-setup.md) | Error tracking, source maps |
+| [RELEASE_CHECKLIST](./RELEASE_CHECKLIST.md) | Checklist phát hành production |
 
-## Gợi ý đọc nhanh
+## Nhật ký thay đổi
 
-- Muốn nắm tổng quan nhanh: bắt đầu từ `docs/01-overview.md`.
-- Muốn hiểu luồng tạo ảnh + analytics: xem `docs/04-workflow-analytics.md`.
-- Chuẩn bị lên production: xem `docs/06-live-deployment.md`. Từ 10/2026 deploy = merge PR vào `main` (GitHub Actions, §0); deploy tay bằng `gcloud` chỉ là dự phòng.
-- Cấu hình đăng nhập / tạo user / lỗi “chưa được cấu hình”: xem `docs/08-auth-users-setup.md`.
-- Phiên đăng nhập đa thiết bị (xem, đăng xuất phiên): `docs/08-auth-users-setup.md` § Phiên đăng nhập đa thiết bị.
-- **Thay đổi refactor 05/2026** (admin/analytics split, aggregation, rate limit Firestore, Dockerfile): xem `docs/07-refactor-2026-05.md`.
-- **Security hardening 06/2026** (CSP, prompt limit, password policy, SSRF validate, Vite define removal, firebase-admin v14, vite v8): xem `docs/10-security-hardening-2026-06.md`.
-- **Security 07/2026** (MIME upload allowlist, SSRF DNS rebinding/redirect qua `ssrfSafeFetch`): xem `docs/13-security-ssrf-mime-2026-07.md`.
-- UI shell, logo, banner Create, upload/kết quả: `docs/02-frontend-architecture.md`.
-- So sánh model Gemini (popup header): `docs/so-sanh-model-gemini.md`.
-- Trước khi phát hành: `docs/RELEASE_CHECKLIST.md`.
+| Doc | Đợt thay đổi |
+| --- | ------------ |
+| [07 - Refactor 05/2026](./07-refactor-2026-05.md) | Tách admin/analytics, aggregation, rate limit Firestore, Dockerfile |
+| [09 - Optimize 06/2026](./09-optimize-2026-06.md) | CORS, hiệu năng |
+| [10 - Security hardening 06/2026](./10-security-hardening-2026-06.md) | CSP, prompt limit, mật khẩu 12 ký tự, xoá `/api/rate-limit` (TOCTOU), SSRF validate, nâng deps |
+| [11 - Reliability & polling 06/2026](./11-reliability-polling-2026-06.md) | `usePolling`, graceful shutdown |
+| [13 - SSRF & MIME 07/2026](./13-security-ssrf-mime-2026-07.md) | MIME upload allowlist, `ssrfSafeFetch` chống DNS rebinding |
+| [14 - Nano Banana 2.1 10/2026](./14-nano-banana-2-1-2026-10.md) | Model mặc định 2.1, model ID GA, rollback, bỏ 512px |
+| [15 - Giảm lượt tạo thất bại 10/2026](./15-generation-failures-2026-10.md) | Retry/timeout Gemini, mã lỗi, phân tích lỗi |
+| [16 - Allowlist base URL 10/2026](./16-provider-baseurl-allowlist-2026-10.md) | Chặn rò key qua base URL, thực thi `enabledProviders` |
 
-## Checklist kỹ thuật nhanh (05/2026)
+## Tra nhanh
+
+| Câu hỏi | Xem |
+| ------- | --- |
+| Setup máy mới | `00-onboarding.md` §3 |
+| Lỗi "chưa được cấu hình" / tạo user | `08-auth-users-setup.md` |
+| Deploy thế nào | `06-live-deployment.md` §0 — merge PR vào `main`; `gcloud` tay chỉ dự phòng |
+| Rollback model Nano Banana 2.1 | `06-live-deployment.md` §5 |
+| Container không listen PORT 8080 | `06-live-deployment.md` §9 |
+
+## Checklist kỹ thuật
 
 | Việc | Lệnh / ghi chú |
 | ----- | -------------- |
 | Kiểm tra types | `npm run lint` |
 | Build frontend | `npm run build` |
-| Tests | `npm test` (55 tests: aggregation + rate limit + validateUserInput + prompts + fileValidation + ipRanges + ssrfSafeFetch + validateBaseUrl) |
-| Deploy rules + indexes | `firebase deploy --only firestore:rules,firestore:indexes --project zvas-ai-image` |
-| Deploy app | Push/merge `main` → GitHub Actions (`.github/workflows/deploy.yml`); dự phòng `gcloud run deploy` — Dockerfile cần `COPY server ./server` |
+| Tests | `npm test` — mọi `*.test.ts` (248 test tại 29/10/2026) |
+| Deploy rules + indexes | `firebase deploy --only firestore:rules,firestore:indexes --project zvas-ai-image` (tay, trước khi merge nếu rules đổi) |
+| Deploy app | Merge PR vào `main` → GitHub Actions (`.github/workflows/deploy.yml`) |
 
----
+## Quy ước khi sửa docs
 
-*Tài liệu split: tháng 5/2026. Bổ sung refactor 05/2026: tháng 5/2026.*
+- Đổi code ảnh hưởng hành vi/đường dẫn trong tài liệu tham chiếu → sửa doc trong cùng PR.
+- Một đợt thay đổi lớn (bảo mật, refactor, sự cố) → thêm doc nhật ký `NN-ten-YYYY-MM.md` và thêm vào bảng trên.
+- Không ghi số liệu dễ trôi (số test, kích thước bundle) vào tài liệu tham chiếu ngoài bảng checklist này.
